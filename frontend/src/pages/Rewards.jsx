@@ -92,6 +92,13 @@ export default function Rewards() {
     );
   }, [fetchRewards, fetchPendingRedemptions]);
 
+  // Live updates via WebSocket
+  useEffect(() => {
+    const handler = () => { fetchRewards(); fetchPendingRedemptions(); };
+    window.addEventListener('ws:message', handler);
+    return () => window.removeEventListener('ws:message', handler);
+  }, [fetchRewards, fetchPendingRedemptions]);
+
   // Form handlers
   const openCreateModal = () => {
     setEditingReward(null);

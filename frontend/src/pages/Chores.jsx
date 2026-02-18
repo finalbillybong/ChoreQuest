@@ -173,6 +173,13 @@ export default function Chores() {
     );
   }, [fetchChores, fetchCategories, fetchKids]);
 
+  // Live updates via WebSocket
+  useEffect(() => {
+    const handler = () => { fetchChores(); };
+    window.addEventListener('ws:message', handler);
+    return () => window.removeEventListener('ws:message', handler);
+  }, [fetchChores]);
+
   // Filtering
   const filteredChores = chores.filter((chore) => {
     if (filterCategory && chore.category?.name !== filterCategory) return false;

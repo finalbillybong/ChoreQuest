@@ -199,6 +199,9 @@ async def create_chore(
         .options(selectinload(Chore.category))
     )
     chore = result.scalar_one()
+
+    await ws_manager.broadcast({"type": "data_changed", "data": {"entity": "chore"}}, exclude_user=user.id)
+
     return ChoreResponse.model_validate(chore)
 
 
@@ -275,6 +278,9 @@ async def update_chore(
         .options(selectinload(Chore.category))
     )
     chore = result.scalar_one()
+
+    await ws_manager.broadcast({"type": "data_changed", "data": {"entity": "chore"}}, exclude_user=user.id)
+
     return ChoreResponse.model_validate(chore)
 
 
@@ -296,6 +302,9 @@ async def delete_chore(
     chore.is_active = False
     chore.updated_at = datetime.now(timezone.utc)
     await db.commit()
+
+    await ws_manager.broadcast({"type": "data_changed", "data": {"entity": "chore"}}, exclude_user=user.id)
+
     return None
 
 
@@ -618,6 +627,9 @@ async def uncomplete_chore(
         )
     )
     assignment = result.scalar_one()
+
+    await ws_manager.broadcast({"type": "data_changed", "data": {"entity": "chore"}}, exclude_user=user.id)
+
     return AssignmentResponse.model_validate(assignment)
 
 
@@ -648,6 +660,8 @@ async def skip_chore(
     assignment.status = AssignmentStatus.skipped
     assignment.updated_at = now
     await db.commit()
+
+    await ws_manager.broadcast({"type": "data_changed", "data": {"entity": "chore"}}, exclude_user=user.id)
 
     # Reload with relationships
     result = await db.execute(

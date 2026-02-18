@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { api } from '../api/client';
 import { useAuth } from '../hooks/useAuth';
 import AvatarDisplay from '../components/AvatarDisplay';
@@ -13,20 +13,25 @@ export default function Leaderboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    (async () => {
-      setLoading(true);
-      setError('');
-      try {
-        const data = await api('/api/stats/leaderboard');
-        setEntries(data.leaderboard || data || []);
-      } catch (err) {
-        setError(err.message || 'Failed to load leaderboard');
-      } finally {
-        setLoading(false);
-      }
-    })();
+  const fetchLeaderboard = useCallback(async () => {
+    try {
+      const data = await api('/api/stats/leaderboard');
+      setEntries(data.leaderboard || data || []);
+    } catch (err) {
+      setError(err.message || 'Failed to load leaderboard');
+    }
   }, []);
+
+  useEffect(() => {
+    fetchLeaderboard().finally(() => setLoading(false));
+  }, [fetchLeaderboard]);
+
+  // Live updates via WebSocket
+  useEffect(() => {
+    const handler = () => { fetchLeaderboard(); };
+    window.addEventListener('ws:message', handler);
+    return () => window.removeEventListener('ws:message', handler);
+  }, [fetchLeaderboard]);
 
   const topScore = entries.length > 0 ? Math.max(...entries.map((e) => e.weekly_xp || e.xp || 0), 1) : 1;
 

@@ -24,7 +24,7 @@ async function refreshToken() {
   return data;
 }
 
-async function ensureToken() {
+export async function ensureToken() {
   if (!refreshPromise) {
     refreshPromise = refreshToken().finally(() => { refreshPromise = null; });
   }

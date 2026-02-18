@@ -113,6 +113,13 @@ export default function Calendar() {
     fetchCalendar();
   }, [fetchCalendar]);
 
+  // Live updates via WebSocket
+  useEffect(() => {
+    const handler = () => { fetchCalendar(); };
+    window.addEventListener('ws:message', handler);
+    return () => window.removeEventListener('ws:message', handler);
+  }, [fetchCalendar]);
+
   const prevWeek = () => setWeekStart(addDays(weekStart, -7));
   const nextWeek = () => setWeekStart(addDays(weekStart, 7));
   const thisWeek = () => setWeekStart(getMonday(new Date()));

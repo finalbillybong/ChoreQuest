@@ -218,6 +218,9 @@ async def create_reward(
     db.add(reward)
     await db.commit()
     await db.refresh(reward)
+
+    await ws_manager.broadcast({"type": "data_changed", "data": {"entity": "reward"}}, exclude_user=current_user.id)
+
     return reward
 
 
@@ -255,6 +258,9 @@ async def update_reward(
     reward.updated_at = datetime.utcnow()
     await db.commit()
     await db.refresh(reward)
+
+    await ws_manager.broadcast({"type": "data_changed", "data": {"entity": "reward"}}, exclude_user=current_user.id)
+
     return reward
 
 
@@ -273,6 +279,8 @@ async def delete_reward(
     reward.is_active = False
     reward.updated_at = datetime.utcnow()
     await db.commit()
+
+    await ws_manager.broadcast({"type": "data_changed", "data": {"entity": "reward"}}, exclude_user=current_user.id)
 
 
 @router.post("/{reward_id}/redeem", response_model=RedemptionResponse)

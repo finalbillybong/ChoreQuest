@@ -239,14 +239,9 @@ async def refresh(
     if stored is None:
         raise HTTPException(status_code=401, detail="Refresh token not found")
 
-    # Revoked token — likely a concurrent/duplicate refresh request.
-    # Just reject this individual request; other sessions stay valid.
     if stored.is_revoked:
         _clear_refresh_cookie(response)
         raise HTTPException(status_code=401, detail="Refresh token already used")
-
-    # Revoke old token
-    stored.is_revoked = True
 
     # Load user
     user_result = await db.execute(
@@ -254,13 +249,16 @@ async def refresh(
     )
     user = user_result.scalar_one_or_none()
     if user is None:
-        await db.commit()
         _clear_refresh_cookie(response)
         raise HTTPException(status_code=401, detail="User not found or inactive")
 
-    await db.commit()
-
-    return await _issue_tokens(user, db, response)
+    # No token rotation — just issue a fresh access token.
+    # The same refresh cookie stays valid until expiry or explicit logout.
+    access_token = create_access_token(user.id, user.role.value)
+    return AuthResponse(
+        access_token=access_token,
+        user=UserResponse.model_validate(user),
+    )
 
 
 # ---------- POST /logout ----------
