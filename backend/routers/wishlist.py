@@ -1,0 +1,151 @@
+from datetime import datetime, timezone
+
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from backend.database import get_db
+from backend.models import WishlistItem, Reward, User, UserRole
+from backend.schemas import (
+    WishlistCreate,
+    WishlistUpdate,
+    WishlistResponse,
+    WishlistConvertRequest,
+    RewardResponse,
+)
+from backend.dependencies import get_current_user, require_parent
+
+router = APIRouter(prefix="/api/wishlist", tags=["wishlist"])
+
+
+# ---------- GET / ----------
+@router.get("/", response_model=list[WishlistResponse])
+async def list_wishlist(
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Kids see their own wishlist items; parents/admins see all."""
+    stmt = select(WishlistItem)
+
+    if user.role == UserRole.kid:
+        stmt = stmt.where(WishlistItem.user_id == user.id)
+
+    stmt = stmt.order_by(WishlistItem.created_at.desc())
+
+    result = await db.execute(stmt)
+    items = result.scalars().all()
+    return [WishlistResponse.model_validate(item) for item in items]
+
+
+# ---------- POST / ----------
+@router.post("/", response_model=WishlistResponse, status_code=201)
+async def add_wishlist_item(
+    body: WishlistCreate,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Add a new wishlist item (typically by a kid)."""
+    item = WishlistItem(
+        user_id=user.id,
+        title=body.title,
+        url=body.url,
+        image_url=body.image_url,
+        notes=body.notes,
+    )
+    db.add(item)
+    await db.commit()
+    await db.refresh(item)
+    return WishlistResponse.model_validate(item)
+
+
+# ---------- PUT /{id} ----------
+@router.put("/{item_id}", response_model=WishlistResponse)
+async def update_wishlist_item(
+    item_id: int,
+    body: WishlistUpdate,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Update a wishlist item (owner only)."""
+    result = await db.execute(select(WishlistItem).where(WishlistItem.id == item_id))
+    item = result.scalar_one_or_none()
+    if item is None:
+        raise HTTPException(status_code=404, detail="Wishlist item not found")
+
+    if item.user_id != user.id:
+        raise HTTPException(status_code=403, detail="You can only update your own wishlist items")
+
+    if body.title is not None:
+        item.title = body.title
+    if body.url is not None:
+        item.url = body.url
+    if body.image_url is not None:
+        item.image_url = body.image_url
+    if body.notes is not None:
+        item.notes = body.notes
+
+    item.updated_at = datetime.now(timezone.utc)
+    await db.commit()
+    await db.refresh(item)
+    return WishlistResponse.model_validate(item)
+
+
+# ---------- DELETE /{id} ----------
+@router.delete("/{item_id}")
+async def delete_wishlist_item(
+    item_id: int,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Remove a wishlist item (owner or parent/admin)."""
+    result = await db.execute(select(WishlistItem).where(WishlistItem.id == item_id))
+    item = result.scalar_one_or_none()
+    if item is None:
+        raise HTTPException(status_code=404, detail="Wishlist item not found")
+
+    is_owner = item.user_id == user.id
+    is_parent_or_admin = user.role in (UserRole.parent, UserRole.admin)
+
+    if not is_owner and not is_parent_or_admin:
+        raise HTTPException(status_code=403, detail="Not authorized to delete this item")
+
+    await db.delete(item)
+    await db.commit()
+    return {"detail": "Wishlist item deleted"}
+
+
+# ---------- POST /{id}/convert ----------
+@router.post("/{item_id}/convert", response_model=RewardResponse)
+async def convert_to_reward(
+    item_id: int,
+    body: WishlistConvertRequest,
+    db: AsyncSession = Depends(get_db),
+    parent: User = Depends(require_parent),
+):
+    """Convert a wishlist item to a reward (parent+ only). Creates a Reward and links it."""
+    result = await db.execute(select(WishlistItem).where(WishlistItem.id == item_id))
+    item = result.scalar_one_or_none()
+    if item is None:
+        raise HTTPException(status_code=404, detail="Wishlist item not found")
+
+    if item.converted_to_reward_id is not None:
+        raise HTTPException(status_code=400, detail="Item has already been converted to a reward")
+
+    reward = Reward(
+        title=item.title,
+        description=item.notes,
+        point_cost=body.point_cost,
+        icon=None,
+        stock=1,
+        is_active=True,
+        created_by=parent.id,
+    )
+    db.add(reward)
+    await db.flush()
+
+    item.converted_to_reward_id = reward.id
+    item.updated_at = datetime.now(timezone.utc)
+
+    await db.commit()
+    await db.refresh(reward)
+    return RewardResponse.model_validate(reward)
