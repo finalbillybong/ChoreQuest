@@ -185,7 +185,7 @@ async def deny_redemption(
 # ── Reward CRUD endpoints ────────────────────────────────────────────────
 
 
-@router.get("/", response_model=list[RewardResponse])
+@router.get("", response_model=list[RewardResponse])
 async def list_rewards(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -199,7 +199,7 @@ async def list_rewards(
     return result.scalars().all()
 
 
-@router.post("/", response_model=RewardResponse, status_code=201)
+@router.post("", response_model=RewardResponse, status_code=201)
 async def create_reward(
     body: RewardCreate,
     db: AsyncSession = Depends(get_db),

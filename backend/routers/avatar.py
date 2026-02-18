@@ -73,7 +73,7 @@ async def get_avatar_parts():
 
 
 # ---------- PUT / ----------
-@router.put("/")
+@router.put("")
 async def save_avatar(
     body: AvatarConfig,
     db: AsyncSession = Depends(get_db),

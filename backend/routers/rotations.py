@@ -13,7 +13,7 @@ router = APIRouter(prefix="/api/rotations", tags=["rotations"])
 
 
 # ---------- GET / ----------
-@router.get("/", response_model=list[RotationResponse])
+@router.get("", response_model=list[RotationResponse])
 async def list_rotations(
     db: AsyncSession = Depends(get_db),
     _parent=Depends(require_parent),
@@ -25,7 +25,7 @@ async def list_rotations(
 
 
 # ---------- POST / ----------
-@router.post("/", response_model=RotationResponse, status_code=201)
+@router.post("", response_model=RotationResponse, status_code=201)
 async def create_rotation(
     body: RotationCreate,
     db: AsyncSession = Depends(get_db),

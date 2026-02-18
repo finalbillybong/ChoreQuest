@@ -14,7 +14,7 @@ UPLOAD_DIR = "/app/data/uploads"
 ALLOWED_TYPES = {"image/jpeg", "image/png", "image/gif", "image/webp"}
 
 
-@router.post("/")
+@router.post("")
 async def upload_file(
     file: UploadFile = File(...),
     user: User = Depends(get_current_user),

@@ -19,7 +19,7 @@ router = APIRouter(prefix="/api/wishlist", tags=["wishlist"])
 
 
 # ---------- GET / ----------
-@router.get("/", response_model=list[WishlistResponse])
+@router.get("", response_model=list[WishlistResponse])
 async def list_wishlist(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
@@ -38,7 +38,7 @@ async def list_wishlist(
 
 
 # ---------- POST / ----------
-@router.post("/", response_model=WishlistResponse, status_code=201)
+@router.post("", response_model=WishlistResponse, status_code=201)
 async def add_wishlist_item(
     body: WishlistCreate,
     db: AsyncSession = Depends(get_db),

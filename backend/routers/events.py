@@ -22,7 +22,7 @@ def _event_to_response(event: SeasonalEvent) -> dict:
 
 
 # ---------- GET / ----------
-@router.get("/", response_model=list[EventResponse])
+@router.get("", response_model=list[EventResponse])
 async def list_events(
     db: AsyncSession = Depends(get_db),
     _user=Depends(get_current_user),
@@ -34,7 +34,7 @@ async def list_events(
 
 
 # ---------- POST / ----------
-@router.post("/", response_model=EventResponse, status_code=201)
+@router.post("", response_model=EventResponse, status_code=201)
 async def create_event(
     body: EventCreate,
     db: AsyncSession = Depends(get_db),
