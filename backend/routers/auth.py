@@ -43,6 +43,7 @@ def _set_refresh_cookie(response: Response, token: str):
         samesite="lax",
         path="/api/auth",
         secure=settings.COOKIE_SECURE,
+        max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 86400,
     )
 
 

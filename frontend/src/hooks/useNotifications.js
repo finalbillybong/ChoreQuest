@@ -8,7 +8,7 @@ export function useNotifications() {
   const fetchNotifications = useCallback(async () => {
     try {
       const data = await api('/api/notifications?limit=20');
-      setNotifications(data);
+      setNotifications(Array.isArray(data) ? data : []);
     } catch { /* ignore */ }
   }, []);
 
@@ -31,10 +31,22 @@ export function useNotifications() {
     setUnreadCount(0);
   };
 
-  useEffect(() => {
+  const refresh = useCallback(() => {
     fetchNotifications();
     fetchUnreadCount();
   }, [fetchNotifications, fetchUnreadCount]);
 
-  return { notifications, unreadCount, markRead, markAllRead, refresh: () => { fetchNotifications(); fetchUnreadCount(); } };
+  // Initial fetch
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  // Live updates via WebSocket - refresh notifications when any WS message arrives
+  useEffect(() => {
+    const handler = () => refresh();
+    window.addEventListener('ws:message', handler);
+    return () => window.removeEventListener('ws:message', handler);
+  }, [refresh]);
+
+  return { notifications, unreadCount, markRead, markAllRead, refresh };
 }

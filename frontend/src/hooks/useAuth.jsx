@@ -9,7 +9,8 @@ export function AuthProvider({ children }) {
 
   const refreshSession = useCallback(async () => {
     try {
-      const data = await api('/api/auth/refresh', { method: 'POST' });
+      // Use _retried to skip the api() 401 retry logic - we ARE the refresh
+      const data = await api('/api/auth/refresh', { method: 'POST', _retried: true });
       setAccessToken(data.access_token);
       setUser(data.user);
       return true;

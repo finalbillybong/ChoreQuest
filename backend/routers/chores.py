@@ -1,6 +1,8 @@
 from datetime import datetime, date, timezone
 
-from fastapi import APIRouter, Depends, HTTPException
+import os
+import uuid
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy import select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -301,6 +303,7 @@ async def delete_chore(
 @router.post("/{chore_id}/complete", response_model=AssignmentResponse)
 async def complete_chore(
     chore_id: int,
+    file: UploadFile | None = File(None),
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
@@ -326,83 +329,27 @@ async def complete_chore(
         )
 
     chore = assignment.chore
-    base_points = chore.points
 
-    # Mark as completed
+    # Save photo proof if provided
+    if file and file.size and file.size > 0:
+        upload_dir = "/app/data/uploads"
+        os.makedirs(upload_dir, exist_ok=True)
+        ext = os.path.splitext(file.filename or "photo.jpg")[1] or ".jpg"
+        filename = f"{uuid.uuid4().hex}{ext}"
+        filepath = os.path.join(upload_dir, filename)
+        contents = await file.read()
+        with open(filepath, "wb") as f:
+            f.write(contents)
+        assignment.photo_proof_path = filename
+
+    # Mark as completed (pending parent approval - no points yet)
     assignment.status = AssignmentStatus.completed
     assignment.completed_at = now
     assignment.updated_at = now
 
-    # 2. Get active seasonal events
-    result = await db.execute(
-        select(SeasonalEvent).where(
-            SeasonalEvent.is_active == True,
-            SeasonalEvent.start_date <= now,
-            SeasonalEvent.end_date >= now,
-        )
-    )
-    active_events = result.scalars().all()
-
-    # 3. Calculate combined multiplier
-    multiplier = 1.0
-    for event in active_events:
-        multiplier *= event.multiplier
-
-    # 4a. Award base points
-    base_tx = PointTransaction(
-        user_id=user.id,
-        amount=base_points,
-        type=PointType.chore_complete,
-        description=f"Completed: {chore.title}",
-        reference_id=assignment.id,
-    )
-    db.add(base_tx)
-
-    total_awarded = base_points
-
-    # 4b. If multiplier > 1, create a separate event_multiplier transaction for the bonus
-    if multiplier > 1.0:
-        bonus_points = int(base_points * multiplier) - base_points
-        if bonus_points > 0:
-            event_names = ", ".join(e.title for e in active_events)
-            bonus_tx = PointTransaction(
-                user_id=user.id,
-                amount=bonus_points,
-                type=PointType.event_multiplier,
-                description=f"Event bonus ({event_names}): {chore.title}",
-                reference_id=assignment.id,
-            )
-            db.add(bonus_tx)
-            total_awarded += bonus_points
-
-    # 5. Update user points
-    user.points_balance += total_awarded
-    user.total_points_earned += total_awarded
-
-    # 6. Update streak
-    if user.last_streak_date == today:
-        # Already recorded today, skip
-        pass
-    elif user.last_streak_date is not None and (today - user.last_streak_date).days == 1:
-        # Yesterday -- extend streak
-        user.current_streak += 1
-        user.last_streak_date = today
-    elif user.last_streak_date == today:
-        pass
-    else:
-        # Gap or first time -- reset to 1
-        user.current_streak = 1
-        user.last_streak_date = today
-
-    if user.current_streak > user.longest_streak:
-        user.longest_streak = user.current_streak
-
     await db.commit()
 
-    # 7. Check achievements (async, after commit so data is consistent)
-    await check_achievements(db, user)
-
-    # 8. Send WebSocket notification to parents
+    # Send WebSocket notification to parents for approval
     parent_result = await db.execute(
         select(User.id).where(
             User.role.in_([UserRole.parent, UserRole.admin]),
@@ -419,20 +366,20 @@ async def complete_chore(
                 "chore_title": chore.title,
                 "user_id": user.id,
                 "user_display_name": user.display_name,
-                "points": total_awarded,
+                "points": chore.points,
                 "assignment_id": assignment.id,
             },
         },
         parent_ids,
     )
 
-    # 9. Create notification for parents
+    # Create notification for parents
     for pid in parent_ids:
         notif = Notification(
             user_id=pid,
             type=NotificationType.chore_completed,
-            title="Chore Completed",
-            message=f"{user.display_name} completed '{chore.title}' (+{total_awarded} XP)",
+            title="Quest Awaiting Approval",
+            message=f"{user.display_name} completed '{chore.title}' - tap to approve (+{chore.points} XP)",
             reference_type="chore_assignment",
             reference_id=assignment.id,
         )
@@ -465,11 +412,13 @@ async def verify_chore(
 
     # Find a completed (but not yet verified) assignment for today
     result = await db.execute(
-        select(ChoreAssignment).where(
+        select(ChoreAssignment)
+        .where(
             ChoreAssignment.chore_id == chore_id,
             ChoreAssignment.date == today,
             ChoreAssignment.status == AssignmentStatus.completed,
         )
+        .options(selectinload(ChoreAssignment.chore))
     )
     assignment = result.scalar_one_or_none()
     if assignment is None:
@@ -478,11 +427,104 @@ async def verify_chore(
             detail="No completed assignment found to verify for this chore today",
         )
 
+    chore = assignment.chore
+    base_points = chore.points
+
     assignment.status = AssignmentStatus.verified
     assignment.verified_at = now
     assignment.verified_by = user.id
     assignment.updated_at = now
+
+    # Award points now that parent has approved
+    # Get active seasonal events for multiplier
+    ev_result = await db.execute(
+        select(SeasonalEvent).where(
+            SeasonalEvent.is_active == True,
+            SeasonalEvent.start_date <= now,
+            SeasonalEvent.end_date >= now,
+        )
+    )
+    active_events = ev_result.scalars().all()
+
+    multiplier = 1.0
+    for event in active_events:
+        multiplier *= event.multiplier
+
+    base_tx = PointTransaction(
+        user_id=assignment.user_id,
+        amount=base_points,
+        type=PointType.chore_complete,
+        description=f"Completed: {chore.title}",
+        reference_id=assignment.id,
+    )
+    db.add(base_tx)
+
+    total_awarded = base_points
+
+    if multiplier > 1.0:
+        bonus_points = int(base_points * multiplier) - base_points
+        if bonus_points > 0:
+            event_names = ", ".join(e.title for e in active_events)
+            bonus_tx = PointTransaction(
+                user_id=assignment.user_id,
+                amount=bonus_points,
+                type=PointType.event_multiplier,
+                description=f"Event bonus ({event_names}): {chore.title}",
+                reference_id=assignment.id,
+            )
+            db.add(bonus_tx)
+            total_awarded += bonus_points
+
+    # Load assigned user to update points and streak
+    kid_result = await db.execute(select(User).where(User.id == assignment.user_id))
+    kid = kid_result.scalar_one()
+
+    kid.points_balance += total_awarded
+    kid.total_points_earned += total_awarded
+
+    # Update streak
+    if kid.last_streak_date == today:
+        pass
+    elif kid.last_streak_date is not None and (today - kid.last_streak_date).days == 1:
+        kid.current_streak += 1
+        kid.last_streak_date = today
+    else:
+        kid.current_streak = 1
+        kid.last_streak_date = today
+
+    if kid.current_streak > kid.longest_streak:
+        kid.longest_streak = kid.current_streak
+
     await db.commit()
+
+    # Check achievements
+    await check_achievements(db, kid)
+
+    # Notify the kid
+    notif = Notification(
+        user_id=assignment.user_id,
+        type=NotificationType.chore_verified,
+        title="Quest Approved!",
+        message=f"'{chore.title}' was approved! You earned {total_awarded} XP!",
+        reference_type="chore_assignment",
+        reference_id=assignment.id,
+    )
+    db.add(notif)
+    await db.commit()
+
+    # Send WebSocket update to the kid
+    await ws_manager.send_to_user(
+        assignment.user_id,
+        {
+            "type": "chore_verified",
+            "data": {
+                "chore_id": chore.id,
+                "chore_title": chore.title,
+                "points": total_awarded,
+                "assignment_id": assignment.id,
+            },
+        },
+    )
 
     # Reload with relationships
     result = await db.execute(
