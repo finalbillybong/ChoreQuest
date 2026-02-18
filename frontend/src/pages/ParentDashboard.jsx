@@ -12,6 +12,7 @@ import {
   AlertTriangle,
   Users,
   Sparkles,
+  Camera,
 } from 'lucide-react';
 import { api } from '../api/client';
 import { useAuth } from '../hooks/useAuth';
@@ -73,11 +74,11 @@ export default function ParentDashboard() {
       setFamilyStats(familyRes);
       setPendingRedemptions(redemptionsRes);
 
-      // Find assignments needing verification: status === 'completed' with requires_photo
+      // Find ALL assignments needing parent approval (status === 'completed')
       const today = new Date().toISOString().slice(0, 10);
       const todayAssignments = (calendarRes.days && calendarRes.days[today]) || [];
       const needsVerification = todayAssignments.filter(
-        (a) => a.status === 'completed' && a.chore?.requires_photo
+        (a) => a.status === 'completed'
       );
       setPendingVerifications(needsVerification);
     } catch (err) {
@@ -107,7 +108,7 @@ export default function ParentDashboard() {
     setActionLoading((prev) => ({ ...prev, [key]: busy }));
   };
 
-  // Verify a chore
+  // Verify (approve) a chore
   const handleVerifyChore = async (choreId) => {
     const key = `verify-${choreId}`;
     setActionBusy(key, true);
@@ -116,6 +117,20 @@ export default function ParentDashboard() {
       await fetchData();
     } catch (err) {
       setError(err.message || 'Failed to verify chore');
+    } finally {
+      setActionBusy(key, false);
+    }
+  };
+
+  // Reject (uncomplete) a chore
+  const handleRejectChore = async (choreId) => {
+    const key = `reject-${choreId}`;
+    setActionBusy(key, true);
+    try {
+      await api(`/api/chores/${choreId}/uncomplete`, { method: 'POST' });
+      await fetchData();
+    } catch (err) {
+      setError(err.message || 'Failed to reject chore');
     } finally {
       setActionBusy(key, false);
     }
@@ -316,34 +331,68 @@ export default function ParentDashboard() {
             {/* Chore verifications */}
             {pendingVerifications.map((assignment) => {
               const verifyKey = `verify-${assignment.chore_id}`;
+              const rejectKey = `reject-${assignment.chore_id}`;
               const isVerifying = actionLoading[verifyKey];
+              const isRejecting = actionLoading[rejectKey];
+              const isBusy = isVerifying || isRejecting;
 
               return (
                 <div
                   key={`chore-${assignment.id}`}
-                  className="game-panel p-4 flex items-center justify-between gap-3"
+                  className="game-panel p-4"
                 >
-                  <div className="min-w-0 flex-1">
-                    <p className="text-cream font-body text-lg truncate">
-                      {assignment.chore?.title || 'Chore'}
-                    </p>
-                    <p className="text-cream/50 font-body text-base">
-                      by {assignment.user?.display_name || 'Kid'} &middot; Photo verification
-                    </p>
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-cream font-body text-lg truncate">
+                        {assignment.chore?.title || 'Chore'}
+                      </p>
+                      <p className="text-cream/50 font-body text-base">
+                        by {assignment.user?.display_name || 'Kid'}
+                        {assignment.chore?.requires_photo && (
+                          <span className="inline-flex items-center gap-1 ml-2 text-sky">
+                            <Camera size={12} /> Photo attached
+                          </span>
+                        )}
+                        <span className="ml-2 text-gold">+{assignment.chore?.points} XP</span>
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <button
+                        className="game-btn game-btn-gold !px-3 !py-2"
+                        disabled={isBusy}
+                        onClick={() => handleVerifyChore(assignment.chore_id)}
+                        title="Approve"
+                      >
+                        {isVerifying ? (
+                          <Loader2 size={14} className="animate-spin" />
+                        ) : (
+                          <CheckCircle2 size={16} />
+                        )}
+                      </button>
+                      <button
+                        className="game-btn game-btn-red !px-3 !py-2"
+                        disabled={isBusy}
+                        onClick={() => handleRejectChore(assignment.chore_id)}
+                        title="Reject"
+                      >
+                        {isRejecting ? (
+                          <Loader2 size={14} className="animate-spin" />
+                        ) : (
+                          <XCircle size={16} />
+                        )}
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <button
-                      className="game-btn game-btn-gold !px-3 !py-2"
-                      disabled={isVerifying}
-                      onClick={() => handleVerifyChore(assignment.chore_id)}
-                    >
-                      {isVerifying ? (
-                        <Loader2 size={14} className="animate-spin" />
-                      ) : (
-                        <CheckCircle2 size={16} />
-                      )}
-                    </button>
-                  </div>
+                  {/* Show photo proof if attached */}
+                  {assignment.photo_proof_path && (
+                    <div className="mt-3">
+                      <img
+                        src={`/api/uploads/${assignment.photo_proof_path}`}
+                        alt="Photo proof"
+                        className="rounded-lg max-h-48 object-cover border border-[#2a2a4a]"
+                      />
+                    </div>
+                  )}
                 </div>
               );
             })}

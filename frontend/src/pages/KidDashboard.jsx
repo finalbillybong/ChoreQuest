@@ -189,8 +189,8 @@ export default function KidDashboard() {
     }
     if (status === 'completed') {
       return (
-        <span className="flex items-center gap-1 text-emerald font-heading text-[10px]">
-          <CheckCircle2 size={16} /> Done
+        <span className="flex items-center gap-1 text-yellow-400 font-heading text-[10px]">
+          <CheckCircle2 size={16} /> Awaiting Approval
         </span>
       );
     }
