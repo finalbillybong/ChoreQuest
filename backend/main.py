@@ -212,6 +212,9 @@ if STATIC_DIR.is_dir():
 
     @app.get("/{full_path:path}")
     async def serve_frontend(full_path: str):
+        # Never serve frontend HTML for unmatched API routes
+        if full_path.startswith("api/"):
+            return JSONResponse({"detail": "Not found"}, status_code=404)
         file_path = STATIC_DIR / full_path
         if file_path.is_file():
             return FileResponse(str(file_path))

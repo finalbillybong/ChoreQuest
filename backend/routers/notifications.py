@@ -11,7 +11,7 @@ router = APIRouter(prefix="/api/notifications", tags=["notifications"])
 
 
 # ---------- GET / ----------
-@router.get("/", response_model=list[NotificationResponse])
+@router.get("", response_model=list[NotificationResponse])
 async def list_notifications(
     unread_only: bool = Query(False),
     limit: int = Query(20, ge=1, le=100),

@@ -646,10 +646,10 @@ function AuditLogTab() {
               {entries.map((entry, idx) => (
                 <tr key={entry.id || idx} className="hover:bg-[#2a2a4a]/20 transition-colors">
                   <td className="py-2.5 px-2 text-cream/50 font-body text-base whitespace-nowrap">
-                    {formatTimestamp(entry.timestamp || entry.created_at)}
+                    {formatTimestamp(entry.created_at)}
                   </td>
                   <td className="py-2.5 px-2 text-cream font-body text-base">
-                    {entry.username || entry.user || '--'}
+                    {entry.user_id != null ? `User #${entry.user_id}` : '--'}
                   </td>
                   <td className="py-2.5 px-2">
                     <span className="text-sky font-body text-base">

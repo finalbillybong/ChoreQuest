@@ -109,7 +109,7 @@ async def _auto_generate_assignments(
     await db.commit()
 
 
-@router.get("/")
+@router.get("")
 async def get_weekly_calendar(
     week_start: date | None = Query(
         None,

@@ -16,7 +16,13 @@ import {
   Search,
 } from 'lucide-react';
 
-const DIFFICULTY_LABELS = ['Trivial', 'Easy', 'Medium', 'Hard', 'Legendary'];
+const DIFFICULTY_OPTIONS = [
+  { value: 'easy', label: 'Easy', level: 1 },
+  { value: 'medium', label: 'Medium', level: 2 },
+  { value: 'hard', label: 'Hard', level: 3 },
+  { value: 'expert', label: 'Expert', level: 4 },
+];
+const DIFFICULTY_LEVEL = { easy: 1, medium: 2, hard: 3, expert: 4 };
 const RECURRENCE_OPTIONS = [
   { value: 'once', label: 'One-time' },
   { value: 'daily', label: 'Daily' },
@@ -45,13 +51,14 @@ const selectClass =
   'focus:border-gold focus:outline-none transition-colors';
 
 function DifficultyStars({ level }) {
+  const numLevel = typeof level === 'string' ? (DIFFICULTY_LEVEL[level] || 1) : (level || 1);
   return (
     <div className="flex items-center gap-0.5">
-      {[1, 2, 3, 4, 5].map((i) => (
+      {[1, 2, 3, 4].map((i) => (
         <Star
           key={i}
           size={14}
-          className={i <= level ? 'text-gold fill-gold' : 'text-cream/20'}
+          className={i <= numLevel ? 'text-gold fill-gold' : 'text-cream/20'}
         />
       ))}
     </div>
@@ -59,10 +66,11 @@ function DifficultyStars({ level }) {
 }
 
 function CategoryBadge({ category }) {
-  const colorClass = CATEGORY_COLORS[category?.toLowerCase()] || CATEGORY_COLORS.default;
+  const catName = typeof category === 'object' ? category?.name : category;
+  const colorClass = CATEGORY_COLORS[catName?.toLowerCase()] || CATEGORY_COLORS.default;
   return (
     <span className={`inline-block px-2 py-0.5 rounded-full text-sm border ${colorClass} capitalize`}>
-      {category || 'General'}
+      {catName || 'General'}
     </span>
   );
 }
@@ -86,12 +94,12 @@ const emptyForm = {
   title: '',
   description: '',
   points: 10,
-  difficulty: 1,
-  category: '',
+  difficulty: 'easy',
+  category_id: '',
   recurrence: 'once',
   custom_days: [],
   requires_photo: false,
-  assigned_kids: [],
+  assigned_user_ids: [],
 };
 
 export default function Chores() {
@@ -144,18 +152,18 @@ export default function Chores() {
   const fetchKids = useCallback(async () => {
     if (!isParent) return;
     try {
-      let data;
+      // /api/stats/family returns a list of kid objects directly
+      const data = await api('/api/stats/family');
+      setKids(Array.isArray(data) ? data : []);
+    } catch {
+      // Fallback: fetch all users and filter to kids
       try {
-        data = await api('/api/stats/family');
-        const members = data.members || data.kids || data.children || [];
-        setKids(members.filter((m) => m.role === 'kid' || m.is_kid));
-      } catch {
-        data = await api('/api/admin/users');
+        const data = await api('/api/admin/users');
         const users = Array.isArray(data) ? data : data.users || [];
         setKids(users.filter((u) => u.role === 'kid'));
+      } catch {
+        // Non-critical
       }
-    } catch {
-      // Non-critical
     }
   }, [isParent]);
 
@@ -167,8 +175,8 @@ export default function Chores() {
 
   // Filtering
   const filteredChores = chores.filter((chore) => {
-    if (filterCategory && chore.category !== filterCategory) return false;
-    if (filterDifficulty && chore.difficulty !== Number(filterDifficulty)) return false;
+    if (filterCategory && chore.category?.name !== filterCategory) return false;
+    if (filterDifficulty && chore.difficulty !== filterDifficulty) return false;
     if (
       searchTerm &&
       !chore.title?.toLowerCase().includes(searchTerm.toLowerCase()) &&
@@ -192,12 +200,12 @@ export default function Chores() {
       title: chore.title || '',
       description: chore.description || '',
       points: chore.points || 10,
-      difficulty: chore.difficulty || 1,
-      category: chore.category || '',
+      difficulty: chore.difficulty || 'easy',
+      category_id: chore.category_id || '',
       recurrence: chore.recurrence || 'once',
       custom_days: chore.custom_days || [],
       requires_photo: chore.requires_photo || false,
-      assigned_kids: chore.assigned_kids || chore.assigned_to || [],
+      assigned_user_ids: chore.assigned_user_ids || chore.assigned_kids || chore.assigned_to || [],
     });
     setFormError('');
     setShowModal(true);
@@ -225,9 +233,9 @@ export default function Chores() {
   const toggleKid = (kidId) => {
     setForm((prev) => ({
       ...prev,
-      assigned_kids: prev.assigned_kids.includes(kidId)
-        ? prev.assigned_kids.filter((id) => id !== kidId)
-        : [...prev.assigned_kids, kidId],
+      assigned_user_ids: prev.assigned_user_ids.includes(kidId)
+        ? prev.assigned_user_ids.filter((id) => id !== kidId)
+        : [...prev.assigned_user_ids, kidId],
     }));
   };
 
@@ -246,14 +254,20 @@ export default function Chores() {
 
     const body = {
       title: form.title.trim(),
-      description: form.description.trim(),
+      description: form.description.trim() || null,
       points: Number(form.points),
-      difficulty: Number(form.difficulty),
-      category: form.category || undefined,
+      difficulty: form.difficulty,
+      category_id: form.category_id ? Number(form.category_id) : undefined,
       recurrence: form.recurrence,
       requires_photo: form.requires_photo,
-      assigned_kids: form.assigned_kids.length > 0 ? form.assigned_kids : undefined,
+      assigned_user_ids: form.assigned_user_ids.length > 0 ? form.assigned_user_ids : [],
     };
+
+    if (!body.category_id) {
+      setFormError('Please select a category for this quest.');
+      setSubmitting(false);
+      return;
+    }
 
     if (form.recurrence === 'custom') {
       body.custom_days = form.custom_days;
@@ -356,8 +370,8 @@ export default function Chores() {
           >
             <option value="">All Categories</option>
             {categories.map((cat) => (
-              <option key={typeof cat === 'string' ? cat : cat.id || cat.name} value={typeof cat === 'string' ? cat : cat.name || cat.id}>
-                {typeof cat === 'string' ? cat : cat.label || cat.name}
+              <option key={cat.id} value={cat.name}>
+                {cat.name}
               </option>
             ))}
           </select>
@@ -369,9 +383,9 @@ export default function Chores() {
             className={selectClass}
           >
             <option value="">All Difficulties</option>
-            {DIFFICULTY_LABELS.map((label, i) => (
-              <option key={i + 1} value={i + 1}>
-                {label}
+            {DIFFICULTY_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
               </option>
             ))}
           </select>
@@ -552,12 +566,12 @@ export default function Chores() {
               </label>
               <select
                 value={form.difficulty}
-                onChange={(e) => updateForm('difficulty', Number(e.target.value))}
+                onChange={(e) => updateForm('difficulty', e.target.value)}
                 className={`${selectClass} w-full p-3`}
               >
-                {DIFFICULTY_LABELS.map((label, i) => (
-                  <option key={i + 1} value={i + 1}>
-                    {label}
+                {DIFFICULTY_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
                   </option>
                 ))}
               </select>
@@ -570,17 +584,17 @@ export default function Chores() {
               Category
             </label>
             <select
-              value={form.category}
-              onChange={(e) => updateForm('category', e.target.value)}
+              value={form.category_id}
+              onChange={(e) => updateForm('category_id', e.target.value)}
               className={`${selectClass} w-full p-3`}
             >
-              <option value="">None</option>
+              <option value="">Select category...</option>
               {categories.map((cat) => (
                 <option
-                  key={typeof cat === 'string' ? cat : cat.id || cat.name}
-                  value={typeof cat === 'string' ? cat : cat.name || cat.id}
+                  key={cat.id}
+                  value={cat.id}
                 >
-                  {typeof cat === 'string' ? cat : cat.label || cat.name}
+                  {cat.name}
                 </option>
               ))}
             </select>
@@ -668,7 +682,7 @@ export default function Chores() {
                   >
                     <input
                       type="checkbox"
-                      checked={form.assigned_kids.includes(kid.id)}
+                      checked={form.assigned_user_ids.includes(kid.id)}
                       onChange={() => toggleKid(kid.id)}
                       className="w-4 h-4 accent-gold"
                     />

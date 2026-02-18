@@ -115,7 +115,7 @@ async def delete_category(
 # ========== Chores ==========
 
 # ---------- GET / ----------
-@router.get("/", response_model=list[ChoreResponse])
+@router.get("", response_model=list[ChoreResponse])
 async def list_chores(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
@@ -144,7 +144,7 @@ async def list_chores(
 
 
 # ---------- POST / ----------
-@router.post("/", response_model=ChoreResponse, status_code=201)
+@router.post("", response_model=ChoreResponse, status_code=201)
 async def create_chore(
     body: ChoreCreate,
     db: AsyncSession = Depends(get_db),
