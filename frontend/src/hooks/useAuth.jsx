@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { api, setAccessToken, clearAccessToken } from '../api/client';
 
 const AuthContext = createContext(null);
@@ -6,19 +6,30 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const refreshPromiseRef = useRef(null);
 
   const refreshSession = useCallback(async () => {
-    try {
-      // Use _retried to skip the api() 401 retry logic - we ARE the refresh
-      const data = await api('/api/auth/refresh', { method: 'POST', _retried: true });
-      setAccessToken(data.access_token);
-      setUser(data.user);
-      return true;
-    } catch {
-      clearAccessToken();
-      setUser(null);
-      return false;
-    }
+    // Deduplicate concurrent refresh calls (prevents token-reuse revocation
+    // when React StrictMode double-fires the mount effect)
+    if (refreshPromiseRef.current) return refreshPromiseRef.current;
+
+    refreshPromiseRef.current = (async () => {
+      try {
+        // Use _retried to skip the api() 401 retry logic - we ARE the refresh
+        const data = await api('/api/auth/refresh', { method: 'POST', _retried: true });
+        setAccessToken(data.access_token);
+        setUser(data.user);
+        return true;
+      } catch {
+        clearAccessToken();
+        setUser(null);
+        return false;
+      } finally {
+        refreshPromiseRef.current = null;
+      }
+    })();
+
+    return refreshPromiseRef.current;
   }, []);
 
   useEffect(() => {

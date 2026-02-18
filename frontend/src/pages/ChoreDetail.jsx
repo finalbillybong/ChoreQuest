@@ -202,8 +202,9 @@ export default function ChoreDetail() {
 
   if (!chore) return null;
 
+  const categoryName = typeof chore.category === 'object' ? chore.category?.name : chore.category;
   const categoryColorClass =
-    CATEGORY_COLORS[chore.category?.toLowerCase()] || CATEGORY_COLORS.default;
+    CATEGORY_COLORS[categoryName?.toLowerCase()] || CATEGORY_COLORS.default;
 
   // Determine today's assignment
   const assignments = chore.assignments || chore.history || [];
@@ -279,7 +280,7 @@ export default function ChoreDetail() {
               <span
                 className={`inline-block px-2 py-0.5 rounded-full text-sm border capitalize ${categoryColorClass}`}
               >
-                {chore.category || 'General'}
+                {categoryName || 'General'}
               </span>
             </div>
           </div>
