@@ -1,0 +1,157 @@
+import random
+from datetime import date, timedelta
+
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import select, func
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from backend.database import get_db
+from backend.models import (
+    SpinResult,
+    ChoreAssignment,
+    AssignmentStatus,
+    User,
+    PointTransaction,
+    PointType,
+)
+from backend.schemas import SpinResultResponse, SpinAvailabilityResponse
+from backend.dependencies import get_current_user
+from backend.achievements import check_achievements
+from backend.websocket_manager import ws_manager
+
+router = APIRouter(prefix="/api/spin", tags=["spin"])
+
+SPIN_MIN = 1
+SPIN_MAX = 25
+
+
+async def _can_spin_today(db: AsyncSession, user: User) -> tuple[bool, int | None]:
+    """
+    Determine if the user is eligible to spin today.
+
+    Rules:
+    1. The user must have completed all of yesterday's assigned chores
+       (or had no assignments yesterday).
+    2. The user must not already have a spin result for today.
+
+    Returns (can_spin, last_result_points_or_none).
+    """
+    today = date.today()
+    yesterday = today - timedelta(days=1)
+
+    # Check if already spun today
+    result = await db.execute(
+        select(SpinResult).where(
+            SpinResult.user_id == user.id,
+            SpinResult.spin_date == today,
+        )
+    )
+    today_spin = result.scalar_one_or_none()
+
+    # Get last spin result for display
+    last_result: int | None = None
+    last_spin_query = await db.execute(
+        select(SpinResult)
+        .where(SpinResult.user_id == user.id)
+        .order_by(SpinResult.created_at.desc())
+        .limit(1)
+    )
+    last_spin = last_spin_query.scalar_one_or_none()
+    if last_spin is not None:
+        last_result = last_spin.points_won
+
+    if today_spin is not None:
+        return False, last_result
+
+    # Check yesterday's chore assignments
+    result = await db.execute(
+        select(ChoreAssignment).where(
+            ChoreAssignment.user_id == user.id,
+            ChoreAssignment.date == yesterday,
+        )
+    )
+    yesterday_assignments = result.scalars().all()
+
+    # If no assignments yesterday, eligible
+    if not yesterday_assignments:
+        return True, last_result
+
+    # All yesterday assignments must be completed or verified (not pending/skipped)
+    all_done = all(
+        a.status in (AssignmentStatus.completed, AssignmentStatus.verified)
+        for a in yesterday_assignments
+    )
+    return all_done, last_result
+
+
+# ---------- GET /availability ----------
+@router.get("/availability", response_model=SpinAvailabilityResponse)
+async def check_availability(
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Check if the user can spin today."""
+    can_spin, last_result = await _can_spin_today(db, user)
+    return SpinAvailabilityResponse(can_spin=can_spin, last_result=last_result)
+
+
+# ---------- POST /spin ----------
+@router.post("/spin", response_model=SpinResultResponse)
+async def execute_spin(
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Execute the daily spin. Validates eligibility, generates random XP, awards points."""
+    can_spin, _ = await _can_spin_today(db, user)
+    if not can_spin:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot spin today. Either you already spun or did not complete yesterday's chores.",
+        )
+
+    # Random points between SPIN_MIN and SPIN_MAX inclusive
+    points_won = random.randint(SPIN_MIN, SPIN_MAX)
+    today = date.today()
+
+    # Create spin result
+    spin_result = SpinResult(
+        user_id=user.id,
+        points_won=points_won,
+        spin_date=today,
+    )
+    db.add(spin_result)
+
+    # Award XP via PointTransaction
+    transaction = PointTransaction(
+        user_id=user.id,
+        amount=points_won,
+        type=PointType.spin,
+        description=f"Daily spin: won {points_won} XP",
+        reference_id=None,
+        created_by=None,
+    )
+    db.add(transaction)
+
+    # Update user balance
+    user.points_balance += points_won
+    user.total_points_earned += points_won
+
+    await db.commit()
+    await db.refresh(spin_result)
+
+    # Check achievements (non-blocking on failure)
+    try:
+        await check_achievements(db, user)
+    except Exception:
+        pass
+
+    # Notify via WebSocket
+    try:
+        await ws_manager.send_to_user(user.id, {
+            "type": "spin_result",
+            "data": {"points_won": points_won},
+        })
+    except Exception:
+        pass
+
+    return SpinResultResponse(points_won=points_won)

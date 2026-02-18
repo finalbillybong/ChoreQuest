@@ -1,0 +1,96 @@
+@import "tailwindcss";
+
+@theme {
+  --color-navy: #0f0e17;
+  --color-navy-light: #1a1a2e;
+  --color-navy-mid: #16213e;
+  --color-gold: #f9d71c;
+  --color-emerald: #2de2a6;
+  --color-crimson: #ff4444;
+  --color-purple: #b388ff;
+  --color-sky: #64dfdf;
+  --color-cream: #fffffe;
+  --font-heading: "Press Start 2P", monospace;
+  --font-body: "VT323", "Inter", sans-serif;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  font-family: var(--font-body);
+  font-size: 18px;
+  background: var(--color-navy);
+  color: var(--color-cream);
+  min-height: 100dvh;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+}
+
+/* Game panel border style */
+.game-panel {
+  background: linear-gradient(135deg, var(--color-navy-light), var(--color-navy-mid));
+  border: 3px solid #2a2a4a;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 4px 12px rgba(0,0,0,0.4);
+  border-radius: 8px;
+}
+
+.game-btn {
+  font-family: var(--font-heading);
+  font-size: 10px;
+  padding: 12px 24px;
+  border: 3px solid;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: transform 0.1s, filter 0.1s;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.game-btn:hover {
+  transform: scale(1.05);
+  filter: brightness(1.1);
+}
+
+.game-btn:active {
+  transform: scale(0.98);
+}
+
+.game-btn-gold {
+  background: var(--color-gold);
+  border-color: #d4b516;
+  color: var(--color-navy);
+}
+
+.game-btn-blue {
+  background: var(--color-sky);
+  border-color: #4cb8b8;
+  color: var(--color-navy);
+}
+
+.game-btn-red {
+  background: var(--color-crimson);
+  border-color: #cc3636;
+  color: white;
+}
+
+.game-btn-purple {
+  background: var(--color-purple);
+  border-color: #8a6acc;
+  color: var(--color-navy);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-navy);
+}
+::-webkit-scrollbar-thumb {
+  background: #2a2a4a;
+  border-radius: 3px;
+}
