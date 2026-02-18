@@ -95,17 +95,12 @@ export default function Calendar() {
     setError('');
     try {
       const data = await api(`/api/calendar?week_start=${weekStart}`);
-      // Organize assignments by date
+      // Use the days map returned by the backend, ensuring all 7 days exist
       const byDay = {};
       for (let i = 0; i < 7; i++) {
-        byDay[addDays(weekStart, i)] = [];
+        const dayKey = addDays(weekStart, i);
+        byDay[dayKey] = data.days?.[dayKey] || [];
       }
-      (data.assignments || data || []).forEach((a) => {
-        const day = a.due_date?.slice(0, 10) || a.date?.slice(0, 10);
-        if (day && byDay[day]) {
-          byDay[day].push(a);
-        }
-      });
       setAssignments(byDay);
     } catch (err) {
       setError(err.message || 'Failed to load calendar');
@@ -282,12 +277,12 @@ export default function Calendar() {
                                 style.textClass || 'text-cream'
                               }`}
                             >
-                              {a.chore_title || a.title || 'Quest'}
+                              {a.chore?.title || a.chore_title || 'Quest'}
                             </p>
                             {/* Show assigned kid for parents */}
-                            {!isKid && a.assigned_to_name && (
+                            {!isKid && (a.user?.display_name || a.assigned_to_name) && (
                               <p className="text-[11px] text-purple font-body mt-0.5 truncate">
-                                {a.assigned_to_name}
+                                {a.user?.display_name || a.assigned_to_name}
                               </p>
                             )}
                           </div>
@@ -354,7 +349,7 @@ export default function Calendar() {
           <p className="text-cream/80 text-base">
             Trade{' '}
             <span className="text-gold font-heading text-[10px]">
-              {tradeAssignment?.chore_title || tradeAssignment?.title}
+              {tradeAssignment?.chore?.title || tradeAssignment?.chore_title || 'Quest'}
             </span>{' '}
             with another hero:
           </p>
