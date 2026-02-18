@@ -62,7 +62,7 @@ export default function Rewards() {
   // Redemption action state
   const [processingRedemption, setProcessingRedemption] = useState(null);
 
-  const userXp = user?.points ?? user?.xp ?? user?.total_points ?? 0;
+  const userXp = user?.points_balance ?? 0;
 
   const fetchRewards = useCallback(async () => {
     try {
@@ -133,7 +133,7 @@ export default function Rewards() {
       return;
     }
     if (Number(form.point_cost) < 1) {
-      setFormError('The cost must be at least 1 gold.');
+      setFormError('The cost must be at least 1 XP.');
       return;
     }
 
@@ -274,8 +274,8 @@ export default function Rewards() {
               <Coins size={28} className="text-gold" />
             </div>
             <div className="text-center">
-              <p className="text-cream/50 font-body text-base">Your Gold Balance</p>
-              <p className="text-gold font-heading text-lg sm:text-xl">{userXp} XP</p>
+              <p className="text-cream/50 font-body text-base">Your XP Balance</p>
+              <p className="text-gold font-heading text-lg sm:text-xl">{userXp.toLocaleString()} XP</p>
             </div>
           </div>
         </div>
@@ -358,7 +358,7 @@ export default function Rewards() {
                 {/* Cost */}
                 <div className="flex items-center gap-2">
                   <Coins size={16} className="text-gold" />
-                  <span className="text-gold font-heading text-[10px]">{cost} Gold</span>
+                  <span className="text-gold font-heading text-[10px]">{cost} XP</span>
                 </div>
 
                 {/* Stock indicator */}
@@ -393,7 +393,7 @@ export default function Rewards() {
                       {redeemingId === reward.id
                         ? 'Claiming...'
                         : !affordable
-                        ? 'Not Enough Gold'
+                        ? 'Not Enough XP'
                         : outOfStock
                         ? 'Sold Out'
                         : 'Redeem'}
@@ -462,7 +462,7 @@ export default function Rewards() {
                       </span>
                       <span className="flex items-center gap-1 text-gold text-sm">
                         <Coins size={12} />
-                        {redemption.points || redemption.point_cost || redemption.reward?.point_cost || 0} Gold
+                        {redemption.points_spent || redemption.points || redemption.reward?.point_cost || 0} XP
                       </span>
                     </div>
                   </div>
@@ -557,7 +557,7 @@ export default function Rewards() {
           {/* Cost */}
           <div>
             <label className="block text-gold/80 text-sm font-heading mb-1 tracking-wide">
-              Cost (Gold)
+              Cost (XP)
             </label>
             <input
               type="number"
