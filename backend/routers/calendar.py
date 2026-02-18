@@ -140,10 +140,13 @@ async def get_weekly_calendar(
     # Auto-generate missing assignments
     await _auto_generate_assignments(db, week_start)
 
-    # Fetch all assignments for the week with chore and user eager-loaded
+    # Fetch all assignments for the week with chore (+category) and user eager-loaded
     result = await db.execute(
         select(ChoreAssignment)
-        .options(selectinload(ChoreAssignment.chore), selectinload(ChoreAssignment.user))
+        .options(
+            selectinload(ChoreAssignment.chore).selectinload(Chore.category),
+            selectinload(ChoreAssignment.user),
+        )
         .where(
             ChoreAssignment.date >= week_start,
             ChoreAssignment.date <= week_end,
@@ -152,7 +155,7 @@ async def get_weekly_calendar(
     )
     assignments = result.scalars().all()
 
-    # Group by day
+    # Group by day — manually build dicts to avoid lazy-load issues
     grouped: dict[str, list] = {}
     for day_offset in range(7):
         day = week_start + timedelta(days=day_offset)
@@ -160,10 +163,57 @@ async def get_weekly_calendar(
 
     for a in assignments:
         day_key = a.date.isoformat()
-        if day_key in grouped:
-            grouped[day_key].append(
-                AssignmentResponse.model_validate(a)
-            )
+        if day_key not in grouped:
+            continue
+        entry = {
+            "id": a.id,
+            "chore_id": a.chore_id,
+            "user_id": a.user_id,
+            "date": a.date.isoformat(),
+            "status": a.status.value if a.status else "pending",
+            "completed_at": a.completed_at.isoformat() if a.completed_at else None,
+            "verified_at": a.verified_at.isoformat() if a.verified_at else None,
+            "verified_by": a.verified_by,
+            "photo_proof_path": a.photo_proof_path,
+        }
+        if a.chore:
+            entry["chore"] = {
+                "id": a.chore.id,
+                "title": a.chore.title,
+                "description": a.chore.description,
+                "points": a.chore.points,
+                "difficulty": a.chore.difficulty.value if a.chore.difficulty else None,
+                "icon": a.chore.icon,
+                "category_id": a.chore.category_id,
+                "category": {
+                    "id": a.chore.category.id,
+                    "name": a.chore.category.name,
+                    "icon": a.chore.category.icon,
+                    "colour": a.chore.category.colour,
+                    "is_default": a.chore.category.is_default,
+                } if a.chore.category else None,
+                "recurrence": a.chore.recurrence.value if a.chore.recurrence else None,
+                "custom_days": a.chore.custom_days,
+                "requires_photo": a.chore.requires_photo,
+                "is_active": a.chore.is_active,
+                "created_by": a.chore.created_by,
+                "created_at": a.chore.created_at.isoformat() if a.chore.created_at else None,
+            }
+        if a.user:
+            entry["user"] = {
+                "id": a.user.id,
+                "username": a.user.username,
+                "display_name": a.user.display_name,
+                "role": a.user.role.value if a.user.role else None,
+                "points_balance": a.user.points_balance,
+                "total_points_earned": a.user.total_points_earned,
+                "current_streak": a.user.current_streak,
+                "longest_streak": a.user.longest_streak,
+                "avatar_config": a.user.avatar_config,
+                "is_active": a.user.is_active,
+                "created_at": a.user.created_at.isoformat() if a.user.created_at else None,
+            }
+        grouped[day_key].append(entry)
 
     return {
         "week_start": week_start.isoformat(),

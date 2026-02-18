@@ -8,16 +8,28 @@ import {
   CalendarDays,
   Trophy,
   UserCircle,
+  Settings,
+  ShieldCheck,
+  Home,
 } from 'lucide-react';
 import AvatarDisplay from './AvatarDisplay';
 
-const navItems = [
-  { label: 'Quests', icon: Swords, path: '/chores' },
-  { label: 'Rewards', icon: Gift, path: '/rewards' },
-  { label: 'Calendar', icon: CalendarDays, path: '/calendar' },
-  { label: 'Board', icon: Trophy, path: '/leaderboard' },
-  { label: 'Profile', icon: UserCircle, path: '/profile' },
-];
+function getNavItems(role) {
+  const items = [
+    { label: 'Home', icon: Home, path: '/' },
+    { label: 'Quests', icon: Swords, path: '/chores' },
+    { label: 'Rewards', icon: Gift, path: '/rewards' },
+    { label: 'Calendar', icon: CalendarDays, path: '/calendar' },
+    { label: 'Board', icon: Trophy, path: '/leaderboard' },
+  ];
+  if (role === 'parent' || role === 'admin') {
+    items.push({ label: 'Settings', icon: Settings, path: '/settings' });
+  }
+  if (role === 'admin') {
+    items.push({ label: 'Admin', icon: ShieldCheck, path: '/admin' });
+  }
+  return items;
+}
 
 export default function Layout({ children }) {
   const navigate = useNavigate();
@@ -25,7 +37,10 @@ export default function Layout({ children }) {
   const { user } = useAuth();
   const { unreadCount } = useNotifications();
 
-  const isActive = (path) => location.pathname === path || location.pathname.startsWith(path + '/');
+  const navItems = getNavItems(user?.role);
+  const isActive = (path) => path === '/' ? location.pathname === '/' : (location.pathname === path || location.pathname.startsWith(path + '/'));
+  // Bottom nav on mobile: show max 5 most important items
+  const mobileNavItems = navItems.slice(0, 5);
 
   return (
     <div className="min-h-screen bg-navy flex">
@@ -137,7 +152,7 @@ export default function Layout({ children }) {
       {/* ─── Mobile Bottom Nav ─── */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-navy-light/95 backdrop-blur-sm border-t border-[#2a2a4a]">
         <div className="flex items-center justify-around h-16 px-1">
-          {navItems.map((item) => {
+          {mobileNavItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.path);
             return (

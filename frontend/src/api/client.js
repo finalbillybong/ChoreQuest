@@ -70,9 +70,22 @@ export async function api(path, options = {}) {
   if (res.status === 204) return null;
 
   if (!res.ok) {
-    const data = await res.json().catch(() => ({ detail: 'Request failed' }));
-    throw new Error(data.detail || 'Request failed');
+    const text = await res.text();
+    let detail = 'Request failed';
+    try {
+      const data = JSON.parse(text);
+      detail = data.detail || detail;
+    } catch {
+      // Response wasn't JSON (server error page, etc.)
+    }
+    throw new Error(detail);
   }
 
-  return res.json();
+  const text = await res.text();
+  if (!text) return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error('Invalid response from server');
+  }
 }
