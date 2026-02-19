@@ -7,8 +7,6 @@ import {
   Save,
   Shield,
   Loader2,
-  ToggleLeft,
-  ToggleRight,
   Award,
 } from 'lucide-react';
 
