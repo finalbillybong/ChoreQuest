@@ -67,6 +67,7 @@ async def create_category(
     db.add(category)
     await db.commit()
     await db.refresh(category)
+    await ws_manager.broadcast({"type": "data_changed", "data": {"entity": "category"}}, exclude_user=user.id)
     return CategoryResponse.model_validate(category)
 
 
@@ -90,6 +91,7 @@ async def update_category(
     category.colour = body.colour
     await db.commit()
     await db.refresh(category)
+    await ws_manager.broadcast({"type": "data_changed", "data": {"entity": "category"}}, exclude_user=user.id)
     return CategoryResponse.model_validate(category)
 
 
@@ -111,6 +113,7 @@ async def delete_category(
 
     await db.delete(category)
     await db.commit()
+    await ws_manager.broadcast({"type": "data_changed", "data": {"entity": "category"}}, exclude_user=user.id)
     return None
 
 

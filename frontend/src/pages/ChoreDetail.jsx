@@ -109,6 +109,13 @@ export default function ChoreDetail() {
     fetchChore();
   }, [fetchChore]);
 
+  // Live updates via WebSocket
+  useEffect(() => {
+    const handler = () => { fetchChore(); };
+    window.addEventListener('ws:message', handler);
+    return () => window.removeEventListener('ws:message', handler);
+  }, [fetchChore]);
+
   const handleComplete = async () => {
     setActionLoading('complete');
     setActionMessage('');

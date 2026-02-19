@@ -8,6 +8,7 @@ from backend.database import get_db
 from backend.models import ChoreRotation
 from backend.schemas import RotationCreate, RotationUpdate, RotationResponse
 from backend.dependencies import require_parent
+from backend.websocket_manager import ws_manager
 
 router = APIRouter(prefix="/api/rotations", tags=["rotations"])
 
@@ -52,6 +53,7 @@ async def create_rotation(
     db.add(rotation)
     await db.commit()
     await db.refresh(rotation)
+    await ws_manager.broadcast({"type": "data_changed", "data": {"entity": "rotation"}})
     return RotationResponse.model_validate(rotation)
 
 
@@ -85,6 +87,7 @@ async def update_rotation(
     rotation.updated_at = datetime.now(timezone.utc)
     await db.commit()
     await db.refresh(rotation)
+    await ws_manager.broadcast({"type": "data_changed", "data": {"entity": "rotation"}})
     return RotationResponse.model_validate(rotation)
 
 
@@ -105,6 +108,7 @@ async def delete_rotation(
 
     await db.delete(rotation)
     await db.commit()
+    await ws_manager.broadcast({"type": "data_changed", "data": {"entity": "rotation"}})
     return {"detail": "Rotation deleted"}
 
 
@@ -134,4 +138,5 @@ async def advance_rotation(
 
     await db.commit()
     await db.refresh(rotation)
+    await ws_manager.broadcast({"type": "data_changed", "data": {"entity": "rotation"}})
     return RotationResponse.model_validate(rotation)

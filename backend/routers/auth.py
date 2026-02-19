@@ -30,6 +30,7 @@ from backend.auth import (
 )
 from backend.dependencies import get_current_user
 from backend.rate_limit import rate_limiter
+from backend.websocket_manager import ws_manager
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -310,6 +311,7 @@ async def update_me(
     user.updated_at = datetime.now(timezone.utc)
     await db.commit()
     await db.refresh(user)
+    await ws_manager.broadcast({"type": "data_changed", "data": {"entity": "user"}}, exclude_user=user.id)
     return UserResponse.model_validate(user)
 
 

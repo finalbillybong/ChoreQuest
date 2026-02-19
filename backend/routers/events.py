@@ -8,6 +8,7 @@ from backend.database import get_db
 from backend.models import SeasonalEvent
 from backend.schemas import EventCreate, EventUpdate, EventResponse
 from backend.dependencies import get_current_user, require_parent
+from backend.websocket_manager import ws_manager
 
 router = APIRouter(prefix="/api/events", tags=["events"])
 
@@ -56,6 +57,7 @@ async def create_event(
     db.add(event)
     await db.commit()
     await db.refresh(event)
+    await ws_manager.broadcast({"type": "data_changed", "data": {"entity": "event"}}, exclude_user=parent.id)
     return _event_to_response(event)
 
 
@@ -90,6 +92,7 @@ async def update_event(
 
     await db.commit()
     await db.refresh(event)
+    await ws_manager.broadcast({"type": "data_changed", "data": {"entity": "event"}})
     return _event_to_response(event)
 
 
@@ -108,4 +111,5 @@ async def delete_event(
 
     await db.delete(event)
     await db.commit()
+    await ws_manager.broadcast({"type": "data_changed", "data": {"entity": "event"}})
     return {"detail": "Event deleted"}

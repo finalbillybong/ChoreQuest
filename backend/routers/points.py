@@ -180,4 +180,9 @@ async def adjust_points(
     await db.commit()
     await db.refresh(tx)
 
+    await ws_manager.send_to_user(user.id, {
+        "type": "data_changed",
+        "data": {"entity": "points", "new_balance": user.points_balance},
+    })
+
     return tx

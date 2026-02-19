@@ -99,6 +99,7 @@ async def update_wishlist_item(
     item.updated_at = datetime.now(timezone.utc)
     await db.commit()
     await db.refresh(item)
+    await ws_manager.broadcast({"type": "data_changed", "data": {"entity": "wishlist"}}, exclude_user=user.id)
     return WishlistResponse.model_validate(item)
 
 

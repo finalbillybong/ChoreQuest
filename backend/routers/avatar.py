@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.database import get_db
 from backend.models import User
 from backend.dependencies import get_current_user
+from backend.websocket_manager import ws_manager
 
 router = APIRouter(prefix="/api/avatar", tags=["avatar"])
 
@@ -89,4 +90,5 @@ async def save_avatar(
     user.updated_at = datetime.now(timezone.utc)
     await db.commit()
     await db.refresh(user)
+    await ws_manager.broadcast({"type": "data_changed", "data": {"entity": "user"}}, exclude_user=user.id)
     return {"detail": "Avatar updated", "avatar_config": user.avatar_config}
