@@ -14,6 +14,8 @@ import {
 } from 'lucide-react';
 import { api } from '../api/client';
 import { useAuth } from '../hooks/useAuth';
+import { useTheme } from '../hooks/useTheme';
+import { themedTitle } from '../utils/questThemeText';
 import PointCounter from '../components/PointCounter';
 import StreakDisplay from '../components/StreakDisplay';
 import SpinWheel from '../components/SpinWheel';
@@ -69,6 +71,7 @@ const completeButtonVariants = {
 
 export default function KidDashboard() {
   const { user, updateUser } = useAuth();
+  const { colorTheme } = useTheme();
   const navigate = useNavigate();
 
   // data state
@@ -97,8 +100,9 @@ export default function KidDashboard() {
 
       setChores(choresRes);
 
-      // Filter calendar assignments to today only
-      const todayAssignments = (calendarRes.days && calendarRes.days[today]) || [];
+      // Filter calendar assignments to today and this user only
+      const allToday = (calendarRes.days && calendarRes.days[today]) || [];
+      const todayAssignments = allToday.filter((a) => a.user_id === user?.id);
       setAssignments(todayAssignments);
 
       setSpinAvailability(spinRes);
@@ -107,7 +111,7 @@ export default function KidDashboard() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user?.id]);
 
   useEffect(() => {
     fetchData();
@@ -240,7 +244,7 @@ export default function KidDashboard() {
                       {/* Title row */}
                       <div className="flex items-center justify-between gap-2 mb-1.5">
                         <h3 className="text-cream text-sm font-semibold truncate">
-                          {chore.title}
+                          {themedTitle(chore.title, colorTheme)}
                         </h3>
                         <ChevronRight size={16} className="text-muted flex-shrink-0" />
                       </div>

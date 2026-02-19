@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
 import { useAuth } from '../hooks/useAuth';
+import { useTheme } from '../hooks/useTheme';
+import { themedTitle, themedDescription } from '../utils/questThemeText';
 import Modal from '../components/Modal';
 import {
   Swords,
@@ -118,6 +120,7 @@ function todayISO() {
 
 export default function Chores() {
   const { user, updateUser } = useAuth();
+  const { colorTheme } = useTheme();
   const navigate = useNavigate();
   const isParent = user?.role === 'parent' || user?.role === 'admin';
   const isKid = user?.role === 'kid';
@@ -526,7 +529,7 @@ export default function Chores() {
                 {/* Title row */}
                 <div className="flex items-start justify-between gap-2">
                   <h3 className="text-cream text-lg font-bold leading-relaxed flex-1">
-                    {chore.title}
+                    {themedTitle(chore.title, colorTheme)}
                   </h3>
                   {isParent && (
                     <div className="flex items-center gap-1 flex-shrink-0">
@@ -560,7 +563,7 @@ export default function Chores() {
                 {/* Description */}
                 {chore.description && (
                   <p className="text-muted text-sm line-clamp-2">
-                    {chore.description}
+                    {themedDescription(chore.title, chore.description, colorTheme)}
                   </p>
                 )}
 

@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
 import { useAuth } from '../hooks/useAuth';
+import { useTheme } from '../hooks/useTheme';
+import { themedTitle, themedDescription } from '../utils/questThemeText';
 import {
   Swords,
   ArrowLeft,
@@ -17,6 +19,7 @@ import {
   ScrollText,
 } from 'lucide-react';
 
+const DIFFICULTY_LEVEL = { easy: 1, medium: 2, hard: 3, expert: 4 };
 const DIFFICULTY_LABELS = ['Trivial', 'Easy', 'Medium', 'Hard', 'Legendary'];
 const DIFFICULTY_COLORS = [
   'text-muted',
@@ -39,17 +42,19 @@ const CATEGORY_COLORS = {
 };
 
 function DifficultyStars({ level }) {
+  // level can be a string ("easy") or number — normalise to 1-based int
+  const num = typeof level === 'string' ? (DIFFICULTY_LEVEL[level] || 1) : (level || 1);
   return (
     <div className="flex items-center gap-1">
       {[1, 2, 3, 4, 5].map((i) => (
         <Star
           key={i}
           size={18}
-          className={i <= level ? 'text-gold fill-gold' : 'text-cream/20'}
+          className={i <= num ? 'text-gold fill-gold' : 'text-cream/20'}
         />
       ))}
-      <span className={`ml-2 text-sm ${DIFFICULTY_COLORS[level - 1] || 'text-muted'}`}>
-        {DIFFICULTY_LABELS[level - 1] || 'Unknown'}
+      <span className={`ml-2 text-sm ${DIFFICULTY_COLORS[num - 1] || 'text-muted'}`}>
+        {DIFFICULTY_LABELS[num - 1] || 'Unknown'}
       </span>
     </div>
   );
@@ -77,6 +82,7 @@ function StatusBadge({ status }) {
 export default function ChoreDetail() {
   const { id } = useParams();
   const { user } = useAuth();
+  const { colorTheme } = useTheme();
   const navigate = useNavigate();
   const isParent = user?.role === 'parent' || user?.role === 'admin';
   const isKid = user?.role === 'kid';
@@ -234,7 +240,7 @@ export default function ChoreDetail() {
           <Swords size={28} className="text-sky flex-shrink-0 mt-1" />
           <div className="flex-1">
             <h1 className="text-cream text-xl font-extrabold leading-relaxed">
-              {chore.title}
+              {themedTitle(chore.title, colorTheme)}
             </h1>
           </div>
         </div>
@@ -243,7 +249,7 @@ export default function ChoreDetail() {
         {chore.description && (
           <div className="pl-10">
             <p className="text-muted text-sm leading-relaxed">
-              {chore.description}
+              {themedDescription(chore.title, chore.description, colorTheme)}
             </p>
           </div>
         )}

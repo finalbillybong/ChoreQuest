@@ -8,6 +8,7 @@ from backend.database import get_db
 from backend.models import (
     User,
     UserRole,
+    Chore,
     ChoreAssignment,
     AssignmentStatus,
     PointTransaction,
@@ -90,13 +91,15 @@ async def get_family_stats(
     today = date.today()
     family = []
     for kid in kids:
-        # Today's assignment counts
+        # Today's assignment counts — only for active chores
         result = await db.execute(
             select(func.count())
             .select_from(ChoreAssignment)
+            .join(Chore, ChoreAssignment.chore_id == Chore.id)
             .where(
                 ChoreAssignment.user_id == kid.id,
                 ChoreAssignment.date == today,
+                Chore.is_active == True,
             )
         )
         today_total = result.scalar() or 0
@@ -104,9 +107,11 @@ async def get_family_stats(
         result = await db.execute(
             select(func.count())
             .select_from(ChoreAssignment)
+            .join(Chore, ChoreAssignment.chore_id == Chore.id)
             .where(
                 ChoreAssignment.user_id == kid.id,
                 ChoreAssignment.date == today,
+                Chore.is_active == True,
                 ChoreAssignment.status.in_(
                     [AssignmentStatus.completed, AssignmentStatus.verified]
                 ),
