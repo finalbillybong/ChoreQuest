@@ -1,6 +1,7 @@
 from datetime import datetime, date
 from pydantic import BaseModel, Field
 from backend.models import UserRole, Difficulty, Recurrence, AssignmentStatus, RedemptionStatus, PointType, NotificationType, RotationCadence
+from typing import Optional
 
 
 # Auth
@@ -322,6 +323,57 @@ class EventResponse(BaseModel):
     is_active: bool
     created_by: int
     created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+# Assignment Rules
+class AssignmentRuleItem(BaseModel):
+    user_id: int
+    recurrence: Recurrence
+    custom_days: list[int] | None = None
+    requires_photo: bool = False
+
+
+class AssignmentRuleRotation(BaseModel):
+    enabled: bool = False
+    cadence: RotationCadence = RotationCadence.weekly
+
+
+class ChoreAssignRequest(BaseModel):
+    assignments: list[AssignmentRuleItem]
+    rotation: AssignmentRuleRotation | None = None
+
+
+class AssignmentRuleUpdate(BaseModel):
+    recurrence: Recurrence | None = None
+    custom_days: list[int] | None = None
+    requires_photo: bool | None = None
+    is_active: bool | None = None
+
+
+class AssignmentRuleResponse(BaseModel):
+    id: int
+    chore_id: int
+    user_id: int
+    recurrence: Recurrence
+    custom_days: list[int] | None
+    requires_photo: bool
+    is_active: bool
+    user: UserResponse | None = None
+
+    model_config = {"from_attributes": True}
+
+
+# Quest Templates
+class QuestTemplateResponse(BaseModel):
+    id: int
+    title: str
+    description: str | None
+    suggested_points: int
+    difficulty: Difficulty
+    category_name: str
+    icon: str | None
 
     model_config = {"from_attributes": True}
 

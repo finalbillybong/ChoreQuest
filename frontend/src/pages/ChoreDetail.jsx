@@ -20,6 +20,7 @@ import {
   RotateCw,
   Trash2,
   ChevronRight,
+  Users,
 } from 'lucide-react';
 
 const DIFFICULTY_LEVEL = { easy: 1, medium: 2, hard: 3, expert: 4 };
@@ -99,6 +100,8 @@ export default function ChoreDetail() {
   // Rotation state (parent only)
   const [rotation, setRotation] = useState(null);
   const [allKids, setAllKids] = useState([]);
+  const [selectedCadence, setSelectedCadence] = useState('weekly');
+  const [assignmentRules, setAssignmentRules] = useState([]);
 
   const fetchRotation = useCallback(async () => {
     if (!isParent) return;
@@ -107,6 +110,14 @@ export default function ChoreDetail() {
       const match = (rotations || []).find((r) => r.chore_id === parseInt(id));
       setRotation(match || null);
     } catch { setRotation(null); }
+  }, [id, isParent]);
+
+  const fetchAssignmentRules = useCallback(async () => {
+    if (!isParent) return;
+    try {
+      const rules = await api(`/api/chores/${id}/rules`);
+      setAssignmentRules(Array.isArray(rules) ? rules.filter((r) => r.is_active) : []);
+    } catch { setAssignmentRules([]); }
   }, [id, isParent]);
 
   const fetchChore = useCallback(async () => {
@@ -124,10 +135,11 @@ export default function ChoreDetail() {
   useEffect(() => {
     fetchChore();
     fetchRotation();
+    fetchAssignmentRules();
     if (isParent) {
       api('/api/stats/kids').then((data) => setAllKids(data || [])).catch(() => {});
     }
-  }, [fetchChore, fetchRotation, isParent]);
+  }, [fetchChore, fetchRotation, fetchAssignmentRules, isParent]);
 
   // Live updates via WebSocket
   useEffect(() => {
@@ -207,7 +219,7 @@ export default function ChoreDetail() {
     try {
       await api('/api/rotations', {
         method: 'POST',
-        body: { chore_id: parseInt(id), kid_ids: allKids.map((k) => k.id), cadence: 'weekly' },
+        body: { chore_id: parseInt(id), kid_ids: allKids.map((k) => k.id), cadence: selectedCadence },
       });
       await fetchRotation();
       setActionMessage('Rotation created.');
@@ -227,6 +239,23 @@ export default function ChoreDetail() {
       setActionMessage('Rotation advanced to next kid.');
     } catch (err) {
       setActionMessage(err.message || 'Could not advance rotation.');
+    } finally {
+      setActionLoading('');
+    }
+  };
+
+  const handleUpdateCadence = async (newCadence) => {
+    if (!rotation) return;
+    setActionLoading('rotation');
+    try {
+      await api(`/api/rotations/${rotation.id}`, {
+        method: 'PUT',
+        body: { cadence: newCadence },
+      });
+      await fetchRotation();
+      setActionMessage(`Cadence updated to ${newCadence}.`);
+    } catch (err) {
+      setActionMessage(err.message || 'Could not update cadence.');
     } finally {
       setActionLoading('');
     }
@@ -470,6 +499,45 @@ export default function ChoreDetail() {
         </div>
       )}
 
+      {/* Assignment Rules Panel (parent only) */}
+      {isParent && assignmentRules.length > 0 && (
+        <div className="game-panel p-5 space-y-3">
+          <div className="flex items-center gap-2">
+            <Users size={18} className="text-sky" />
+            <h2 className="text-cream text-lg font-bold">Assigned Heroes</h2>
+          </div>
+          <div className="space-y-2">
+            {assignmentRules.map((rule) => {
+              const kid = allKids.find((k) => k.id === rule.user_id);
+              return (
+                <div
+                  key={rule.id}
+                  className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg border border-border bg-surface-raised/20"
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-cream text-sm font-medium truncate">
+                      {kid?.display_name || rule.user?.display_name || `Kid #${rule.user_id}`}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span className="text-muted text-xs capitalize flex items-center gap-1">
+                      <RefreshCw size={10} />
+                      {rule.recurrence}
+                    </span>
+                    {rule.requires_photo && (
+                      <span className="text-muted text-xs flex items-center gap-1">
+                        <Camera size={10} />
+                        Photo
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Rotation Panel (parent only, recurring chores) */}
       {isParent && chore.recurrence && chore.recurrence !== 'once' && (
         <div className="game-panel p-5 space-y-3">
@@ -482,7 +550,17 @@ export default function ChoreDetail() {
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-sm">
                 <span className="text-muted">Cadence:</span>
-                <span className="text-cream capitalize">{rotation.cadence}</span>
+                <select
+                  value={rotation.cadence}
+                  onChange={(e) => handleUpdateCadence(e.target.value)}
+                  disabled={actionLoading === 'rotation'}
+                  className="bg-surface-raised text-cream text-sm rounded-lg border border-border px-2 py-1 focus:outline-none focus:ring-1 focus:ring-purple"
+                >
+                  <option value="daily">Daily</option>
+                  <option value="weekly">Weekly</option>
+                  <option value="fortnightly">Fortnightly</option>
+                  <option value="monthly">Monthly</option>
+                </select>
               </div>
               <div className="flex flex-wrap gap-2">
                 {(rotation.kid_ids || []).map((kidId, idx) => {
@@ -523,10 +601,23 @@ export default function ChoreDetail() {
               </div>
             </div>
           ) : (
-            <div>
-              <p className="text-muted text-xs mb-3">
+            <div className="space-y-3">
+              <p className="text-muted text-xs">
                 No rotation set. Create one to automatically rotate this quest between kids.
               </p>
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-muted">Cadence:</span>
+                <select
+                  value={selectedCadence}
+                  onChange={(e) => setSelectedCadence(e.target.value)}
+                  className="bg-surface-raised text-cream text-sm rounded-lg border border-border px-2 py-1 focus:outline-none focus:ring-1 focus:ring-purple"
+                >
+                  <option value="daily">Daily</option>
+                  <option value="weekly">Weekly</option>
+                  <option value="fortnightly">Fortnightly</option>
+                  <option value="monthly">Monthly</option>
+                </select>
+              </div>
               <button
                 onClick={handleCreateRotation}
                 disabled={actionLoading === 'rotation' || allKids.length < 2}

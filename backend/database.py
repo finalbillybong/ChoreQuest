@@ -21,7 +21,8 @@ async def init_db():
         await conn.exec_driver_sql("PRAGMA journal_mode=WAL")
         from backend.models import (  # noqa: F401
             User, Chore, ChoreAssignment, ChoreCategory, ChoreRotation,
-            ChoreExclusion, Reward, RewardRedemption, PointTransaction,
+            ChoreExclusion, ChoreAssignmentRule, QuestTemplate,
+            Reward, RewardRedemption, PointTransaction,
             Achievement, UserAchievement, WishlistItem, SeasonalEvent,
             Notification, SpinResult, ApiKey, AuditLog, AppSetting,
             InviteCode, RefreshToken,

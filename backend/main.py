@@ -15,7 +15,7 @@ from backend.seed import seed_database
 from backend.auth import decode_access_token
 from backend.websocket_manager import ws_manager
 from backend.models import (
-    Chore, ChoreAssignment, ChoreRotation, User, UserRole,
+    Chore, ChoreAssignment, ChoreAssignmentRule, ChoreRotation, User, UserRole,
     AssignmentStatus, Recurrence, RefreshToken,
 )
 
@@ -38,31 +38,28 @@ async def daily_reset_task():
 
                 # Generate assignments for recurring chores
                 result = await db.execute(
-                    select(Chore).where(
-                        Chore.is_active == True,
-                        Chore.recurrence != Recurrence.once,
-                    )
+                    select(Chore).where(Chore.is_active == True)
                 )
                 chores = result.scalars().all()
 
                 for chore in chores:
-                    should_generate = False
-                    if chore.recurrence == Recurrence.daily:
-                        should_generate = True
-                    elif chore.recurrence == Recurrence.weekly:
-                        should_generate = today.weekday() == chore.created_at.weekday()
-                    elif chore.recurrence == Recurrence.custom and chore.custom_days:
-                        should_generate = today.weekday() in chore.custom_days
+                    # Check for per-kid assignment rules first
+                    rules_result = await db.execute(
+                        select(ChoreAssignmentRule).where(
+                            ChoreAssignmentRule.chore_id == chore.id,
+                            ChoreAssignmentRule.is_active == True,
+                        )
+                    )
+                    rules = rules_result.scalars().all()
 
-                    if should_generate:
-                        # Find assigned users from rotations or past assignments
+                    if rules:
+                        # Handle rotation
                         rotation_result = await db.execute(
                             select(ChoreRotation).where(ChoreRotation.chore_id == chore.id)
                         )
                         rotation = rotation_result.scalar_one_or_none()
 
                         if rotation:
-                            # Check if rotation should advance
                             should_advance = False
                             if rotation.last_rotated is None:
                                 should_advance = True
@@ -71,36 +68,112 @@ async def daily_reset_task():
                             elif rotation.cadence.value == "weekly":
                                 days_since = (datetime.now(timezone.utc) - rotation.last_rotated).days
                                 should_advance = days_since >= 7
+                            elif rotation.cadence.value == "fortnightly":
+                                days_since = (datetime.now(timezone.utc) - rotation.last_rotated).days
+                                should_advance = days_since >= 14
+                            elif rotation.cadence.value == "monthly":
+                                days_since = (datetime.now(timezone.utc) - rotation.last_rotated).days
+                                should_advance = days_since >= 30
 
                             if should_advance and rotation.last_rotated is not None:
                                 rotation.current_index = (rotation.current_index + 1) % len(rotation.kid_ids)
                                 rotation.last_rotated = datetime.now(timezone.utc)
-
                             if rotation.last_rotated is None:
                                 rotation.last_rotated = datetime.now(timezone.utc)
 
-                            user_ids = [rotation.kid_ids[rotation.current_index]]
-                        else:
-                            past_result = await db.execute(
-                                select(ChoreAssignment.user_id).where(
-                                    ChoreAssignment.chore_id == chore.id
-                                ).distinct()
-                            )
-                            user_ids = list(past_result.scalars().all())
+                        # Use per-kid rules for recurrence
+                        for rule in rules:
+                            if rule.recurrence == Recurrence.once:
+                                continue
 
-                        for uid in user_ids:
-                            existing = await db.execute(
-                                select(ChoreAssignment).where(
-                                    ChoreAssignment.chore_id == chore.id,
-                                    ChoreAssignment.user_id == uid,
-                                    ChoreAssignment.date == today,
+                            # If rotation exists, only generate for the current kid
+                            if rotation and rule.user_id != rotation.kid_ids[rotation.current_index]:
+                                continue
+
+                            should_generate = False
+                            if rule.recurrence == Recurrence.daily:
+                                should_generate = True
+                            elif rule.recurrence == Recurrence.weekly:
+                                should_generate = today.weekday() == chore.created_at.weekday()
+                            elif rule.recurrence == Recurrence.custom and rule.custom_days:
+                                should_generate = today.weekday() in rule.custom_days
+
+                            if should_generate:
+                                existing = await db.execute(
+                                    select(ChoreAssignment).where(
+                                        ChoreAssignment.chore_id == chore.id,
+                                        ChoreAssignment.user_id == rule.user_id,
+                                        ChoreAssignment.date == today,
+                                    )
                                 )
+                                if existing.scalar_one_or_none() is None:
+                                    db.add(ChoreAssignment(
+                                        chore_id=chore.id, user_id=rule.user_id,
+                                        date=today, status=AssignmentStatus.pending,
+                                    ))
+                    else:
+                        # Legacy fallback: use chore-level settings
+                        if chore.recurrence == Recurrence.once:
+                            continue
+
+                        should_generate = False
+                        if chore.recurrence == Recurrence.daily:
+                            should_generate = True
+                        elif chore.recurrence == Recurrence.weekly:
+                            should_generate = today.weekday() == chore.created_at.weekday()
+                        elif chore.recurrence == Recurrence.custom and chore.custom_days:
+                            should_generate = today.weekday() in chore.custom_days
+
+                        if should_generate:
+                            rotation_result = await db.execute(
+                                select(ChoreRotation).where(ChoreRotation.chore_id == chore.id)
                             )
-                            if existing.scalar_one_or_none() is None:
-                                db.add(ChoreAssignment(
-                                    chore_id=chore.id, user_id=uid,
-                                    date=today, status=AssignmentStatus.pending,
-                                ))
+                            rotation = rotation_result.scalar_one_or_none()
+
+                            if rotation:
+                                should_advance = False
+                                if rotation.last_rotated is None:
+                                    should_advance = True
+                                elif rotation.cadence.value == "daily":
+                                    should_advance = True
+                                elif rotation.cadence.value == "weekly":
+                                    days_since = (datetime.now(timezone.utc) - rotation.last_rotated).days
+                                    should_advance = days_since >= 7
+                                elif rotation.cadence.value == "fortnightly":
+                                    days_since = (datetime.now(timezone.utc) - rotation.last_rotated).days
+                                    should_advance = days_since >= 14
+                                elif rotation.cadence.value == "monthly":
+                                    days_since = (datetime.now(timezone.utc) - rotation.last_rotated).days
+                                    should_advance = days_since >= 30
+
+                                if should_advance and rotation.last_rotated is not None:
+                                    rotation.current_index = (rotation.current_index + 1) % len(rotation.kid_ids)
+                                    rotation.last_rotated = datetime.now(timezone.utc)
+                                if rotation.last_rotated is None:
+                                    rotation.last_rotated = datetime.now(timezone.utc)
+
+                                user_ids = [rotation.kid_ids[rotation.current_index]]
+                            else:
+                                past_result = await db.execute(
+                                    select(ChoreAssignment.user_id).where(
+                                        ChoreAssignment.chore_id == chore.id
+                                    ).distinct()
+                                )
+                                user_ids = list(past_result.scalars().all())
+
+                            for uid in user_ids:
+                                existing = await db.execute(
+                                    select(ChoreAssignment).where(
+                                        ChoreAssignment.chore_id == chore.id,
+                                        ChoreAssignment.user_id == uid,
+                                        ChoreAssignment.date == today,
+                                    )
+                                )
+                                if existing.scalar_one_or_none() is None:
+                                    db.add(ChoreAssignment(
+                                        chore_id=chore.id, user_id=uid,
+                                        date=today, status=AssignmentStatus.pending,
+                                    ))
 
                 # Cleanup expired refresh tokens
                 await db.execute(
