@@ -167,6 +167,24 @@ async def get_leaderboard(
     )
     rows = result.all()
 
+    # Count completed/verified quests this week per kid
+    quest_result = await db.execute(
+        select(
+            ChoreAssignment.user_id,
+            func.count().label("quests_done"),
+        )
+        .where(
+            ChoreAssignment.user_id.in_(list(kid_map.keys())),
+            ChoreAssignment.date >= monday,
+            ChoreAssignment.date <= sunday,
+            ChoreAssignment.status.in_(
+                [AssignmentStatus.completed, AssignmentStatus.verified]
+            ),
+        )
+        .group_by(ChoreAssignment.user_id)
+    )
+    quests_map = {row.user_id: row.quests_done for row in quest_result.all()}
+
     # Build a set of kids who had transactions
     seen_ids = set()
     leaderboard = []
@@ -181,6 +199,9 @@ async def get_leaderboard(
                     "display_name": kid.display_name,
                     "avatar_config": kid.avatar_config,
                     "weekly_xp": row.weekly_xp or 0,
+                    "total_xp": kid.total_points_earned or 0,
+                    "quests_completed": quests_map.get(kid.id, 0),
+                    "current_streak": kid.current_streak or 0,
                 }
             )
             seen_ids.add(kid.id)
@@ -196,6 +217,9 @@ async def get_leaderboard(
                     "display_name": kid.display_name,
                     "avatar_config": kid.avatar_config,
                     "weekly_xp": 0,
+                    "total_xp": kid.total_points_earned or 0,
+                    "quests_completed": quests_map.get(kid_id, 0),
+                    "current_streak": kid.current_streak or 0,
                 }
             )
             rank += 1

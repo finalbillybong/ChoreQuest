@@ -8,6 +8,9 @@ const HEAD_OPTIONS = [
   { id: 'round', label: 'Round' },
   { id: 'oval', label: 'Oval' },
   { id: 'square', label: 'Square' },
+  { id: 'diamond', label: 'Diamond' },
+  { id: 'heart', label: 'Heart' },
+  { id: 'long', label: 'Long' },
 ];
 
 const HAIR_OPTIONS = [
@@ -17,6 +20,11 @@ const HAIR_OPTIONS = [
   { id: 'spiky', label: 'Spiky' },
   { id: 'curly', label: 'Curly' },
   { id: 'mohawk', label: 'Mohawk' },
+  { id: 'buzz', label: 'Buzz' },
+  { id: 'ponytail', label: 'Ponytail' },
+  { id: 'bun', label: 'Bun' },
+  { id: 'pigtails', label: 'Pigtails' },
+  { id: 'afro', label: 'Afro' },
 ];
 
 const EYES_OPTIONS = [
@@ -24,6 +32,10 @@ const EYES_OPTIONS = [
   { id: 'happy', label: 'Happy' },
   { id: 'wide', label: 'Wide' },
   { id: 'sleepy', label: 'Sleepy' },
+  { id: 'wink', label: 'Wink' },
+  { id: 'angry', label: 'Angry' },
+  { id: 'dot', label: 'Dot' },
+  { id: 'star', label: 'Star' },
 ];
 
 const MOUTH_OPTIONS = [
@@ -31,6 +43,16 @@ const MOUTH_OPTIONS = [
   { id: 'grin', label: 'Grin' },
   { id: 'neutral', label: 'Neutral' },
   { id: 'open', label: 'Open' },
+  { id: 'tongue', label: 'Tongue' },
+  { id: 'frown', label: 'Frown' },
+  { id: 'surprised', label: 'Surprised' },
+  { id: 'smirk', label: 'Smirk' },
+];
+
+const BODY_OPTIONS = [
+  { id: 'slim', label: 'Slim' },
+  { id: 'regular', label: 'Regular' },
+  { id: 'broad', label: 'Broad' },
 ];
 
 const SKIN_COLORS = [
@@ -54,6 +76,12 @@ const MOUTH_COLORS = [
   '#ff6b9d', '#a93226', '#8b4513', '#333333',
 ];
 
+const BODY_COLORS = [
+  '#3b82f6', '#ef4444', '#10b981', '#f59e0b',
+  '#a855f7', '#ec4899', '#06b6d4', '#84cc16',
+  '#f97316', '#6366f1', '#1a1a2e', '#ecf0f1',
+];
+
 const BG_COLORS = [
   '#1a1a2e', '#0f0e17', '#16213e', '#1b4332',
   '#4a1942', '#2d1b69', '#1a3a3a', '#3d0c02',
@@ -65,10 +93,12 @@ const DEFAULT_CONFIG = {
   hair: 'short',
   eyes: 'normal',
   mouth: 'smile',
+  body: 'regular',
   head_color: '#ffcc99',
   hair_color: '#4a3728',
   eye_color: '#333333',
   mouth_color: '#cc6666',
+  body_color: '#3b82f6',
   bg_color: '#1a1a2e',
 };
 
@@ -159,12 +189,20 @@ export default function AvatarEditor() {
       {/* Head */}
       <Section title="Head Shape">
         <ShapeSelector options={HEAD_OPTIONS} selected={config.head} onSelect={(v) => set('head', v)} />
+      </Section>
+
+      {/* Skin Colour */}
+      <Section title="Skin Colour">
         <ColorSwatch colors={SKIN_COLORS} selected={config.head_color} onSelect={(v) => set('head_color', v)} />
       </Section>
 
       {/* Hair */}
       <Section title="Hair Style">
         <ShapeSelector options={HAIR_OPTIONS} selected={config.hair} onSelect={(v) => set('hair', v)} />
+      </Section>
+
+      {/* Hair Colour */}
+      <Section title="Hair Colour">
         <ColorSwatch colors={HAIR_COLORS} selected={config.hair_color} onSelect={(v) => set('hair_color', v)} />
       </Section>
 
@@ -178,6 +216,16 @@ export default function AvatarEditor() {
       <Section title="Mouth">
         <ShapeSelector options={MOUTH_OPTIONS} selected={config.mouth} onSelect={(v) => set('mouth', v)} />
         <ColorSwatch colors={MOUTH_COLORS} selected={config.mouth_color} onSelect={(v) => set('mouth_color', v)} />
+      </Section>
+
+      {/* Body */}
+      <Section title="Body Shape">
+        <ShapeSelector options={BODY_OPTIONS} selected={config.body} onSelect={(v) => set('body', v)} />
+      </Section>
+
+      {/* Body / Outfit Colour */}
+      <Section title="Outfit Colour">
+        <ColorSwatch colors={BODY_COLORS} selected={config.body_color} onSelect={(v) => set('body_color', v)} />
       </Section>
 
       {/* Background */}

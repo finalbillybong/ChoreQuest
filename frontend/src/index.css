@@ -196,3 +196,47 @@ h1, h2, h3, h4, h5, h6 {
   background-size: 200% 100%;
   animation: shimmer 3s ease-in-out infinite;
 }
+
+/* ─── Light Mode ─── */
+.light-mode {
+  --color-navy: #f8fafc;
+  --color-navy-light: #f1f5f9;
+  --color-navy-mid: #e2e8f0;
+  --color-cream: #0f172a;
+  --color-surface: #ffffff;
+  --color-surface-raised: #f1f5f9;
+  --color-border: #e2e8f0;
+  --color-border-light: #cbd5e1;
+  --color-muted: #64748b;
+}
+
+.light-mode body {
+  background: var(--color-navy);
+  color: var(--color-cream);
+}
+
+.light-mode .game-panel {
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.04);
+}
+
+.light-mode .field-input {
+  background: var(--color-navy);
+  border-color: var(--color-border);
+  color: var(--color-cream);
+}
+
+.light-mode .xp-bar {
+  background: var(--color-border);
+}
+
+.light-mode ::-webkit-scrollbar-track {
+  background: var(--color-navy);
+}
+
+.light-mode ::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+}
+
+.light-mode ::-webkit-scrollbar-thumb:hover {
+  background: var(--color-border-light);
+}

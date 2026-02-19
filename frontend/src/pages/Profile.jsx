@@ -4,6 +4,8 @@ import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
 import AvatarDisplay from '../components/AvatarDisplay';
 import AvatarEditor from '../components/AvatarEditor';
+import { useNavigate } from 'react-router-dom';
+import ChoreIcon from '../components/ChoreIcon';
 import {
   UserCircle,
   Save,
@@ -17,9 +19,14 @@ import {
   Star,
   Loader2,
   Paintbrush,
+  ShieldCheck,
+  Settings,
+  Trophy,
+  ChevronRight,
 } from 'lucide-react';
 
 export default function Profile() {
+  const navigate = useNavigate();
   const { user, logout, updateUser } = useAuth();
   const { theme, toggle: toggleTheme } = useTheme();
 
@@ -30,9 +37,15 @@ export default function Profile() {
   const [nameSaving, setNameSaving] = useState(false);
   const [nameMsg, setNameMsg] = useState('');
 
-  // Stats
+  // Stats (kids only)
+  const isKid = user?.role === 'kid';
   const [stats, setStats] = useState(null);
-  const [statsLoading, setStatsLoading] = useState(true);
+  const [statsLoading, setStatsLoading] = useState(isKid);
+
+  // Achievements (kids only)
+  const [achievements, setAchievements] = useState([]);
+  const [achievementsLoading, setAchievementsLoading] = useState(false);
+  const [showAchievements, setShowAchievements] = useState(false);
 
   // PIN
   const [pin, setPin] = useState('');
@@ -50,21 +63,37 @@ export default function Profile() {
     setDisplayName(user?.display_name || '');
   }, [user?.display_name]);
 
-  // Fetch stats
+  // Fetch stats (kids only)
   useEffect(() => {
+    if (!isKid) return;
     (async () => {
       setStatsLoading(true);
       try {
         const data = await api('/api/stats/me');
         setStats(data);
       } catch {
-        // Stats may not be available
         setStats(null);
       } finally {
         setStatsLoading(false);
       }
     })();
-  }, []);
+  }, [isKid]);
+
+  // Fetch achievements when toggled (kids only)
+  useEffect(() => {
+    if (!showAchievements || achievements.length > 0) return;
+    (async () => {
+      setAchievementsLoading(true);
+      try {
+        const data = await api('/api/stats/achievements/all');
+        setAchievements(Array.isArray(data) ? data : []);
+      } catch {
+        setAchievements([]);
+      } finally {
+        setAchievementsLoading(false);
+      }
+    })();
+  }, [showAchievements, achievements.length]);
 
   const saveDisplayName = async () => {
     if (!displayName.trim()) return;
@@ -213,52 +242,127 @@ export default function Profile() {
       {/* Avatar Editor */}
       {showEditor && <AvatarEditor />}
 
-      {/* Stats Summary */}
-      <div className="game-panel p-5">
-        <h2 className="text-cream text-sm font-bold mb-4">
-          Stats
-        </h2>
-        {statsLoading ? (
-          <div className="flex justify-center py-4">
-            <Loader2 size={20} className="text-sky animate-spin" />
+      {/* Stats Summary (kids only) */}
+      {isKid && (
+        <div className="game-panel p-5">
+          <h2 className="text-cream text-sm font-bold mb-4">
+            Stats
+          </h2>
+          {statsLoading ? (
+            <div className="flex justify-center py-4">
+              <Loader2 size={20} className="text-sky animate-spin" />
+            </div>
+          ) : stats ? (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="text-center">
+                <Star size={18} className="text-gold mx-auto mb-1" />
+                <p className="text-gold text-sm font-bold">
+                  {stats.points_balance ?? stats.xp_balance ?? 0}
+                </p>
+                <p className="text-muted text-xs">XP Balance</p>
+              </div>
+              <div className="text-center">
+                <Award size={18} className="text-emerald mx-auto mb-1" />
+                <p className="text-emerald text-sm font-bold">
+                  {stats.total_points_earned ?? stats.total_xp_earned ?? 0}
+                </p>
+                <p className="text-muted text-xs">Total Earned</p>
+              </div>
+              <div className="text-center">
+                <Flame size={18} className="text-orange-400 mx-auto mb-1" />
+                <p className="text-orange-400 text-sm font-bold">
+                  {stats.current_streak ?? stats.streak ?? 0}
+                </p>
+                <p className="text-muted text-xs">Streak</p>
+              </div>
+              <button
+                className="text-center hover:bg-surface-raised/50 rounded-lg py-1 transition-colors"
+                onClick={() => setShowAchievements((v) => !v)}
+              >
+                <Trophy size={18} className="text-purple mx-auto mb-1" />
+                <p className="text-purple text-sm font-bold">
+                  {stats.achievements_count ?? 0}
+                </p>
+                <p className="text-muted text-xs flex items-center justify-center gap-0.5">
+                  Achievements <ChevronRight size={10} />
+                </p>
+              </button>
+            </div>
+          ) : (
+            <p className="text-muted text-center text-sm">
+              Stats not available yet. Complete quests to build your record!
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Achievements Browser (kids only) */}
+      {isKid && showAchievements && (
+        <div className="game-panel p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-cream text-sm font-bold flex items-center gap-2">
+              <Trophy size={16} className="text-purple" />
+              All Achievements
+            </h2>
+            <button
+              onClick={() => setShowAchievements(false)}
+              className="text-muted text-xs hover:text-cream transition-colors"
+            >
+              Hide
+            </button>
           </div>
-        ) : stats ? (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="text-center">
-              <Star size={18} className="text-gold mx-auto mb-1" />
-              <p className="text-gold text-sm font-bold">
-                {stats.xp_balance ?? stats.xp ?? 0}
-              </p>
-              <p className="text-muted text-xs">XP Balance</p>
+          {achievementsLoading ? (
+            <div className="flex justify-center py-4">
+              <Loader2 size={20} className="text-sky animate-spin" />
             </div>
-            <div className="text-center">
-              <Award size={18} className="text-emerald mx-auto mb-1" />
-              <p className="text-emerald text-sm font-bold">
-                {stats.total_xp_earned ?? stats.total_earned ?? 0}
-              </p>
-              <p className="text-muted text-xs">Total Earned</p>
+          ) : achievements.length === 0 ? (
+            <p className="text-muted text-center text-sm">
+              No achievements available yet.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {achievements.map((a) => (
+                <div
+                  key={a.id}
+                  className={`flex items-center gap-3 p-3 rounded-lg border transition-opacity ${
+                    a.unlocked
+                      ? 'border-purple/30 bg-purple/5'
+                      : 'border-border bg-surface-raised/30 opacity-60'
+                  }`}
+                >
+                  <div
+                    className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                      a.unlocked
+                        ? 'bg-purple/20 border border-purple/40'
+                        : 'bg-surface-raised border border-border'
+                    }`}
+                  >
+                    {a.unlocked ? (
+                      <ChoreIcon name={a.icon} size={20} className="text-purple" />
+                    ) : (
+                      <Lock size={16} className="text-muted" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-sm font-medium ${a.unlocked ? 'text-cream' : 'text-muted'}`}>
+                      {a.title}
+                    </p>
+                    <p className="text-muted text-xs mt-0.5">
+                      {a.description}
+                    </p>
+                  </div>
+                  {a.points_reward > 0 && (
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <Star size={12} className="text-gold fill-gold" />
+                      <span className="text-gold text-xs font-bold">{a.points_reward}</span>
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
-            <div className="text-center">
-              <Flame size={18} className="text-orange-400 mx-auto mb-1" />
-              <p className="text-orange-400 text-sm font-bold">
-                {stats.streak ?? 0}
-              </p>
-              <p className="text-muted text-xs">Streak</p>
-            </div>
-            <div className="text-center">
-              <Award size={18} className="text-purple mx-auto mb-1" />
-              <p className="text-purple text-sm font-bold">
-                {stats.achievements_count ?? stats.achievements ?? 0}
-              </p>
-              <p className="text-muted text-xs">Achievements</p>
-            </div>
-          </div>
-        ) : (
-          <p className="text-muted text-center text-sm">
-            Stats not available yet. Complete quests to build your record!
-          </p>
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
       {/* PIN Setup */}
       <div className="game-panel p-5">
@@ -365,6 +469,31 @@ export default function Profile() {
           </button>
         </div>
       </div>
+
+      {/* Quick Access */}
+      {(user?.role === 'admin' || user?.role === 'parent') && (
+        <div className="game-panel p-5 space-y-2">
+          <h2 className="text-cream text-sm font-bold mb-3">Quick Access</h2>
+          {(user?.role === 'admin' || user?.role === 'parent') && (
+            <button
+              onClick={() => navigate('/settings')}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-muted hover:text-cream hover:bg-surface-raised transition-colors text-left"
+            >
+              <Settings size={18} />
+              <span className="text-sm font-medium">Family Settings</span>
+            </button>
+          )}
+          {user?.role === 'admin' && (
+            <button
+              onClick={() => navigate('/admin')}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-muted hover:text-cream hover:bg-surface-raised transition-colors text-left"
+            >
+              <ShieldCheck size={18} />
+              <span className="text-sm font-medium">Admin Dashboard</span>
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Logout */}
       <div className="pb-6">

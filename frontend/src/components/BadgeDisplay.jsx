@@ -17,7 +17,7 @@ export default function BadgeDisplay({ achievement }) {
         className={`w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 ${
           unlocked
             ? 'bg-purple/20 border border-purple/40'
-            : 'bg-[#2a2a4a] border border-[#2a2a4a]'
+            : 'bg-surface-raised border border-border'
         }`}
       >
         {unlocked ? (
@@ -27,20 +27,20 @@ export default function BadgeDisplay({ achievement }) {
             className="text-purple"
           />
         ) : (
-          <Lock size={20} className="text-cream/30" />
+          <Lock size={20} className="text-muted" />
         )}
       </div>
 
       {/* Text */}
       <div className="flex-1 min-w-0">
         <p
-          className={`font-heading text-[10px] leading-relaxed mb-0.5 ${
-            unlocked ? 'text-cream' : 'text-cream/40'
+          className={`text-sm font-medium mb-0.5 ${
+            unlocked ? 'text-cream' : 'text-muted'
           }`}
         >
           {unlocked ? title : '???'}
         </p>
-        <p className="font-body text-cream/50 text-sm truncate">
+        <p className="text-muted text-xs truncate">
           {unlocked ? description : 'Locked achievement'}
         </p>
       </div>
@@ -49,7 +49,7 @@ export default function BadgeDisplay({ achievement }) {
       {unlocked && points_reward > 0 && (
         <div className="flex items-center gap-1 flex-shrink-0">
           <Star size={14} className="text-gold fill-gold" />
-          <span className="font-heading text-gold text-[10px]">
+          <span className="text-gold text-xs font-bold">
             {points_reward}
           </span>
         </div>

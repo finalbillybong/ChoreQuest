@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
 import { useAuth } from '../hooks/useAuth';
 import Modal from '../components/Modal';
-import {
+  import {
   Swords,
   Plus,
   Pencil,
@@ -14,6 +14,7 @@ import {
   Camera,
   Filter,
   Search,
+  BookTemplate,
 } from 'lucide-react';
 
 const DIFFICULTY_OPTIONS = [
@@ -518,6 +519,46 @@ export default function Chores() {
           {formError && (
             <div className="p-2 rounded border border-crimson/40 bg-crimson/10 text-crimson text-sm">
               {formError}
+            </div>
+          )}
+
+          {/* Template picker (only when creating) */}
+          {!editingChore && chores.length > 0 && (
+            <div>
+              <label className="block text-cream text-sm font-medium mb-1 tracking-wide flex items-center gap-1.5">
+                <BookTemplate size={14} />
+                Start from existing quest
+              </label>
+              <select
+                value=""
+                onChange={(e) => {
+                  const tpl = chores.find((c) => String(c.id) === e.target.value);
+                  if (tpl) {
+                    setForm({
+                      title: tpl.title || '',
+                      description: tpl.description || '',
+                      points: tpl.points || 10,
+                      difficulty: tpl.difficulty || 'easy',
+                      category_id: tpl.category_id || '',
+                      recurrence: tpl.recurrence || 'once',
+                      custom_days: tpl.custom_days || [],
+                      requires_photo: tpl.requires_photo || false,
+                      assigned_user_ids: [],
+                    });
+                  }
+                }}
+                className={`${selectClass} w-full p-3`}
+              >
+                <option value="">Create from scratch...</option>
+                {chores.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.title} ({c.points} XP, {c.difficulty})
+                  </option>
+                ))}
+              </select>
+              <p className="text-muted text-xs mt-1">
+                Pick a quest to pre-fill the form, then customise as needed.
+              </p>
             </div>
           )}
 

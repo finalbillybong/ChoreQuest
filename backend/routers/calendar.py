@@ -141,8 +141,10 @@ async def get_weekly_calendar(
     await _auto_generate_assignments(db, week_start)
 
     # Fetch all assignments for the week with chore (+category) and user eager-loaded
+    # Exclude assignments for deleted (inactive) chores
     result = await db.execute(
         select(ChoreAssignment)
+        .join(Chore, ChoreAssignment.chore_id == Chore.id)
         .options(
             selectinload(ChoreAssignment.chore).selectinload(Chore.category),
             selectinload(ChoreAssignment.user),
@@ -150,6 +152,7 @@ async def get_weekly_calendar(
         .where(
             ChoreAssignment.date >= week_start,
             ChoreAssignment.date <= week_end,
+            Chore.is_active == True,
         )
         .order_by(ChoreAssignment.date, ChoreAssignment.id)
     )

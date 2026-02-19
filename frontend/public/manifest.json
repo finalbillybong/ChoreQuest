@@ -1,11 +1,11 @@
 {
-  "name": "QuestOS — Quest Board",
+  "name": "QuestOS",
   "short_name": "QuestOS",
-  "description": "Gamified family chore management with RPG theming",
+  "description": "Gamified family quest board",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0f0e17",
-  "theme_color": "#0f0e17",
+  "background_color": "#0a0e1a",
+  "theme_color": "#3b82f6",
   "icons": [
     {
       "src": "/icon-192.png",
@@ -16,6 +16,12 @@
       "src": "/icon-512.png",
       "sizes": "512x512",
       "type": "image/png"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
     }
   ]
 }
