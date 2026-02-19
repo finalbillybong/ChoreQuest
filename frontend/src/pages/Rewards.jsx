@@ -41,41 +41,20 @@ export default function Rewards() {
   const activeTab = searchParams.get('tab') || 'shop';
   const setTab = (key) => setSearchParams(key === 'shop' ? {} : { tab: key }, { replace: true });
 
-  // Render sub-pages
-  if (activeTab === 'inventory') {
-    return (
-      <div className="max-w-5xl mx-auto space-y-6">
-        <TabBar activeTab={activeTab} setTab={setTab} />
-        <Inventory />
-      </div>
-    );
-  }
-  if (activeTab === 'wishlist') {
-    return (
-      <div className="max-w-5xl mx-auto space-y-6">
-        <TabBar activeTab={activeTab} setTab={setTab} />
-        <Wishlist />
-      </div>
-    );
-  }
-
-  // Data state
+  // All hooks must be declared before any early returns (React rules of hooks)
   const [rewards, setRewards] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Modal state
   const [showModal, setShowModal] = useState(false);
   const [editingReward, setEditingReward] = useState(null);
   const [form, setForm] = useState({ ...emptyForm });
   const [formError, setFormError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  // Delete state
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
-  // Redeem state
   const [redeemingId, setRedeemingId] = useState(null);
   const [redeemMessage, setRedeemMessage] = useState('');
 
@@ -101,6 +80,24 @@ export default function Rewards() {
     window.addEventListener('ws:message', handler);
     return () => window.removeEventListener('ws:message', handler);
   }, [fetchRewards]);
+
+  // Render sub-pages (after all hooks)
+  if (activeTab === 'inventory') {
+    return (
+      <div className="max-w-5xl mx-auto space-y-6">
+        <TabBar activeTab={activeTab} setTab={setTab} />
+        <Inventory />
+      </div>
+    );
+  }
+  if (activeTab === 'wishlist') {
+    return (
+      <div className="max-w-5xl mx-auto space-y-6">
+        <TabBar activeTab={activeTab} setTab={setTab} />
+        <Wishlist />
+      </div>
+    );
+  }
 
   // Form handlers
   const openCreateModal = () => {

@@ -93,6 +93,70 @@ async def list_kids(
     ]
 
 
+@router.get("/family/{kid_id}")
+async def get_kid_detail(
+    kid_id: int,
+    parent: User = Depends(require_parent),
+    db: AsyncSession = Depends(get_db),
+):
+    """Detailed view of a single kid's quests for today. Parent+ only."""
+    result = await db.execute(
+        select(User).where(User.id == kid_id, User.role == UserRole.kid, User.is_active == True)
+    )
+    kid = result.scalar_one_or_none()
+    if not kid:
+        raise HTTPException(status_code=404, detail="Kid not found")
+
+    today = date.today()
+
+    # Get today's assignments with chore details
+    result = await db.execute(
+        select(ChoreAssignment)
+        .join(Chore, ChoreAssignment.chore_id == Chore.id)
+        .where(
+            ChoreAssignment.user_id == kid_id,
+            ChoreAssignment.date == today,
+            Chore.is_active == True,
+        )
+        .options(
+            selectinload(ChoreAssignment.chore).selectinload(Chore.category),
+        )
+        .order_by(ChoreAssignment.status, Chore.title)
+    )
+    assignments = result.scalars().all()
+
+    return {
+        "kid": {
+            "id": kid.id,
+            "display_name": kid.display_name,
+            "avatar_config": kid.avatar_config,
+            "points_balance": kid.points_balance,
+            "current_streak": kid.current_streak,
+        },
+        "assignments": [
+            {
+                "id": a.id,
+                "chore_id": a.chore_id,
+                "status": a.status.value,
+                "completed_at": a.completed_at.isoformat() if a.completed_at else None,
+                "verified_at": a.verified_at.isoformat() if a.verified_at else None,
+                "photo_proof_path": a.photo_proof_path,
+                "chore": {
+                    "id": a.chore.id,
+                    "title": a.chore.title,
+                    "description": a.chore.description,
+                    "points": a.chore.points,
+                    "difficulty": a.chore.difficulty.value if a.chore.difficulty else None,
+                    "category": a.chore.category.name if a.chore.category else None,
+                    "requires_photo": a.chore.requires_photo,
+                    "recurrence": a.chore.recurrence.value if a.chore.recurrence else None,
+                },
+            }
+            for a in assignments
+        ],
+    }
+
+
 @router.get("/family")
 async def get_family_stats(
     parent: User = Depends(require_parent),

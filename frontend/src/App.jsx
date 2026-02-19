@@ -17,6 +17,7 @@ const Calendar = lazy(() => import('./pages/Calendar'));
 const Leaderboard = lazy(() => import('./pages/Leaderboard'));
 const Settings = lazy(() => import('./pages/Settings'));
 const Events = lazy(() => import('./pages/Events'));
+const KidQuests = lazy(() => import('./pages/KidQuests'));
 
 function Loading() {
   return (
@@ -27,11 +28,13 @@ function Loading() {
 }
 
 export default function App() {
-  const { user, loading } = useAuth();
+  const { user, loading, refreshSession } = useAuth();
 
   const handleWsMessage = useCallback((msg) => {
+    // Refresh user object (points_balance, etc.) on every WS event
+    refreshSession();
     window.dispatchEvent(new CustomEvent('ws:message', { detail: msg }));
-  }, []);
+  }, [refreshSession]);
 
   useWebSocket(user?.id, handleWsMessage);
 
@@ -67,6 +70,7 @@ export default function App() {
           <Route path="/leaderboard" element={<Leaderboard />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/events" element={<Events />} />
+          <Route path="/kids/:kidId" element={<KidQuests />} />
           <Route path="/settings" element={<Settings />} />
           {user.role === 'admin' && <Route path="/admin" element={<AdminDashboard />} />}
           <Route path="*" element={<Navigate to="/" replace />} />

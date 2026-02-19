@@ -229,11 +229,12 @@ export default function ParentDashboard() {
           {familyStats.map((kid, idx) => (
             <motion.div
               key={kid.id}
-              className="game-panel p-4"
+              className="game-panel p-4 cursor-pointer hover:border-sky/40 transition-colors"
               variants={kidCardVariants}
               initial="hidden"
               animate="visible"
               custom={idx}
+              onClick={() => navigate(`/kids/${kid.id}`)}
             >
               <div className="flex items-center gap-3 mb-3">
                 <AvatarDisplay

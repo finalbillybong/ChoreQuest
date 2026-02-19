@@ -13,6 +13,7 @@ import {
   CheckCheck,
   X,
   Sparkles,
+  ArrowLeft,
 } from 'lucide-react';
 import AvatarDisplay from './AvatarDisplay';
 
@@ -68,6 +69,7 @@ export default function Layout({ children }) {
 
   const isParent = user?.role === 'parent' || user?.role === 'admin';
   const navItems = ALL_NAV_ITEMS.filter((item) => !item.parentOnly || isParent);
+  const isHome = location.pathname === '/';
 
   const isActive = (path) => path === '/' ? location.pathname === '/' : (location.pathname === path || location.pathname.startsWith(path + '/'));
 
@@ -130,17 +132,26 @@ export default function Layout({ children }) {
       <div className="flex-1 flex flex-col md:ml-60 min-h-screen">
         {/* Top Bar */}
         <header className="sticky top-0 z-20 bg-surface/90 backdrop-blur-md border-b border-border px-4 py-3 flex items-center justify-between">
-          <div
-            className="flex items-center gap-2 cursor-pointer md:hidden"
-            onClick={() => navigate('/')}
-          >
-            <div className="w-7 h-7 rounded-md bg-gradient-to-br from-sky to-accent-light flex items-center justify-center">
-              <Swords size={14} className="text-white" />
+          <div className="flex items-center gap-2">
+            {!isHome && (
+              <button
+                onClick={() => navigate(-1)}
+                className="p-1.5 rounded-lg hover:bg-surface-raised transition-colors text-muted hover:text-cream"
+                aria-label="Go back"
+              >
+                <ArrowLeft size={20} />
+              </button>
+            )}
+            <div
+              className="flex items-center gap-2 cursor-pointer md:hidden"
+              onClick={() => navigate('/')}
+            >
+              <div className="w-7 h-7 rounded-md bg-gradient-to-br from-sky to-accent-light flex items-center justify-center">
+                <Swords size={14} className="text-white" />
+              </div>
+              <span className="font-heading text-cream text-base font-extrabold tracking-tight">ChoreQuest</span>
             </div>
-            <span className="font-heading text-cream text-base font-extrabold tracking-tight">ChoreQuest</span>
           </div>
-
-          <div className="hidden md:block" />
 
           <div className="flex items-center gap-2">
             {/* Notification Bell + Dropdown */}
