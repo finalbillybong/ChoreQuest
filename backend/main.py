@@ -75,10 +75,8 @@ async def daily_reset_task():
                                 days_since = (datetime.now(timezone.utc) - rotation.last_rotated).days
                                 should_advance = days_since >= 30
 
-                            if should_advance and rotation.last_rotated is not None:
+                            if should_advance:
                                 rotation.current_index = (rotation.current_index + 1) % len(rotation.kid_ids)
-                                rotation.last_rotated = datetime.now(timezone.utc)
-                            if rotation.last_rotated is None:
                                 rotation.last_rotated = datetime.now(timezone.utc)
 
                         # Use per-kid rules for recurrence
@@ -146,10 +144,8 @@ async def daily_reset_task():
                                     days_since = (datetime.now(timezone.utc) - rotation.last_rotated).days
                                     should_advance = days_since >= 30
 
-                                if should_advance and rotation.last_rotated is not None:
+                                if should_advance:
                                     rotation.current_index = (rotation.current_index + 1) % len(rotation.kid_ids)
-                                    rotation.last_rotated = datetime.now(timezone.utc)
-                                if rotation.last_rotated is None:
                                     rotation.last_rotated = datetime.now(timezone.utc)
 
                                 user_ids = [rotation.kid_ids[rotation.current_index]]

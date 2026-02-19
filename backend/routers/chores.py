@@ -505,6 +505,7 @@ async def assign_chore(
                 kid_ids=kid_ids,
                 cadence=body.rotation.cadence,
                 current_index=0,
+                last_rotated=datetime.now(timezone.utc),
             )
             db.add(existing_rotation)
             await db.flush()
