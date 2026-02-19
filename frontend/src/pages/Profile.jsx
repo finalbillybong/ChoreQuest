@@ -470,26 +470,39 @@ export default function Profile() {
         </div>
       </div>
 
-      {/* Quick Access */}
+      {/* Management */}
       {(user?.role === 'admin' || user?.role === 'parent') && (
         <div className="game-panel p-5 space-y-2">
-          <h2 className="text-cream text-sm font-bold mb-3">Quick Access</h2>
-          {(user?.role === 'admin' || user?.role === 'parent') && (
-            <button
-              onClick={() => navigate('/settings')}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-muted hover:text-cream hover:bg-surface-raised transition-colors text-left"
-            >
-              <Settings size={18} />
-              <span className="text-sm font-medium">Family Settings</span>
-            </button>
-          )}
+          <h2 className="text-cream text-sm font-bold mb-3 flex items-center gap-2">
+            <Settings size={16} className="text-muted" />
+            Management
+          </h2>
+          <button
+            onClick={() => navigate('/settings')}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-surface-raised/50 hover:bg-surface-raised border border-border/50 hover:border-border transition-colors text-left"
+          >
+            <div className="w-9 h-9 rounded-lg bg-sky/10 border border-sky/20 flex items-center justify-center flex-shrink-0">
+              <Settings size={18} className="text-sky" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-cream text-sm font-medium">Family Settings</p>
+              <p className="text-muted text-xs">Features, resets &amp; rewards</p>
+            </div>
+            <ChevronRight size={16} className="text-muted flex-shrink-0" />
+          </button>
           {user?.role === 'admin' && (
             <button
               onClick={() => navigate('/admin')}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-muted hover:text-cream hover:bg-surface-raised transition-colors text-left"
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-surface-raised/50 hover:bg-surface-raised border border-border/50 hover:border-border transition-colors text-left"
             >
-              <ShieldCheck size={18} />
-              <span className="text-sm font-medium">Admin Dashboard</span>
+              <div className="w-9 h-9 rounded-lg bg-crimson/10 border border-crimson/20 flex items-center justify-center flex-shrink-0">
+                <ShieldCheck size={18} className="text-crimson" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-cream text-sm font-medium">Admin Dashboard</p>
+                <p className="text-muted text-xs">Users, keys &amp; audit log</p>
+              </div>
+              <ChevronRight size={16} className="text-muted flex-shrink-0" />
             </button>
           )}
         </div>

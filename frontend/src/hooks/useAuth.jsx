@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import { api, setAccessToken, clearAccessToken } from '../api/client';
+import { api, setAccessToken, clearAccessToken, ensureToken } from '../api/client';
 
 const AuthContext = createContext(null);
 
@@ -15,9 +15,9 @@ export function AuthProvider({ children }) {
 
     refreshPromiseRef.current = (async () => {
       try {
-        // Use _retried to skip the api() 401 retry logic - we ARE the refresh
-        const data = await api('/api/auth/refresh', { method: 'POST', _retried: true });
-        setAccessToken(data.access_token);
+        // Use ensureToken (shared with 401-retry path) so there is exactly
+        // one in-flight refresh at a time across the whole app.
+        const data = await ensureToken();
         setUser(data.user);
         return true;
       } catch {

@@ -188,7 +188,7 @@ export default function Leaderboard() {
                     </div>
 
                     {/* XP bar */}
-                    <div className="flex-1 min-w-0 ml-auto max-w-[200px]">
+                    <div className="flex-1 min-w-0 hidden sm:block">
                       <div className="xp-bar !h-4">
                         <motion.div
                           className="xp-bar-fill"
@@ -200,7 +200,7 @@ export default function Leaderboard() {
                     </div>
 
                     {/* XP label */}
-                    <span className="flex-shrink-0 font-medium text-sky text-xs min-w-[60px] text-right">
+                    <span className="flex-shrink-0 font-medium text-sky text-xs text-right ml-auto">
                       {xp} XP
                     </span>
                   </div>

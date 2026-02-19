@@ -252,7 +252,7 @@ export default function ChoreDetail() {
         <div className="mx-auto w-full h-[1px] bg-gradient-to-r from-transparent via-border to-transparent" />
 
         {/* Stats grid */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {/* XP */}
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-gold/10 flex items-center justify-center">

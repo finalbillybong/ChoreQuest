@@ -8,30 +8,19 @@ import {
   Gift,
   CalendarDays,
   Trophy,
-  Settings,
-  ShieldCheck,
   Home,
   CheckCheck,
   X,
 } from 'lucide-react';
 import AvatarDisplay from './AvatarDisplay';
 
-function getNavItems(role) {
-  const items = [
-    { label: 'Home', icon: Home, path: '/' },
-    { label: 'Quests', icon: Swords, path: '/chores' },
-    { label: 'Rewards', icon: Gift, path: '/rewards' },
-    { label: 'Calendar', icon: CalendarDays, path: '/calendar' },
-    { label: 'Board', icon: Trophy, path: '/leaderboard' },
-  ];
-  if (role === 'parent' || role === 'admin') {
-    items.push({ label: 'Settings', icon: Settings, path: '/settings' });
-  }
-  if (role === 'admin') {
-    items.push({ label: 'Admin', icon: ShieldCheck, path: '/admin' });
-  }
-  return items;
-}
+const navItems = [
+  { label: 'Home', icon: Home, path: '/' },
+  { label: 'Quests', icon: Swords, path: '/chores' },
+  { label: 'Rewards', icon: Gift, path: '/rewards' },
+  { label: 'Calendar', icon: CalendarDays, path: '/calendar' },
+  { label: 'Board', icon: Trophy, path: '/leaderboard' },
+];
 
 function timeAgo(dateStr) {
   if (!dateStr) return '';
@@ -69,10 +58,7 @@ export default function Layout({ children }) {
     setShowNotifs(false);
   }, [location.pathname]);
 
-  const navItems = getNavItems(user?.role);
   const isActive = (path) => path === '/' ? location.pathname === '/' : (location.pathname === path || location.pathname.startsWith(path + '/'));
-  // Show all nav items on mobile (including Settings/Admin for parent/admin)
-  const mobileNavItems = navItems;
 
   return (
     <div className="min-h-screen bg-navy flex">
@@ -163,7 +149,7 @@ export default function Layout({ children }) {
 
               {/* Notification Panel */}
               {showNotifs && (
-                <div className="absolute right-0 top-full mt-2 w-80 max-h-96 bg-surface border border-border rounded-xl shadow-2xl overflow-hidden z-50">
+                <div className="absolute right-0 top-full mt-2 w-[calc(100vw-2rem)] sm:w-80 max-h-96 bg-surface border border-border rounded-xl shadow-2xl overflow-hidden z-50">
                   {/* Header */}
                   <div className="flex items-center justify-between px-4 py-3 border-b border-border">
                     <span className="font-heading text-cream text-sm font-bold">Notifications</span>
@@ -250,7 +236,7 @@ export default function Layout({ children }) {
       {/* ─── Mobile Bottom Nav ─── */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-surface/90 backdrop-blur-md border-t border-border">
         <div className="flex items-center justify-around h-16 px-1">
-          {mobileNavItems.map((item) => {
+          {navItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.path);
             return (

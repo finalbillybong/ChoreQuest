@@ -222,11 +222,11 @@ export default function KidDashboard() {
 
       {/* ── Header with stats ── */}
       <div className="game-panel p-5">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between gap-2 flex-wrap mb-4">
           <h1 className="font-heading text-cream text-xl font-extrabold">
             Quest Board
           </h1>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <PointCounter value={user?.points_balance ?? 0} />
             <StreakDisplay streak={user?.current_streak ?? 0} />
           </div>

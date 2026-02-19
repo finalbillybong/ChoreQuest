@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi.responses import JSONResponse
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -240,8 +241,9 @@ async def refresh(
         raise HTTPException(status_code=401, detail="Refresh token not found")
 
     if stored.is_revoked:
-        _clear_refresh_cookie(response)
-        raise HTTPException(status_code=401, detail="Refresh token already used")
+        resp = JSONResponse({"detail": "Refresh token already used"}, status_code=401)
+        _clear_refresh_cookie(resp)
+        return resp
 
     # Load user
     user_result = await db.execute(
@@ -249,11 +251,15 @@ async def refresh(
     )
     user = user_result.scalar_one_or_none()
     if user is None:
-        _clear_refresh_cookie(response)
-        raise HTTPException(status_code=401, detail="User not found or inactive")
+        resp = JSONResponse({"detail": "User not found or inactive"}, status_code=401)
+        _clear_refresh_cookie(resp)
+        return resp
 
     # No token rotation — just issue a fresh access token.
-    # The same refresh cookie stays valid until expiry or explicit logout.
+    # Re-set the same refresh cookie to extend its max-age so active
+    # sessions never silently expire.
+    _set_refresh_cookie(response, raw_token)
+
     access_token = create_access_token(user.id, user.role.value)
     return AuthResponse(
         access_token=access_token,

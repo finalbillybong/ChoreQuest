@@ -234,7 +234,7 @@ export default function Calendar() {
 
       {/* Calendar Grid */}
       {!loading && (
-        <div className="grid grid-cols-1 md:grid-cols-7 gap-3 overflow-x-auto">
+        <div className="grid grid-cols-1 md:grid-cols-7 gap-3">
           {DAY_LABELS.map((label, i) => {
             const dayStr = addDays(weekStart, i);
             const today = new Date().toISOString().slice(0, 10);
@@ -242,7 +242,7 @@ export default function Calendar() {
             const dayAssignments = assignments[dayStr] || [];
 
             return (
-              <div key={dayStr} className="min-w-[140px]">
+              <div key={dayStr} className="min-w-0">
                 {/* Day header */}
                 <div
                   className={`text-center py-2 px-1 rounded-t-md border-b-2 ${
