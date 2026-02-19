@@ -15,9 +15,7 @@ const Rewards = lazy(() => import('./pages/Rewards'));
 const Profile = lazy(() => import('./pages/Profile'));
 const Calendar = lazy(() => import('./pages/Calendar'));
 const Leaderboard = lazy(() => import('./pages/Leaderboard'));
-const Wishlist = lazy(() => import('./pages/Wishlist'));
 const Settings = lazy(() => import('./pages/Settings'));
-const Inventory = lazy(() => import('./pages/Inventory'));
 const Events = lazy(() => import('./pages/Events'));
 
 function Loading() {
@@ -63,11 +61,11 @@ export default function App() {
           <Route path="/chores" element={<Chores />} />
           <Route path="/chores/:id" element={<ChoreDetail />} />
           <Route path="/rewards" element={<Rewards />} />
-          <Route path="/inventory" element={<Inventory />} />
+          <Route path="/inventory" element={<Navigate to="/rewards?tab=inventory" replace />} />
+          <Route path="/wishlist" element={<Navigate to="/rewards?tab=wishlist" replace />} />
           <Route path="/calendar" element={<Calendar />} />
           <Route path="/leaderboard" element={<Leaderboard />} />
           <Route path="/profile" element={<Profile />} />
-          <Route path="/wishlist" element={<Wishlist />} />
           <Route path="/events" element={<Events />} />
           <Route path="/settings" element={<Settings />} />
           {user.role === 'admin' && <Route path="/admin" element={<AdminDashboard />} />}
