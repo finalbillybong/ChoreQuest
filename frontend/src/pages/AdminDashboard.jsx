@@ -39,7 +39,7 @@ function UsersTab() {
     setError('');
     try {
       const data = await api('/api/admin/users');
-      setUsers(data.users || data || []);
+      setUsers(Array.isArray(data) ? data : (data.users || []));
     } catch (err) {
       setError(err.message || 'Failed to load users');
     } finally {
@@ -171,7 +171,7 @@ function ApiKeysTab() {
     setError('');
     try {
       const data = await api('/api/admin/api-keys');
-      setKeys(data.keys || data || []);
+      setKeys(Array.isArray(data) ? data : (data.keys || []));
     } catch (err) {
       setError(err.message || 'Failed to load API keys');
     } finally {
@@ -375,7 +375,7 @@ function InviteCodesTab() {
     setError('');
     try {
       const data = await api('/api/admin/invite-codes');
-      setCodes(data.codes || data || []);
+      setCodes(Array.isArray(data) ? data : (data.codes || []));
     } catch (err) {
       setError(err.message || 'Failed to load invite codes');
     } finally {
@@ -542,7 +542,7 @@ function AuditLogTab() {
     setError('');
     try {
       const data = await api(`/api/admin/audit-log?limit=${limit}&offset=${offset}`);
-      setEntries(data.entries || data.logs || data || []);
+      setEntries(Array.isArray(data) ? data : (data.entries || data.logs || []));
     } catch (err) {
       setError(err.message || 'Failed to load audit log');
     } finally {
