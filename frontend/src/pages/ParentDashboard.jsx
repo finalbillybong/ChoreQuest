@@ -307,7 +307,10 @@ export default function ParentDashboard() {
                 >
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0 flex-1">
-                      <p className="text-cream text-sm font-medium truncate">
+                      <p
+                        className="text-cream text-sm font-medium truncate cursor-pointer hover:text-sky transition-colors"
+                        onClick={() => navigate(`/chores/${assignment.chore_id}`)}
+                      >
                         {assignment.chore?.title || 'Chore'}
                       </p>
                       <p className="text-muted text-xs mt-0.5">

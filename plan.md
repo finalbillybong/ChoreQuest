@@ -1,123 +1,218 @@
-# Implementation Plan
+# Quest Management Overhaul Plan
 
-## 1. Rename ChoreQuest to ChoreQuest (all layers)
-
-Replace every occurrence of "ChoreQuest" / "choresos" across the entire codebase:
-
-| File | Change |
-|------|--------|
-| `frontend/index.html` | `<title>ChoreQuest — Quest Board</title>` |
-| `frontend/public/manifest.json` | name + short_name |
-| `frontend/public/sw.js` | `CACHE_NAME = 'chorequest-v3'` (bump version to bust cache) |
-| `frontend/src/components/Layout.jsx` | Two heading strings (desktop sidebar + mobile bar) |
-| `frontend/src/hooks/useTheme.jsx` | localStorage key `chorequest-theme` |
-| `frontend/src/pages/Login.jsx` | Login page branding text |
-| `frontend/package.json` | package name |
-| `backend/main.py` | FastAPI title |
-| `static/index.html` | `<title>` tag |
-| `static/manifest.json` | name + short_name |
-| `static/sw.js` | CACHE_NAME |
-| `docker-compose.yml` | service name |
+## Summary
+Split quest creation from quest assignment. Quests become reusable templates. Assignment (which kids, recurrence, photo proof, rotation) is done separately per-kid. Add built-in RPG-themed quest template library. Two-tab Quest Management screen. Guild Master Actions on Quest Detail page.
 
 ---
 
-## 2. Avatar customisation — revamp AvatarDisplay and editor
+## Phase 1: Data Model Changes
 
-### 2a. Rebuild `AvatarDisplay.jsx` SVG renderer
+### 1a. New Model: `ChoreAssignmentRule`
+Stores per-kid assignment configuration (moves recurrence/photo from Chore to per-kid).
 
-The current component already supports SVG rendering with skin/hair/eye/shirt colours and 5 hair styles. Expand it to support the requested customisable parts:
+```python
+class ChoreAssignmentRule(Base):
+    __tablename__ = "chore_assignment_rules"
+    id: int (PK)
+    chore_id: int (FK → chores.id)
+    user_id: int (FK → users.id)  # the kid
+    recurrence: Enum(once, daily, weekly, custom)
+    custom_days: JSON  # [0,1,2...] for custom
+    requires_photo: bool (default False)
+    is_active: bool (default True)
+    created_at: datetime
+    updated_at: datetime
 
-**Part types (all selectable + individually colourable):**
-
-- **Head** (3 shapes): round, oval, square — colour = skin colour
-- **Hair** (6 styles): none, short, long, spiky, curly, mohawk — own colour picker
-- **Eyes** (4 styles): normal, happy, wide, sleepy — own colour picker
-- **Mouth** (4 styles): smile, grin, neutral, open — own colour picker
-- **Background**: solid colour picker (replaces the hardcoded `#1a1a2e`)
-
-**Config shape** stored in `user.avatar_config` (JSON):
-```json
-{
-  "head": "round",
-  "hair": "spiky",
-  "eyes": "wide",
-  "mouth": "grin",
-  "head_color": "#ffcc99",
-  "hair_color": "#4a3728",
-  "eye_color": "#333333",
-  "mouth_color": "#cc6666",
-  "bg_color": "#1a1a2e"
-}
+    UniqueConstraint(chore_id, user_id)
 ```
 
-Changes to `AvatarDisplay.jsx`:
-- Add head shape variants (round ellipse, taller oval, rounded rect)
-- Add eye style variants (reuse the 4 from the backend catalogue, rendered as SVG)
-- Add mouth style variants (smile curve, grin, straight line, open ellipse)
-- Read `bg_color` from config for the SVG background
-- Read `mouth_color` for the mouth element
-- Read `head` shape key to pick the head shape SVG
+### 1b. New Model: `QuestTemplate`
+Built-in RPG-themed quest templates that ship with the app.
 
-### 2b. Build `AvatarEditor.jsx` component
+```python
+class QuestTemplate(Base):
+    __tablename__ = "quest_templates"
+    id: int (PK)
+    title: str
+    description: str
+    suggested_points: int
+    difficulty: Difficulty enum
+    category_name: str  # matches category name
+    icon: str
+```
 
-A new component rendered on the Profile page. Shows the live avatar preview on the left/top and part selectors + colour pickers below.
+### 1c. Chore Model — Backward Compat
+Keep `recurrence`, `custom_days`, `requires_photo` on Chore. They become fallback defaults when no `ChoreAssignmentRule` exists. New quests from the redesigned flow won't populate these.
 
-**UI layout:**
-- Live preview (lg size avatar)
-- Tabs or sections: Head, Hair, Eyes, Mouth, Background
-- Each section: row of shape thumbnails (tap to select) + colour picker swatch row
-- "Save" button calls `PUT /api/avatar` with the config dict
-
-**Colour pickers:** Use a curated palette of 12-16 colours per category (skin tones for head, fantasy colours for hair, etc.) rendered as tappable swatches. No need for a free-form colour picker.
-
-### 2c. Update Profile page
-
-- Add the AvatarEditor component below the current avatar display
-- Tapping the avatar or a "Customise" button opens/toggles the editor
-- On save, call `PUT /api/avatar`, then `updateUser({ avatar_config: newConfig })` to update React state so the avatar updates everywhere instantly
-
-### 2d. Backend — no model changes needed
-
-- `User.avatar_config` is already a JSON column
-- `PUT /api/avatar` already accepts any dict and saves it
-- `GET /api/avatar/parts` — update the hardcoded catalogue to match the new part set (head, hair, eyes, mouth only — remove body/legs/shoes/accessories that aren't rendered)
+### 1d. Migration in `init_db()`
+- `create_all` creates new tables
+- For each existing Chore with assignments: create `ChoreAssignmentRule` per kid using Chore's recurrence/photo settings
+- Seed `QuestTemplate` with built-in templates
 
 ---
 
-## 3. Template quests with RPG-style descriptions
+## Phase 2: Backend API Changes
 
-Add a `DEFAULT_QUESTS` list to `backend/seed.py` that seeds template chores on first run. These are pre-made quests with RPG-flavoured titles and descriptions.
+### 2a. Quest Templates Endpoint
+- `GET /api/chores/templates` — returns all QuestTemplate records
 
-**Template quests:**
+### 2b. Assignment Rules Endpoints
+- `GET /api/chores/{id}/rules` — get assignment rules for a chore (parent only)
+- `POST /api/chores/{id}/assign` — create assignment rules + initial assignments
+  - Body: `{ assignments: [{ user_id, recurrence, custom_days, requires_photo }], rotation?: { enabled, cadence } }`
+  - Creates ChoreAssignmentRule per kid
+  - Creates today's ChoreAssignment where applicable
+  - Optionally creates/updates ChoreRotation
+  - Sends notifications to assigned kids
+- `PUT /api/chores/rules/{rule_id}` — update a single rule
+- `DELETE /api/chores/rules/{rule_id}` — remove a kid's assignment
 
-| Title | Description | Category | Difficulty | Points |
-|-------|-------------|----------|------------|--------|
-| The Chamber of Rest | Venture into your sleeping quarters and restore order to the land. Make the bed, clear the floor, and banish the chaos that lurks within. | Bedroom | medium | 20 |
-| Dishwasher's Oath | The enchanted basin overflows with relics of past feasts. Empty its contents and return each vessel to its rightful place in the kingdom's cupboards. | Kitchen | easy | 15 |
-| The Scholar's Burden | Ancient tomes of knowledge await your attention. Sit at the desk of wisdom, open your scrolls, and complete the lessons set forth by the Academy. | Homework | hard | 30 |
-| Cauldron Duty | The evening feast must be prepared. Assist the Head Chef in chopping ingredients, stirring the cauldron, and setting the grand table for the guild. | Kitchen | medium | 25 |
-| The Folding Ritual | Freshly cleansed garments have emerged from the Washing Shrine. Sort them by allegiance, fold them with precision, and deliver them to each hero's quarters. | Laundry | easy | 15 |
-| Beast Keeper's Round | The loyal creatures of the realm hunger for sustenance and care. Fill their bowls, refresh their water, and tend to their domain. | Pets | easy | 10 |
-| Garden of the Ancients | The overgrown wilds beyond the castle walls cry out for a champion. Pull the weeds, water the sacred plants, and sweep the stone paths clean. | Garden | hard | 30 |
-| The Porcelain Throne | A perilous quest awaits in the Bathroom Keep. Scrub the basin, polish the mirrors, and vanquish the grime that clings to every surface. | Bathroom | medium | 20 |
-| Sweeping the Great Hall | Dust and debris have invaded the common quarters. Take up your broom and mop, and restore the floors to their former glory. | General | easy | 10 |
-| Merchant's Errand | The guild requires supplies from the village market. Accompany the Quartermaster on this vital resupply mission beyond the castle gates. | Outdoor | medium | 20 |
+### 2c. Simplify Chore Creation
+- `POST /api/chores` — only accepts: title, description, points, difficulty, category_id, icon
+  - No `assigned_user_ids`, `recurrence`, `custom_days`, `requires_photo`
 
-**Seed logic:**
-- Add to `seed_database()` — only seed if the chores table is empty
-- Need a "system" user or the first admin user to set as `created_by`
-- Assign to category by name lookup
-- All set to `recurrence: daily`, `requires_photo: false`
-- No `assigned_user_ids` (parents assign later)
+### 2d. Update Auto-Generation
+- Calendar `_auto_generate_assignments()` and daily reset: read from `ChoreAssignmentRule` first, fallback to Chore fields
+- Each kid gets their own recurrence schedule from their rule
+
+### 2e. Chore Listing
+- `GET /api/chores` gains `?view=library|active` query param
+  - `library`: all quests (template view)
+  - `active`: quests with active assignment rules
+- Response includes `assignment_rules` and `assignment_count`
 
 ---
 
-## Execution order
+## Phase 3: Frontend — Quest Creation ("New Quest Scroll")
 
-1. **Rename ChoreQuest -> ChoreQuest** (~12 files, find-and-replace)
-2. **Avatar: rebuild AvatarDisplay.jsx** (head shapes, eye styles, mouth styles, bg colour)
-3. **Avatar: update backend catalogue** (avatar.py — slim down to head/hair/eyes/mouth)
-4. **Avatar: build AvatarEditor.jsx** (new component with shape selectors + colour swatches)
-5. **Avatar: integrate editor into Profile.jsx**
-6. **Template quests: add DEFAULT_QUESTS to seed.py**
-7. **Test & commit**
+### 3a. QuestCreateModal.jsx (new component)
+Clean modal with:
+- **Template picker**: grid of built-in RPG templates + "From Scratch" option
+- **Form fields**: Quest Name, Description, XP, Difficulty, Category
+- **"Create Quest" button** — creates the quest, no assignment
+
+### 3b. Built-in Templates
+RPG-themed templates for boys & girls across categories:
+
+**Household Quests:**
+- The Chamber of Rest — Make bed, tidy room
+- Sweeping the Great Hall — Vacuum/sweep floors
+- Dishwasher's Oath — Load/unload dishwasher
+- The Royal Table — Set/clear dinner table
+- Cauldron Duty — Help prepare dinner
+- The Folding Ritual — Fold and put away laundry
+- Bin Banishment — Take out the bins
+
+**Personal Care:**
+- The Morning Ritual — Brush teeth (morning)
+- The Evening Ritual — Brush teeth (evening)
+- The Warrior's Cleanse — Have a shower/bath
+- Armour Up — Get dressed independently
+- The Scholar's Pack — Pack school bag
+
+**Pets/Creatures:**
+- Beast Keeper's Round — Feed pet
+- The Hound's March — Walk the dog
+- Dragon's Den Duty — Clean pet area
+- The Sacred Water Bowl — Fill pet's water
+
+**Learning/Homework:**
+- The Scholar's Burden — Do homework
+- Tome Reader's Quest — Read for 20 minutes
+- Bard's Practice — Practice instrument
+- Spell Studies — Study spelling/revision
+
+**Outdoor/Garden:**
+- Garden of the Ancients — Water plants / weed garden
+- The Lawn Guardian — Mow the lawn
+- Merchant's Errand — Help with shopping trip
+
+**Bathroom:**
+- The Porcelain Throne — Clean bathroom
+
+---
+
+## Phase 4: Frontend — Quest Assignment ("Quest Assignment Scroll")
+
+### 4a. QuestAssignModal.jsx (new component)
+Opens when tapping an unassigned quest (or "Assign" button on any quest):
+- **Quest summary** at top (name, XP, difficulty badge)
+- **Kid selector**: avatar chips for each family kid, tap to toggle
+- **Per-kid settings** (expandable section per selected kid):
+  - Recurrence: once / daily / weekly / custom (dropdown)
+  - Custom days: day-of-week toggles (shown if custom)
+  - Photo proof: toggle switch
+- **Rotation section** (shown when 2+ kids selected):
+  - "Enable rotation" toggle
+  - Cadence: daily / weekly / fortnightly / monthly
+- **"Assign Quest" button**
+
+### 4b. Editing Assignments
+Same modal can open for already-assigned quests:
+- Pre-filled with current rules
+- Can add/remove kids
+- Can change per-kid settings
+- "Update Assignments" button
+
+---
+
+## Phase 5: Frontend — Quest Management Tabs
+
+### 5a. Chores.jsx Redesign (Parent View)
+Two tabs at top of page:
+
+**Tab 1: "Quest Library"**
+- All created quests as cards
+- Each card shows: name, XP, difficulty stars, category badge
+- Badge: "Assigned to X kids" or "Not assigned"
+- Tap card → opens QuestAssignModal
+- Edit (pencil) → opens QuestCreateModal in edit mode
+- Delete (trash) → removes quest
+- FAB "+" → opens QuestCreateModal
+
+**Tab 2: "Active Quests"**
+- Quests that have active assignment rules
+- Grouped or filterable by kid
+- Each card shows: quest name, assigned kids (avatars), recurrence, status
+- Tap card → navigates to `/chores/{id}` (Quest Detail)
+- Filter/search bar
+
+### 5b. Kid View
+- Unchanged — kids see their assigned quests with complete/photo flow
+
+---
+
+## Phase 6: Quest Detail + Guild Master Actions
+
+### 6a. ChoreDetail.jsx Updates
+- Guild Master Actions (already exists, stays on this page):
+  - Verify, Uncomplete, Skip, Remove (Just Today / All Future)
+- Add per-kid assignment info display
+- Show which kid this assignment is for
+- Navigation from Family Overview → `/chores/{id}?kid={kidId}`
+
+### 6b. ParentDashboard (Family Overview)
+- Kid cards with today's progress
+- Tapping an assigned quest → navigates to ChoreDetail
+- Pending verifications section stays
+
+---
+
+## File Changes Summary
+
+**Backend modified:**
+- `models.py` — add ChoreAssignmentRule, QuestTemplate
+- `schemas.py` — new schemas
+- `routers/chores.py` — templates endpoint, assignment rules CRUD, simplify create
+- `routers/calendar.py` — update auto-generation to use rules
+- `main.py` — update daily reset to use rules
+- `database.py` — migration + seed templates
+
+**Frontend new:**
+- `src/components/QuestCreateModal.jsx`
+- `src/components/QuestAssignModal.jsx`
+
+**Frontend modified:**
+- `src/pages/Chores.jsx` — two-tab layout, template picker, simplified create
+- `src/pages/ChoreDetail.jsx` — per-kid settings display
+- `src/pages/ParentDashboard.jsx` — navigation updates

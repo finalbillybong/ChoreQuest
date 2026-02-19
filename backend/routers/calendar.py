@@ -8,6 +8,7 @@ from backend.database import get_db
 from backend.models import (
     Chore,
     ChoreAssignment,
+    ChoreAssignmentRule,
     ChoreExclusion,
     ChoreRotation,
     User,
@@ -27,8 +28,8 @@ router = APIRouter(prefix="/api/calendar", tags=["calendar"])
 async def _get_assigned_user_ids(db: AsyncSession, chore: Chore) -> list[int]:
     """Determine which user IDs should be assigned to a chore.
 
-    First checks for a ChoreRotation. If none exists, falls back to
-    looking at distinct user_ids from past ChoreAssignment records.
+    First checks for a ChoreRotation. Then checks assignment rules.
+    Falls back to past ChoreAssignment records.
     """
     # Check for rotation first
     result = await db.execute(
@@ -37,6 +38,17 @@ async def _get_assigned_user_ids(db: AsyncSession, chore: Chore) -> list[int]:
     rotation = result.scalar_one_or_none()
     if rotation and rotation.kid_ids:
         return rotation.kid_ids
+
+    # Check for active assignment rules
+    rules_result = await db.execute(
+        select(ChoreAssignmentRule.user_id).where(
+            ChoreAssignmentRule.chore_id == chore.id,
+            ChoreAssignmentRule.is_active == True,
+        )
+    )
+    rule_user_ids = list(rules_result.scalars().all())
+    if rule_user_ids:
+        return rule_user_ids
 
     # Fall back to distinct assigned users from previous assignments
     result = await db.execute(
@@ -74,57 +86,98 @@ async def _auto_generate_assignments(
 
     # Get all active recurring chores
     result = await db.execute(
-        select(Chore).where(
-            Chore.is_active == True,
-            Chore.recurrence != Recurrence.once,
-        )
+        select(Chore).where(Chore.is_active == True)
     )
     chores = result.scalars().all()
 
     for chore in chores:
-        user_ids = await _get_assigned_user_ids(db, chore)
-        if not user_ids:
-            continue
+        # Check for per-kid assignment rules first
+        rules_result = await db.execute(
+            select(ChoreAssignmentRule).where(
+                ChoreAssignmentRule.chore_id == chore.id,
+                ChoreAssignmentRule.is_active == True,
+            )
+        )
+        rules = rules_result.scalars().all()
 
-        for day in week_dates:
-            should_create = False
+        if rules:
+            # Use per-kid assignment rules (new flow)
+            for rule in rules:
+                if rule.recurrence == Recurrence.once:
+                    continue  # One-time rules are handled at creation
 
-            if chore.recurrence == Recurrence.daily:
-                should_create = True
-            elif chore.recurrence == Recurrence.weekly:
-                # Create on the weekday matching the chore's created_at weekday
-                if day.weekday() == chore.created_at.weekday():
-                    should_create = True
-            elif chore.recurrence == Recurrence.custom:
-                # custom_days is a list of ints: 0=Mon, 6=Sun
-                if chore.custom_days and day.weekday() in chore.custom_days:
-                    should_create = True
+                for day in week_dates:
+                    should_create = False
+                    if rule.recurrence == Recurrence.daily:
+                        should_create = True
+                    elif rule.recurrence == Recurrence.weekly:
+                        if day.weekday() == chore.created_at.weekday():
+                            should_create = True
+                    elif rule.recurrence == Recurrence.custom:
+                        if rule.custom_days and day.weekday() in rule.custom_days:
+                            should_create = True
 
-            if not should_create:
+                    if not should_create:
+                        continue
+                    if (chore.id, rule.user_id, day) in exclusion_set:
+                        continue
+
+                    existing = await db.execute(
+                        select(ChoreAssignment).where(
+                            ChoreAssignment.chore_id == chore.id,
+                            ChoreAssignment.user_id == rule.user_id,
+                            ChoreAssignment.date == day,
+                        )
+                    )
+                    if not existing.scalar_one_or_none():
+                        db.add(ChoreAssignment(
+                            chore_id=chore.id,
+                            user_id=rule.user_id,
+                            date=day,
+                            status=AssignmentStatus.pending,
+                        ))
+        else:
+            # Legacy fallback: use chore-level recurrence
+            if chore.recurrence == Recurrence.once:
                 continue
 
-            for user_id in user_ids:
-                # Skip if this slot was intentionally removed
-                if (chore.id, user_id, day) in exclusion_set:
+            user_ids = await _get_assigned_user_ids(db, chore)
+            if not user_ids:
+                continue
+
+            for day in week_dates:
+                should_create = False
+
+                if chore.recurrence == Recurrence.daily:
+                    should_create = True
+                elif chore.recurrence == Recurrence.weekly:
+                    if day.weekday() == chore.created_at.weekday():
+                        should_create = True
+                elif chore.recurrence == Recurrence.custom:
+                    if chore.custom_days and day.weekday() in chore.custom_days:
+                        should_create = True
+
+                if not should_create:
                     continue
 
-                # Check if assignment already exists (unique constraint: chore_id, user_id, date)
-                result = await db.execute(
-                    select(ChoreAssignment).where(
-                        ChoreAssignment.chore_id == chore.id,
-                        ChoreAssignment.user_id == user_id,
-                        ChoreAssignment.date == day,
+                for user_id in user_ids:
+                    if (chore.id, user_id, day) in exclusion_set:
+                        continue
+
+                    existing = await db.execute(
+                        select(ChoreAssignment).where(
+                            ChoreAssignment.chore_id == chore.id,
+                            ChoreAssignment.user_id == user_id,
+                            ChoreAssignment.date == day,
+                        )
                     )
-                )
-                existing = result.scalar_one_or_none()
-                if not existing:
-                    assignment = ChoreAssignment(
-                        chore_id=chore.id,
-                        user_id=user_id,
-                        date=day,
-                        status=AssignmentStatus.pending,
-                    )
-                    db.add(assignment)
+                    if not existing.scalar_one_or_none():
+                        db.add(ChoreAssignment(
+                            chore_id=chore.id,
+                            user_id=user_id,
+                            date=day,
+                            status=AssignmentStatus.pending,
+                        ))
 
     await db.commit()
 
@@ -217,7 +270,7 @@ async def get_weekly_calendar(
                 } if a.chore.category else None,
                 "recurrence": a.chore.recurrence.value if a.chore.recurrence else None,
                 "custom_days": a.chore.custom_days,
-                "requires_photo": a.chore.requires_photo,
+                "requires_photo": a.chore.requires_photo,  # legacy; frontend checks rule too
                 "is_active": a.chore.is_active,
                 "created_by": a.chore.created_by,
                 "created_at": a.chore.created_at.isoformat() if a.chore.created_at else None,

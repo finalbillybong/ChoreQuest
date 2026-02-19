@@ -20,6 +20,7 @@ import {
   RotateCw,
   Trash2,
   ChevronRight,
+  Users,
 } from 'lucide-react';
 
 const DIFFICULTY_LEVEL = { easy: 1, medium: 2, hard: 3, expert: 4 };
@@ -100,6 +101,7 @@ export default function ChoreDetail() {
   const [rotation, setRotation] = useState(null);
   const [allKids, setAllKids] = useState([]);
   const [selectedCadence, setSelectedCadence] = useState('weekly');
+  const [assignmentRules, setAssignmentRules] = useState([]);
 
   const fetchRotation = useCallback(async () => {
     if (!isParent) return;
@@ -108,6 +110,14 @@ export default function ChoreDetail() {
       const match = (rotations || []).find((r) => r.chore_id === parseInt(id));
       setRotation(match || null);
     } catch { setRotation(null); }
+  }, [id, isParent]);
+
+  const fetchAssignmentRules = useCallback(async () => {
+    if (!isParent) return;
+    try {
+      const rules = await api(`/api/chores/${id}/rules`);
+      setAssignmentRules(Array.isArray(rules) ? rules.filter((r) => r.is_active) : []);
+    } catch { setAssignmentRules([]); }
   }, [id, isParent]);
 
   const fetchChore = useCallback(async () => {
@@ -125,10 +135,11 @@ export default function ChoreDetail() {
   useEffect(() => {
     fetchChore();
     fetchRotation();
+    fetchAssignmentRules();
     if (isParent) {
       api('/api/stats/kids').then((data) => setAllKids(data || [])).catch(() => {});
     }
-  }, [fetchChore, fetchRotation, isParent]);
+  }, [fetchChore, fetchRotation, fetchAssignmentRules, isParent]);
 
   // Live updates via WebSocket
   useEffect(() => {
@@ -484,6 +495,45 @@ export default function ChoreDetail() {
               <SkipForward size={14} />
               {actionLoading === 'skip' ? 'Skipping...' : 'Skip Today'}
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Assignment Rules Panel (parent only) */}
+      {isParent && assignmentRules.length > 0 && (
+        <div className="game-panel p-5 space-y-3">
+          <div className="flex items-center gap-2">
+            <Users size={18} className="text-sky" />
+            <h2 className="text-cream text-lg font-bold">Assigned Heroes</h2>
+          </div>
+          <div className="space-y-2">
+            {assignmentRules.map((rule) => {
+              const kid = allKids.find((k) => k.id === rule.user_id);
+              return (
+                <div
+                  key={rule.id}
+                  className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg border border-border bg-surface-raised/20"
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-cream text-sm font-medium truncate">
+                      {kid?.display_name || rule.user?.display_name || `Kid #${rule.user_id}`}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span className="text-muted text-xs capitalize flex items-center gap-1">
+                      <RefreshCw size={10} />
+                      {rule.recurrence}
+                    </span>
+                    {rule.requires_photo && (
+                      <span className="text-muted text-xs flex items-center gap-1">
+                        <Camera size={10} />
+                        Photo
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

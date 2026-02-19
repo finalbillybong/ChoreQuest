@@ -186,6 +186,36 @@ class ChoreExclusion(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
+class ChoreAssignmentRule(Base):
+    """Per-kid assignment configuration for a chore (recurrence, photo, etc.)."""
+    __tablename__ = "chore_assignment_rules"
+    __table_args__ = (UniqueConstraint("chore_id", "user_id"),)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    chore_id: Mapped[int] = mapped_column(ForeignKey("chores.id"), nullable=False)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    recurrence: Mapped[Recurrence] = mapped_column(Enum(Recurrence), nullable=False)
+    custom_days: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    requires_photo: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    chore = relationship("Chore")
+    user = relationship("User")
+
+
+class QuestTemplate(Base):
+    """Built-in quest templates that ship with the app."""
+    __tablename__ = "quest_templates"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    suggested_points: Mapped[int] = mapped_column(Integer, nullable=False)
+    difficulty: Mapped[Difficulty] = mapped_column(Enum(Difficulty), nullable=False)
+    category_name: Mapped[str] = mapped_column(String(50), nullable=False)
+    icon: Mapped[str | None] = mapped_column(String(50), nullable=True)
+
+
 class Reward(Base):
     __tablename__ = "rewards"
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
