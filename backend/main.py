@@ -124,12 +124,13 @@ async def lifespan(app: FastAPI):
     task.cancel()
 
 
-app = FastAPI(title="QuestOS", lifespan=lifespan)
+app = FastAPI(title="ChoreQuest", lifespan=lifespan)
 
-# CORS - restrictive
+# CORS - configurable via CORS_ORIGINS env var (comma-separated), empty = no cross-origin
+_cors_origins = [o.strip() for o in settings.CORS_ORIGINS.split(",") if o.strip()]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -216,6 +217,6 @@ if STATIC_DIR.is_dir():
         if full_path.startswith("api/"):
             return JSONResponse({"detail": "Not found"}, status_code=404)
         file_path = STATIC_DIR / full_path
-        if file_path.is_file():
+        if file_path.resolve().is_relative_to(STATIC_DIR.resolve()) and file_path.is_file():
             return FileResponse(str(file_path))
         return FileResponse(str(STATIC_DIR / "index.html"))

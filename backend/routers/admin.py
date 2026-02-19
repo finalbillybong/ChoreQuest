@@ -1,7 +1,7 @@
 import hashlib
 import os
+import secrets
 import string
-import random
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -158,7 +158,7 @@ async def revoke_api_key(
 
 def _generate_invite_code(length: int = 8) -> str:
     chars = string.ascii_uppercase + string.digits
-    return "".join(random.choices(chars, k=length))
+    return "".join(secrets.choice(chars) for _ in range(length))
 
 
 # ---------- GET /invite-codes ----------

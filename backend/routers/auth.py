@@ -256,12 +256,21 @@ async def refresh(
         _clear_refresh_cookie(resp)
         return resp
 
-    # No token rotation — just issue a fresh access token.
-    # Re-set the same refresh cookie to extend its max-age so active
-    # sessions never silently expire.
-    _set_refresh_cookie(response, raw_token)
+    # Rotate: revoke old token, issue a fresh pair
+    stored.is_revoked = True
 
     access_token = create_access_token(user.id, user.role.value)
+    new_raw_refresh, new_expires_at = create_refresh_token(user.id)
+    new_stored = RefreshToken(
+        user_id=user.id,
+        token_hash=hash_token(new_raw_refresh),
+        expires_at=new_expires_at,
+    )
+    db.add(new_stored)
+    await db.commit()
+
+    _set_refresh_cookie(response, new_raw_refresh)
+
     return AuthResponse(
         access_token=access_token,
         user=UserResponse.model_validate(user),

@@ -31,6 +31,7 @@ from backend.schemas import (
     CategoryCreate,
     CategoryResponse,
 )
+from backend.config import settings
 from backend.dependencies import get_current_user, require_parent
 from backend.achievements import check_achievements
 from backend.websocket_manager import ws_manager
@@ -356,12 +357,18 @@ async def complete_chore(
 
     # Save photo proof if provided
     if file and file.size and file.size > 0:
+        allowed_types = {"image/jpeg", "image/png", "image/gif", "image/webp"}
+        if file.content_type not in allowed_types:
+            raise HTTPException(status_code=400, detail="Invalid file type. Allowed: JPEG, PNG, GIF, WebP")
+        contents = await file.read()
+        max_size = settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024
+        if len(contents) > max_size:
+            raise HTTPException(status_code=400, detail=f"File too large. Max {settings.MAX_UPLOAD_SIZE_MB}MB")
         upload_dir = "/app/data/uploads"
         os.makedirs(upload_dir, exist_ok=True)
         ext = os.path.splitext(file.filename or "photo.jpg")[1] or ".jpg"
         filename = f"{uuid.uuid4().hex}{ext}"
         filepath = os.path.join(upload_dir, filename)
-        contents = await file.read()
         with open(filepath, "wb") as f:
             f.write(contents)
         assignment.photo_proof_path = filename

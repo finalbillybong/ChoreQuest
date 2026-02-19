@@ -1,6 +1,6 @@
 {
-  "name": "QuestOS",
-  "short_name": "QuestOS",
+  "name": "ChoreQuest",
+  "short_name": "ChoreQuest",
   "description": "Gamified family quest board",
   "start_url": "/",
   "display": "standalone",

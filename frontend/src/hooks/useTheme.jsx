@@ -18,19 +18,19 @@ export const COLOR_THEMES = [
 
 export function ThemeProvider({ children }) {
   const [mode, setMode] = useState(() => {
-    const saved = localStorage.getItem('questos-theme');
+    const saved = localStorage.getItem('chorequest-theme');
     if (saved) return saved;
     return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
   });
 
   const [colorTheme, setColorTheme] = useState(() => {
-    return localStorage.getItem('questos-color-theme') || 'default';
+    return localStorage.getItem('chorequest-color-theme') || 'default';
   });
 
   // Apply mode + color theme to document
   useEffect(() => {
-    localStorage.setItem('questos-theme', mode);
-    localStorage.setItem('questos-color-theme', colorTheme);
+    localStorage.setItem('chorequest-theme', mode);
+    localStorage.setItem('chorequest-color-theme', colorTheme);
 
     const el = document.documentElement;
     el.classList.toggle('light-mode', mode === 'light');
@@ -68,7 +68,7 @@ export function ThemeProvider({ children }) {
       const serverTheme = user.avatar_config.color_theme;
       if (COLOR_THEMES.some((t) => t.id === serverTheme)) {
         setColorTheme(serverTheme);
-        localStorage.setItem('questos-color-theme', serverTheme);
+        localStorage.setItem('chorequest-color-theme', serverTheme);
       }
     }
   }, []);

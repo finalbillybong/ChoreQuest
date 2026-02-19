@@ -86,7 +86,7 @@ export default function Layout({ children }) {
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-sky to-accent-light flex items-center justify-center">
             <Swords size={16} className="text-white" />
           </div>
-          <span className="font-heading text-cream text-lg font-extrabold tracking-tight">QuestOS</span>
+          <span className="font-heading text-cream text-lg font-extrabold tracking-tight">ChoreQuest</span>
         </div>
 
         <nav className="flex flex-col gap-0.5 px-3 mt-2 flex-1">
@@ -141,7 +141,7 @@ export default function Layout({ children }) {
             <div className="w-7 h-7 rounded-md bg-gradient-to-br from-sky to-accent-light flex items-center justify-center">
               <Swords size={14} className="text-white" />
             </div>
-            <span className="font-heading text-cream text-base font-extrabold tracking-tight">QuestOS</span>
+            <span className="font-heading text-cream text-base font-extrabold tracking-tight">ChoreQuest</span>
           </div>
 
           <div className="hidden md:block" />

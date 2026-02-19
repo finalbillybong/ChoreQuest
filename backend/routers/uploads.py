@@ -12,6 +12,12 @@ router = APIRouter(prefix="/api/uploads", tags=["uploads"])
 
 UPLOAD_DIR = "/app/data/uploads"
 ALLOWED_TYPES = {"image/jpeg", "image/png", "image/gif", "image/webp"}
+MIME_TO_EXT = {
+    "image/jpeg": {".jpg", ".jpeg"},
+    "image/png": {".png"},
+    "image/gif": {".gif"},
+    "image/webp": {".webp"},
+}
 
 
 @router.post("")
@@ -27,7 +33,10 @@ async def upload_file(
     if len(contents) > max_size:
         raise HTTPException(status_code=400, detail=f"File too large. Max {settings.MAX_UPLOAD_SIZE_MB}MB")
 
-    ext = os.path.splitext(file.filename or "upload.jpg")[1] or ".jpg"
+    ext = os.path.splitext(file.filename or "upload.jpg")[1].lower() or ".jpg"
+    allowed_exts = MIME_TO_EXT.get(file.content_type, set())
+    if ext not in allowed_exts:
+        ext = next(iter(allowed_exts), ".jpg")
     filename = f"{uuid.uuid4().hex}{ext}"
     filepath = os.path.join(UPLOAD_DIR, filename)
 
@@ -39,7 +48,7 @@ async def upload_file(
 
 
 @router.get("/{filename}")
-async def get_upload(filename: str):
+async def get_upload(filename: str, user: User = Depends(get_current_user)):
     safe_name = os.path.basename(filename)
     filepath = os.path.join(UPLOAD_DIR, safe_name)
     if not os.path.isfile(filepath):

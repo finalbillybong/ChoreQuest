@@ -1,16 +1,16 @@
 # Implementation Plan
 
-## 1. Rename ChoresOS to QuestOS (all layers)
+## 1. Rename ChoreQuest to ChoreQuest (all layers)
 
-Replace every occurrence of "ChoresOS" / "choresos" across the entire codebase:
+Replace every occurrence of "ChoreQuest" / "choresos" across the entire codebase:
 
 | File | Change |
 |------|--------|
-| `frontend/index.html` | `<title>QuestOS — Quest Board</title>` |
+| `frontend/index.html` | `<title>ChoreQuest — Quest Board</title>` |
 | `frontend/public/manifest.json` | name + short_name |
-| `frontend/public/sw.js` | `CACHE_NAME = 'questos-v3'` (bump version to bust cache) |
+| `frontend/public/sw.js` | `CACHE_NAME = 'chorequest-v3'` (bump version to bust cache) |
 | `frontend/src/components/Layout.jsx` | Two heading strings (desktop sidebar + mobile bar) |
-| `frontend/src/hooks/useTheme.jsx` | localStorage key `questos-theme` |
+| `frontend/src/hooks/useTheme.jsx` | localStorage key `chorequest-theme` |
 | `frontend/src/pages/Login.jsx` | Login page branding text |
 | `frontend/package.json` | package name |
 | `backend/main.py` | FastAPI title |
@@ -114,7 +114,7 @@ Add a `DEFAULT_QUESTS` list to `backend/seed.py` that seeds template chores on f
 
 ## Execution order
 
-1. **Rename ChoresOS -> QuestOS** (~12 files, find-and-replace)
+1. **Rename ChoreQuest -> ChoreQuest** (~12 files, find-and-replace)
 2. **Avatar: rebuild AvatarDisplay.jsx** (head shapes, eye styles, mouth styles, bg colour)
 3. **Avatar: update backend catalogue** (avatar.py — slim down to head/hair/eyes/mouth)
 4. **Avatar: build AvatarEditor.jsx** (new component with shape selectors + colour swatches)
