@@ -15,6 +15,7 @@ import {
   CalendarDays,
   Loader2,
   X,
+  Trash2,
 } from 'lucide-react';
 
 function toISO(date) {
@@ -90,6 +91,8 @@ export default function Calendar() {
   const [tradeError, setTradeError] = useState('');
   const [removingId, setRemovingId] = useState(null);
   const [removeTarget, setRemoveTarget] = useState(null);
+  const [cleaning, setCleaning] = useState(false);
+  const [cleanMsg, setCleanMsg] = useState('');
 
   const fetchCalendar = useCallback(async () => {
     setLoading(true);
@@ -199,6 +202,20 @@ export default function Calendar() {
     }
   };
 
+  const cleanupStale = async () => {
+    setCleaning(true);
+    setCleanMsg('');
+    try {
+      const data = await api('/api/chores/cleanup-all-stale', { method: 'POST' });
+      setCleanMsg(data.message || 'Cleanup complete');
+      fetchCalendar();
+    } catch (err) {
+      setError(err.message || 'Cleanup failed');
+    } finally {
+      setCleaning(false);
+    }
+  };
+
   const endDate = addDays(startDate, 6);
   const today = toISO(new Date());
   const isAtToday = startDate === today;
@@ -245,8 +262,31 @@ export default function Calendar() {
               Today
             </button>
           )}
+
+          {!isKid && (
+            <button
+              onClick={cleanupStale}
+              disabled={cleaning}
+              className="game-btn game-btn-red ml-2 flex items-center gap-1"
+              title="Remove all overdue pending quests and reset exclusions"
+            >
+              {cleaning ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : (
+                <Trash2 size={14} />
+              )}
+              Clean Up
+            </button>
+          )}
         </div>
       </div>
+
+      {/* Cleanup success message */}
+      {cleanMsg && (
+        <div className="mb-4 p-3 rounded border-2 border-emerald/40 bg-emerald/10 text-emerald text-sm text-center">
+          {cleanMsg}
+        </div>
+      )}
 
       {/* Error */}
       {error && (
