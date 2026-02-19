@@ -232,12 +232,25 @@ export default function Calendar() {
         </div>
       )}
 
-      {/* Calendar Grid */}
-      {!loading && (
+      {/* Calendar Grid — today first, then future days, then past days */}
+      {!loading && (() => {
+        const today = new Date().toISOString().slice(0, 10);
+        // Build ordered indices: today first, then the rest of the week
+        const todayIdx = (() => {
+          for (let i = 0; i < 7; i++) {
+            if (addDays(weekStart, i) === today) return i;
+          }
+          return 0; // fallback to Monday if today isn't in this week
+        })();
+        const orderedIndices = [];
+        for (let n = 0; n < 7; n++) {
+          orderedIndices.push((todayIdx + n) % 7);
+        }
+        return (
         <div className="grid grid-cols-1 md:grid-cols-7 gap-3">
-          {DAY_LABELS.map((label, i) => {
+          {orderedIndices.map((i) => {
+            const label = DAY_LABELS[i];
             const dayStr = addDays(weekStart, i);
-            const today = new Date().toISOString().slice(0, 10);
             const isToday = dayStr === today;
             const dayAssignments = assignments[dayStr] || [];
 
@@ -316,7 +329,8 @@ export default function Calendar() {
             );
           })}
         </div>
-      )}
+        );
+      })()}
 
       {/* Empty state */}
       {!loading &&

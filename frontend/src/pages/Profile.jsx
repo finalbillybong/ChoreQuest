@@ -473,47 +473,54 @@ export default function Profile() {
         <h3 className="text-cream/80 text-xs font-semibold uppercase tracking-wider mb-3">
           Color Theme
         </h3>
-        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-          {COLOR_THEMES.map((t) => {
-            const isActive = colorTheme === t.id;
-            return (
-              <button
-                key={t.id}
-                onClick={() => setColorTheme(t.id)}
-                className={`relative flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all ${
-                  isActive
-                    ? 'border-accent bg-accent/10 scale-[1.02]'
-                    : 'border-border hover:border-border-light bg-surface-raised/30'
-                }`}
-              >
-                {/* Colour swatch */}
-                <div className="flex gap-1">
-                  <div
-                    className="w-5 h-5 rounded-full border border-white/10"
-                    style={{ backgroundColor: t.accent }}
-                  />
-                  <div
-                    className="w-5 h-5 rounded-full border border-white/10"
-                    style={{ backgroundColor: t.bg }}
-                  />
-                  <div
-                    className="w-5 h-5 rounded-full border border-white/10"
-                    style={{ backgroundColor: t.surface }}
-                  />
-                </div>
-                <span className="text-[11px] font-medium text-cream/80 leading-tight text-center">
-                  {t.label}
-                </span>
-                {isActive && (
-                  <div
-                    className="absolute top-1 right-1 w-3 h-3 rounded-full"
-                    style={{ backgroundColor: t.accent }}
-                  />
-                )}
-              </button>
-            );
-          })}
-        </div>
+        {['boy', 'girl'].map((group) => (
+          <div key={group} className="mb-4">
+            <p className="text-muted text-[11px] font-semibold uppercase tracking-widest mb-2">
+              {group === 'boy' ? 'Knight Themes' : 'Princess Themes'}
+            </p>
+            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+              {COLOR_THEMES.filter((t) => t.group === group).map((t) => {
+                const isActive = colorTheme === t.id;
+                return (
+                  <button
+                    key={t.id}
+                    onClick={() => setColorTheme(t.id)}
+                    className={`relative flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all ${
+                      isActive
+                        ? 'border-accent bg-accent/10 scale-[1.02]'
+                        : 'border-border hover:border-border-light bg-surface-raised/30'
+                    }`}
+                  >
+                    {/* Colour swatch */}
+                    <div className="flex gap-1">
+                      <div
+                        className="w-5 h-5 rounded-full border border-white/10"
+                        style={{ backgroundColor: t.accent }}
+                      />
+                      <div
+                        className="w-5 h-5 rounded-full border border-white/10"
+                        style={{ backgroundColor: t.bg }}
+                      />
+                      <div
+                        className="w-5 h-5 rounded-full border border-white/10"
+                        style={{ backgroundColor: t.surface }}
+                      />
+                    </div>
+                    <span className="text-[11px] font-medium text-cream/80 leading-tight text-center">
+                      {t.label}
+                    </span>
+                    {isActive && (
+                      <div
+                        className="absolute top-1 right-1 w-3 h-3 rounded-full"
+                        style={{ backgroundColor: t.accent }}
+                      />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Management */}
