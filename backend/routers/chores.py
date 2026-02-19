@@ -14,6 +14,7 @@ from backend.models import (
     ChoreAssignment,
     ChoreAssignmentRule,
     ChoreCategory,
+    ChoreExclusion,
     ChoreRotation,
     QuestTemplate,
     User,
@@ -537,6 +538,23 @@ async def assign_chore(
                 await db.delete(sa)
                 removed += 1
         print(f"[ASSIGN] Cleaned {removed} stale pending assignments from {today} onward", flush=True)
+
+        # Clear all exclusions for this chore from today onward.
+        # Exclusions are created when the user manually removes calendar
+        # entries; they must be wiped when re-assigning so the auto-gen
+        # can freely create the new rotation pattern.
+        excl_result = await db.execute(
+            select(ChoreExclusion).where(
+                ChoreExclusion.chore_id == chore_id,
+                ChoreExclusion.date >= today,
+            )
+        )
+        excl_count = 0
+        for exc in excl_result.scalars().all():
+            await db.delete(exc)
+            excl_count += 1
+        if excl_count:
+            print(f"[ASSIGN] Cleared {excl_count} exclusions from {today} onward", flush=True)
 
     elif existing_rotation:
         # Rotation disabled - remove existing rotation

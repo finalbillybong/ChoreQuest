@@ -167,7 +167,12 @@ export default function Layout({ children }) {
             {/* Notification Bell + Dropdown */}
             <div className="relative" ref={panelRef}>
               <button
-                onClick={() => setShowNotifs((v) => !v)}
+                onClick={() => {
+                  setShowNotifs((v) => {
+                    if (!v && unreadCount > 0) markAllRead();
+                    return !v;
+                  });
+                }}
                 className="relative p-2 rounded-lg hover:bg-surface-raised transition-colors"
                 aria-label="Notifications"
               >
