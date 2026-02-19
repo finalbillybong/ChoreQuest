@@ -108,6 +108,12 @@ async def approve_redemption(
         },
     })
 
+    # Broadcast so other clients (parent views, etc.) refresh
+    await ws_manager.broadcast(
+        {"type": "data_changed", "data": {"entity": "redemption"}},
+        exclude_user=redemption.user_id,
+    )
+
     return redemption
 
 
@@ -227,6 +233,13 @@ async def fulfill_redemption(
             "reward_title": redemption.reward.title,
         },
     })
+
+    # Broadcast data-changed so the parent's own inventory view refreshes
+    # (the targeted notification above only goes to the kid)
+    await ws_manager.broadcast(
+        {"type": "data_changed", "data": {"entity": "redemption"}},
+        exclude_user=redemption.user_id,
+    )
 
     return redemption
 

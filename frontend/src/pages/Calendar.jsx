@@ -86,6 +86,7 @@ export default function Calendar() {
   const [tradeSubmitting, setTradeSubmitting] = useState(false);
   const [tradeError, setTradeError] = useState('');
   const [removingId, setRemovingId] = useState(null);
+  const [removeTarget, setRemoveTarget] = useState(null);
 
   const fetchCalendar = useCallback(async () => {
     setLoading(true);
@@ -181,10 +182,12 @@ export default function Calendar() {
     }
   };
 
-  const removeAssignment = async (assignmentId) => {
+  const removeAssignment = async (assignmentId, allFuture = false) => {
     setRemovingId(assignmentId);
+    setRemoveTarget(null);
     try {
-      await api(`/api/calendar/assignments/${assignmentId}`, { method: 'DELETE' });
+      const qs = allFuture ? '?all_future=true' : '';
+      await api(`/api/calendar/assignments/${assignmentId}${qs}`, { method: 'DELETE' });
       fetchCalendar();
     } catch (err) {
       setError(err.message || 'Failed to remove quest');
@@ -339,7 +342,12 @@ export default function Calendar() {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              removeAssignment(a.id);
+                              const isRecurring = a.chore?.recurrence && a.chore.recurrence !== 'once';
+                              if (isRecurring) {
+                                setRemoveTarget(a);
+                              } else {
+                                removeAssignment(a.id);
+                              }
                             }}
                             disabled={removingId === a.id}
                             className="mt-1.5 flex items-center gap-1 text-xs font-medium text-crimson hover:text-crimson/80 transition-colors"
@@ -435,6 +443,38 @@ export default function Calendar() {
             </div>
           )}
         </div>
+      </Modal>
+
+      {/* Remove Recurring Quest Modal */}
+      <Modal
+        isOpen={!!removeTarget}
+        onClose={() => setRemoveTarget(null)}
+        title="Remove Recurring Quest"
+        actions={[
+          {
+            label: 'Cancel',
+            onClick: () => setRemoveTarget(null),
+            className: 'game-btn game-btn-blue',
+          },
+          {
+            label: 'Just This One',
+            onClick: () => removeAssignment(removeTarget?.id, false),
+            className: 'game-btn game-btn-red',
+          },
+          {
+            label: 'All Future',
+            onClick: () => removeAssignment(removeTarget?.id, true),
+            className: 'game-btn game-btn-red',
+          },
+        ]}
+      >
+        <p className="text-muted text-sm">
+          <span className="text-cream font-bold">
+            {removeTarget?.chore?.title || 'Quest'}
+          </span>{' '}
+          is a recurring quest{removeTarget?.user?.display_name ? ` for ${removeTarget.user.display_name}` : ''}.
+          Remove just this one instance, or all future pending instances for this kid?
+        </p>
       </Modal>
     </div>
   );

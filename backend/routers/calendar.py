@@ -371,6 +371,18 @@ async def accept_trade(
         },
     )
 
+    # Notify the accepting kid so their dashboard refreshes with the new quest
+    await ws_manager.send_to_user(
+        current_user.id,
+        {
+            "type": "trade_accepted",
+            "data": {
+                "assignment_id": assignment.id,
+                "chore_title": chore_title,
+            },
+        },
+    )
+
     return {"message": "Trade accepted", "assignment_id": assignment.id}
 
 
@@ -441,6 +453,10 @@ async def deny_trade(
 @router.delete("/assignments/{assignment_id}", status_code=204)
 async def remove_assignment(
     assignment_id: int,
+    all_future: bool = Query(
+        False,
+        description="Also remove all future pending instances of this chore for the same kid",
+    ),
     parent: User = Depends(require_parent),
     db: AsyncSession = Depends(get_db),
 ):
@@ -448,6 +464,10 @@ async def remove_assignment(
 
     Only pending assignments can be removed — completed, verified, or
     skipped assignments are left intact.
+
+    If ``all_future=true``, every pending assignment for the same
+    chore + kid from today onward is also deleted (useful for
+    recurring quests).
     """
     result = await db.execute(
         select(ChoreAssignment)
@@ -464,7 +484,21 @@ async def remove_assignment(
             detail="Only pending assignments can be removed",
         )
 
-    await db.delete(assignment)
+    if all_future:
+        # Remove all pending assignments for this chore + kid from this date onward
+        future_result = await db.execute(
+            select(ChoreAssignment).where(
+                ChoreAssignment.chore_id == assignment.chore_id,
+                ChoreAssignment.user_id == assignment.user_id,
+                ChoreAssignment.date >= assignment.date,
+                ChoreAssignment.status == AssignmentStatus.pending,
+            )
+        )
+        for a in future_result.scalars().all():
+            await db.delete(a)
+    else:
+        await db.delete(assignment)
+
     await db.commit()
 
     await ws_manager.broadcast(
