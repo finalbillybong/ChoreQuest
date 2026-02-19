@@ -47,6 +47,7 @@ export default function QuestAssignModal({
   const [expandedKid, setExpandedKid] = useState(null);
   const [rotationEnabled, setRotationEnabled] = useState(false);
   const [rotationCadence, setRotationCadence] = useState('weekly');
+  const [rotationFirstKid, setRotationFirstKid] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [existingRules, setExistingRules] = useState([]);
@@ -107,14 +108,19 @@ export default function QuestAssignModal({
         if (rot && rot.kid_ids && rot.kid_ids.length >= 2) {
           setRotationEnabled(true);
           setRotationCadence(rot.cadence || 'weekly');
+          // Restore who currently starts the rotation
+          const currentIdx = rot.current_index ?? 0;
+          setRotationFirstKid(rot.kid_ids[currentIdx] ?? rot.kid_ids[0]);
         } else {
           setRotationEnabled(false);
           setRotationCadence('weekly');
+          setRotationFirstKid(null);
         }
       })
       .catch(() => {
         setRotationEnabled(false);
         setRotationCadence('weekly');
+        setRotationFirstKid(null);
       });
 
     setError('');
@@ -123,6 +129,15 @@ export default function QuestAssignModal({
   const selectedKids = Object.entries(kidConfigs).filter(([, c]) => c.selected);
   const selectedCount = selectedKids.length;
   const isUnassigningAll = hadExistingAssignments && selectedCount === 0;
+
+  // Auto-default rotationFirstKid when rotation is on but no valid first kid is set
+  useEffect(() => {
+    if (!rotationEnabled || selectedCount < 2) return;
+    const selectedIds = selectedKids.map(([id]) => Number(id));
+    if (rotationFirstKid == null || !selectedIds.includes(Number(rotationFirstKid))) {
+      setRotationFirstKid(selectedIds[0]);
+    }
+  }, [rotationEnabled, selectedCount, kidConfigs]);
 
   const toggleKid = (kidId) => {
     setKidConfigs((prev) => ({
@@ -172,7 +187,7 @@ export default function QuestAssignModal({
     setSubmitting(true);
     setError('');
 
-    const assignments = selectedKids.map(([kidId, config]) => ({
+    let assignments = selectedKids.map(([kidId, config]) => ({
       user_id: Number(kidId),
       recurrence: config.recurrence,
       custom_days: config.recurrence === 'custom' ? config.custom_days : null,
@@ -181,6 +196,14 @@ export default function QuestAssignModal({
 
     const body = { assignments };
     if (rotationEnabled && selectedCount >= 2) {
+      // Reorder so the chosen first kid is at index 0 (backend uses kid_ids[0])
+      if (rotationFirstKid != null) {
+        const firstIdx = assignments.findIndex((a) => a.user_id === Number(rotationFirstKid));
+        if (firstIdx > 0) {
+          const [first] = assignments.splice(firstIdx, 1);
+          assignments.unshift(first);
+        }
+      }
       body.rotation = { enabled: true, cadence: rotationCadence };
     }
 
@@ -459,24 +482,57 @@ export default function QuestAssignModal({
               </button>
             </div>
             {rotationEnabled && (
-              <div>
-                <label className="block text-muted text-xs font-medium mb-1">
-                  Rotation Cadence
-                </label>
-                <select
-                  value={rotationCadence}
-                  onChange={(e) => setRotationCadence(e.target.value)}
-                  className={`${selectClass} w-full`}
-                >
-                  {CADENCE_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-                <p className="text-muted text-xs mt-1">
-                  The quest will rotate between the selected heroes on this schedule.
-                </p>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-muted text-xs font-medium mb-1">
+                    Rotation Cadence
+                  </label>
+                  <select
+                    value={rotationCadence}
+                    onChange={(e) => setRotationCadence(e.target.value)}
+                    className={`${selectClass} w-full`}
+                  >
+                    {CADENCE_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-muted text-xs font-medium mb-1">
+                    Starts With
+                  </label>
+                  <div className="flex gap-2">
+                    {selectedKids.map(([kidId]) => {
+                      const kid = kids.find((k) => k.id === Number(kidId));
+                      if (!kid) return null;
+                      const isFirst = Number(kidId) === Number(rotationFirstKid);
+                      return (
+                        <button
+                          key={kidId}
+                          type="button"
+                          onClick={() => setRotationFirstKid(Number(kidId))}
+                          className={`flex items-center gap-2 px-3 py-2 rounded-lg border-2 transition-colors text-sm ${
+                            isFirst
+                              ? 'border-purple bg-purple/15 text-purple'
+                              : 'border-border text-muted hover:border-cream/30'
+                          }`}
+                        >
+                          <AvatarDisplay
+                            config={kid.avatar_config}
+                            size="xs"
+                            name={kid.display_name || kid.username}
+                          />
+                          {kid.display_name || kid.username}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-muted text-xs mt-1">
+                    This hero will be assigned the quest first, then it rotates.
+                  </p>
+                </div>
               </div>
             )}
           </div>
