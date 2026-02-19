@@ -12,6 +12,7 @@ import {
   ArrowRightLeft,
   CalendarDays,
   Loader2,
+  X,
 } from 'lucide-react';
 
 function toISO(date) {
@@ -84,6 +85,7 @@ export default function Calendar() {
   const [selectedKid, setSelectedKid] = useState('');
   const [tradeSubmitting, setTradeSubmitting] = useState(false);
   const [tradeError, setTradeError] = useState('');
+  const [removingId, setRemovingId] = useState(null);
 
   const fetchCalendar = useCallback(async () => {
     setLoading(true);
@@ -176,6 +178,18 @@ export default function Calendar() {
       setTradeError(err.message || 'Trade failed');
     } finally {
       setTradeSubmitting(false);
+    }
+  };
+
+  const removeAssignment = async (assignmentId) => {
+    setRemovingId(assignmentId);
+    try {
+      await api(`/api/calendar/assignments/${assignmentId}`, { method: 'DELETE' });
+      fetchCalendar();
+    } catch (err) {
+      setError(err.message || 'Failed to remove quest');
+    } finally {
+      setRemovingId(null);
     }
   };
 
@@ -317,6 +331,25 @@ export default function Calendar() {
                           >
                             <ArrowRightLeft size={12} />
                             Trade
+                          </button>
+                        )}
+
+                        {/* Remove button for parents on pending assignments */}
+                        {!isKid && a.status === 'pending' && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              removeAssignment(a.id);
+                            }}
+                            disabled={removingId === a.id}
+                            className="mt-1.5 flex items-center gap-1 text-xs font-medium text-crimson hover:text-crimson/80 transition-colors"
+                          >
+                            {removingId === a.id ? (
+                              <Loader2 size={12} className="animate-spin" />
+                            ) : (
+                              <X size={12} />
+                            )}
+                            Remove
                           </button>
                         )}
                       </div>

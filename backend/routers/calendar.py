@@ -436,3 +436,40 @@ async def deny_trade(
     )
 
     return {"message": "Trade denied", "assignment_id": assignment.id}
+
+
+@router.delete("/assignments/{assignment_id}", status_code=204)
+async def remove_assignment(
+    assignment_id: int,
+    parent: User = Depends(require_parent),
+    db: AsyncSession = Depends(get_db),
+):
+    """Remove a pending assignment. Parent+ only.
+
+    Only pending assignments can be removed — completed, verified, or
+    skipped assignments are left intact.
+    """
+    result = await db.execute(
+        select(ChoreAssignment)
+        .options(selectinload(ChoreAssignment.chore))
+        .where(ChoreAssignment.id == assignment_id)
+    )
+    assignment = result.scalar_one_or_none()
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+
+    if assignment.status != AssignmentStatus.pending:
+        raise HTTPException(
+            status_code=400,
+            detail="Only pending assignments can be removed",
+        )
+
+    await db.delete(assignment)
+    await db.commit()
+
+    await ws_manager.broadcast(
+        {"type": "data_changed", "data": {"entity": "assignment"}},
+        exclude_user=parent.id,
+    )
+
+    return None
