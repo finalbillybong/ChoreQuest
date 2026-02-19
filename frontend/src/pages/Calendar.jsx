@@ -270,7 +270,10 @@ export default function Calendar() {
             const d = new Date(dayStr + 'T00:00:00');
             const label = SHORT_DAYS[d.getDay()];
             const isToday = dayStr === today;
-            const dayAssignments = assignments[dayStr] || [];
+            const allDayAssignments = assignments[dayStr] || [];
+            const dayAssignments = isKid
+              ? allDayAssignments.filter((a) => a.user_id === user?.id)
+              : allDayAssignments;
 
             return (
               <div key={dayStr} className="min-w-0">
