@@ -14,13 +14,8 @@ import {
   Loader2,
 } from 'lucide-react';
 
-/** Return the Monday of the week containing `date`, as an ISO date string (YYYY-MM-DD). */
-function getMonday(date) {
-  const d = new Date(date);
-  const day = d.getDay(); // 0=Sun ... 6=Sat
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-  d.setDate(diff);
-  return d.toISOString().slice(0, 10);
+function toISO(date) {
+  return date.toISOString().slice(0, 10);
 }
 
 function addDays(dateStr, n) {
@@ -29,7 +24,7 @@ function addDays(dateStr, n) {
   return d.toISOString().slice(0, 10);
 }
 
-const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const SHORT_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 function statusStyle(assignment, dayStr) {
   const today = new Date().toISOString().slice(0, 10);
@@ -77,7 +72,7 @@ export default function Calendar() {
   const { user } = useAuth();
   const isKid = user?.role === 'kid';
 
-  const [weekStart, setWeekStart] = useState(() => getMonday(new Date()));
+  const [startDate, setStartDate] = useState(() => toISO(new Date()));
   const [assignments, setAssignments] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -94,12 +89,34 @@ export default function Calendar() {
     setLoading(true);
     setError('');
     try {
-      const data = await api(`/api/calendar?week_start=${weekStart}`);
-      // Use the days map returned by the backend, ensuring all 7 days exist
+      // The backend requires week_start to be a Monday. Our 7-day window
+      // may span two Mon-Sun weeks, so fetch both if needed.
+      const d = new Date(startDate + 'T00:00:00');
+      const dayOfWeek = d.getDay(); // 0=Sun..6=Sat
+      const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+      const monday1 = addDays(startDate, mondayOffset);
+
+      const data = await api(`/api/calendar?week_start=${monday1}`);
       const byDay = {};
       for (let i = 0; i < 7; i++) {
-        const dayKey = addDays(weekStart, i);
+        const dayKey = addDays(startDate, i);
         byDay[dayKey] = data.days?.[dayKey] || [];
+      }
+
+      // If our window extends past Sunday of that week, fetch next week too
+      const monday2 = addDays(monday1, 7);
+      const lastDay = addDays(startDate, 6);
+      const sunday1 = addDays(monday1, 6);
+      if (lastDay > sunday1) {
+        try {
+          const data2 = await api(`/api/calendar?week_start=${monday2}`);
+          for (let i = 0; i < 7; i++) {
+            const dayKey = addDays(startDate, i);
+            if (!byDay[dayKey]?.length && data2.days?.[dayKey]) {
+              byDay[dayKey] = data2.days[dayKey];
+            }
+          }
+        } catch { /* second fetch is best-effort */ }
       }
       setAssignments(byDay);
     } catch (err) {
@@ -107,7 +124,7 @@ export default function Calendar() {
     } finally {
       setLoading(false);
     }
-  }, [weekStart]);
+  }, [startDate]);
 
   useEffect(() => {
     fetchCalendar();
@@ -120,9 +137,9 @@ export default function Calendar() {
     return () => window.removeEventListener('ws:message', handler);
   }, [fetchCalendar]);
 
-  const prevWeek = () => setWeekStart(addDays(weekStart, -7));
-  const nextWeek = () => setWeekStart(addDays(weekStart, 7));
-  const thisWeek = () => setWeekStart(getMonday(new Date()));
+  const prevWeek = () => setStartDate(addDays(startDate, -7));
+  const nextWeek = () => setStartDate(addDays(startDate, 7));
+  const goToday = () => setStartDate(toISO(new Date()));
 
   const openTrade = async (assignment) => {
     setTradeAssignment(assignment);
@@ -130,22 +147,11 @@ export default function Calendar() {
     setSelectedKid('');
     setTradeModal(true);
     try {
-      const data = await api('/api/admin/users');
-      const kids = (data.users || data || []).filter(
-        (u) => u.role === 'kid' && u.id !== user.id && u.is_active !== false
-      );
+      const data = await api('/api/stats/kids');
+      const kids = (data || []).filter((k) => k.id !== user.id);
       setFamilyKids(kids);
     } catch {
-      // Fallback: try family endpoint
-      try {
-        const data = await api('/api/family/members');
-        const kids = (data || []).filter(
-          (u) => u.role === 'kid' && u.id !== user.id
-        );
-        setFamilyKids(kids);
-      } catch {
-        setFamilyKids([]);
-      }
+      setFamilyKids([]);
     }
   };
 
@@ -173,7 +179,9 @@ export default function Calendar() {
     }
   };
 
-  const weekEnd = addDays(weekStart, 6);
+  const endDate = addDays(startDate, 6);
+  const today = toISO(new Date());
+  const isAtToday = startDate === today;
   const formatShortDate = (str) => {
     const d = new Date(str + 'T00:00:00');
     return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
@@ -201,20 +209,22 @@ export default function Calendar() {
           </button>
 
           <span className="text-cream text-sm min-w-[180px] text-center">
-            {formatShortDate(weekStart)} &ndash; {formatShortDate(weekEnd)}
+            {formatShortDate(startDate)} &ndash; {formatShortDate(endDate)}
           </span>
 
           <button
             onClick={nextWeek}
             className="p-2 rounded hover:bg-surface-raised transition-colors text-muted hover:text-cream"
-            aria-label="Next week"
+            aria-label="Next 7 days"
           >
             <ChevronRight size={20} />
           </button>
 
-          <button onClick={thisWeek} className="game-btn game-btn-blue ml-2">
-            This Week
-          </button>
+          {!isAtToday && (
+            <button onClick={goToday} className="game-btn game-btn-blue ml-2">
+              Today
+            </button>
+          )}
         </div>
       </div>
 
@@ -232,25 +242,13 @@ export default function Calendar() {
         </div>
       )}
 
-      {/* Calendar Grid — today first, then future days, then past days */}
-      {!loading && (() => {
-        const today = new Date().toISOString().slice(0, 10);
-        // Build ordered indices: today first, then the rest of the week
-        const todayIdx = (() => {
-          for (let i = 0; i < 7; i++) {
-            if (addDays(weekStart, i) === today) return i;
-          }
-          return 0; // fallback to Monday if today isn't in this week
-        })();
-        const orderedIndices = [];
-        for (let n = 0; n < 7; n++) {
-          orderedIndices.push((todayIdx + n) % 7);
-        }
-        return (
+      {/* Calendar Grid — 7 days starting from startDate */}
+      {!loading && (
         <div className="grid grid-cols-1 md:grid-cols-7 gap-3">
-          {orderedIndices.map((i) => {
-            const label = DAY_LABELS[i];
-            const dayStr = addDays(weekStart, i);
+          {Array.from({ length: 7 }, (_, i) => {
+            const dayStr = addDays(startDate, i);
+            const d = new Date(dayStr + 'T00:00:00');
+            const label = SHORT_DAYS[d.getDay()];
             const isToday = dayStr === today;
             const dayAssignments = assignments[dayStr] || [];
 
@@ -329,8 +327,7 @@ export default function Calendar() {
             );
           })}
         </div>
-        );
-      })()}
+      )}
 
       {/* Empty state */}
       {!loading &&

@@ -12,6 +12,7 @@ import {
   Home,
   CheckCheck,
   X,
+  Star,
 } from 'lucide-react';
 import AvatarDisplay from './AvatarDisplay';
 
@@ -20,6 +21,7 @@ const navItems = [
   { label: 'Quests', icon: Swords, path: '/chores' },
   { label: 'Rewards', icon: Gift, path: '/rewards' },
   { label: 'Inventory', icon: Package, path: '/inventory' },
+  { label: 'Wishlist', icon: Star, path: '/wishlist' },
   { label: 'Calendar', icon: CalendarDays, path: '/calendar' },
 ];
 

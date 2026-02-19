@@ -77,6 +77,22 @@ async def get_my_stats(
     }
 
 
+@router.get("/kids")
+async def list_kids(
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return a lightweight list of all active kids. Any authenticated user can call this."""
+    result = await db.execute(
+        select(User).where(User.role == UserRole.kid, User.is_active == True)
+    )
+    kids = result.scalars().all()
+    return [
+        {"id": k.id, "display_name": k.display_name or k.username}
+        for k in kids
+    ]
+
+
 @router.get("/family")
 async def get_family_stats(
     parent: User = Depends(require_parent),
