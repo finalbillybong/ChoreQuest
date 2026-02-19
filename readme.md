@@ -1,8 +1,8 @@
-# ChoresOS — Full Application Specification
+# ChoreQuest — Full Application Specification
 
-> **Purpose**: This document is a complete build specification for an AI coder (Claude Code) to rebuild ChoresOS from scratch. The existing codebase serves as reference only — this is a clean-sheet rewrite.
+> **Purpose**: This document is a complete build specification for an AI coder (Claude Code) to rebuild ChoreQuest from scratch. The existing codebase serves as reference only — this is a clean-sheet rewrite.
 >
-> **What is ChoresOS?** A gamified family chore management platform with RPG theming. Parents create quests (chores) and rewards, kids earn XP (points) by completing them, and everyone stays motivated with streaks, achievements, leaderboards, and a reward shop.
+> **What is ChoreQuest?** A gamified family chore management platform with RPG theming. Parents create quests (chores) and rewards, kids earn XP (points) by completing them, and everyone stays motivated with streaks, achievements, leaderboards, and a reward shop.
 
 ---
 
@@ -800,7 +800,7 @@ Single `docker-compose.yml`:
 
 ```yaml
 services:
-  choresos:
+  chorequest:
     build: .
     ports:
       - "8122:8122"
@@ -862,7 +862,7 @@ The container should handle mixed host permissions gracefully — auto-detect an
 Suggested directory layout:
 
 ```
-choresos/
+chorequest/
 ├── backend/
 │   ├── main.py                   # FastAPI app, CORS, static files, startup events
 │   ├── config.py                 # Settings from env vars (Pydantic BaseSettings)

@@ -1,4 +1,4 @@
-const TOKEN_KEY = 'questos_access_token';
+const TOKEN_KEY = 'chorequest_access_token';
 
 let accessToken = null;
 

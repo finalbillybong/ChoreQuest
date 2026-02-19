@@ -108,7 +108,7 @@ export default function Login() {
           <h1 className="font-heading text-cream text-2xl font-extrabold tracking-tight mb-1">
             Welcome back
           </h1>
-          <p className="text-muted text-sm">Sign in to QuestOS</p>
+          <p className="text-muted text-sm">Sign in to ChoreQuest</p>
         </div>
 
         {/* Error display */}

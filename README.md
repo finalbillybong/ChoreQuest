@@ -1,4 +1,4 @@
-# QuestOS
+# ChoreQuest
 
 A family chore app with RPG-flavoured language. Parents create quests, kids earn XP by completing them, and everyone can track progress through streaks, achievements, and a reward shop.
 

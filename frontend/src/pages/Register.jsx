@@ -70,7 +70,7 @@ export default function Register() {
           <h1 className="font-heading text-cream text-2xl font-extrabold tracking-tight mb-1">
             Create Account
           </h1>
-          <p className="text-muted text-sm">Join QuestOS and start your journey</p>
+          <p className="text-muted text-sm">Join ChoreQuest and start your journey</p>
         </div>
 
         {/* Error display */}
