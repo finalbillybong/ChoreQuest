@@ -17,6 +17,7 @@ const Calendar = lazy(() => import('./pages/Calendar'));
 const Leaderboard = lazy(() => import('./pages/Leaderboard'));
 const Wishlist = lazy(() => import('./pages/Wishlist'));
 const Settings = lazy(() => import('./pages/Settings'));
+const Inventory = lazy(() => import('./pages/Inventory'));
 
 function Loading() {
   return (
@@ -61,6 +62,7 @@ export default function App() {
           <Route path="/chores" element={<Chores />} />
           <Route path="/chores/:id" element={<ChoreDetail />} />
           <Route path="/rewards" element={<Rewards />} />
+          <Route path="/inventory" element={<Inventory />} />
           <Route path="/calendar" element={<Calendar />} />
           <Route path="/leaderboard" element={<Leaderboard />} />
           <Route path="/profile" element={<Profile />} />

@@ -182,6 +182,55 @@ async def deny_redemption(
     return redemption
 
 
+@router.post("/redemptions/{redemption_id}/fulfill", response_model=RedemptionResponse)
+async def fulfill_redemption(
+    redemption_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_parent),
+):
+    """Mark an approved redemption as fulfilled / handed out (Parent+)."""
+    result = await db.execute(
+        select(RewardRedemption)
+        .options(
+            selectinload(RewardRedemption.reward),
+            selectinload(RewardRedemption.user),
+        )
+        .where(RewardRedemption.id == redemption_id)
+    )
+    redemption = result.scalar_one_or_none()
+    if redemption is None:
+        raise HTTPException(status_code=404, detail="Redemption not found")
+    if redemption.status != RedemptionStatus.approved:
+        raise HTTPException(status_code=400, detail="Only approved redemptions can be fulfilled")
+
+    redemption.status = RedemptionStatus.fulfilled
+    redemption.fulfilled_by = current_user.id
+    redemption.fulfilled_at = datetime.utcnow()
+
+    # Notify the kid
+    notif = Notification(
+        user_id=redemption.user_id,
+        type=NotificationType.reward_approved,
+        title="Reward Delivered!",
+        message=f"Your reward '{redemption.reward.title}' has been handed out!",
+        reference_type="redemption",
+        reference_id=redemption.id,
+    )
+    db.add(notif)
+    await db.commit()
+    await db.refresh(redemption)
+
+    await ws_manager.send_to_user(redemption.user_id, {
+        "type": "reward_fulfilled",
+        "data": {
+            "redemption_id": redemption.id,
+            "reward_title": redemption.reward.title,
+        },
+    })
+
+    return redemption
+
+
 # ── Reward CRUD endpoints ────────────────────────────────────────────────
 
 
@@ -293,9 +342,8 @@ async def redeem_reward(
 
     * Validates sufficient balance and stock.
     * Deducts points and creates a negative PointTransaction.
-    * If auto_approve_threshold is set and the kid's balance (after deduction)
-      still exceeds the threshold, the redemption is auto-approved; otherwise
-      it stays pending.
+    * Redemption is auto-approved — parents fulfil rewards from the
+      Inventory page once they've been handed out in the real world.
     * Checks achievements and sends a WebSocket notification.
     """
     result = await db.execute(select(Reward).where(Reward.id == reward_id))
@@ -331,23 +379,14 @@ async def redeem_reward(
     )
     db.add(tx)
 
-    # Determine initial status
-    if (
-        reward.auto_approve_threshold is not None
-        and current_user.points_balance > reward.auto_approve_threshold
-    ):
-        initial_status = RedemptionStatus.approved
-    else:
-        initial_status = RedemptionStatus.pending
-
+    # Always auto-approve — parents fulfil from Inventory when given out
     redemption = RewardRedemption(
         reward_id=reward.id,
         user_id=current_user.id,
         points_spent=reward.point_cost,
-        status=initial_status,
+        status=RedemptionStatus.approved,
+        approved_at=datetime.utcnow(),
     )
-    if initial_status == RedemptionStatus.approved:
-        redemption.approved_at = datetime.utcnow()
 
     db.add(redemption)
     await db.commit()
@@ -374,7 +413,7 @@ async def redeem_reward(
             "redemption_id": redemption.id,
             "reward_title": reward.title,
             "points_spent": reward.point_cost,
-            "status": initial_status.value,
+            "status": "approved",
         },
     })
 

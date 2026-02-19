@@ -27,6 +27,19 @@ async def init_db():
         )
         await conn.run_sync(Base.metadata.create_all)
 
+        # Lightweight column migrations for SQLite (create_all won't add
+        # new columns to existing tables).
+        for col, typedef in [
+            ("fulfilled_by", "INTEGER REFERENCES users(id)"),
+            ("fulfilled_at", "DATETIME"),
+        ]:
+            try:
+                await conn.exec_driver_sql(
+                    f"ALTER TABLE reward_redemptions ADD COLUMN {col} {typedef}"
+                )
+            except Exception:
+                pass  # column already exists
+
 
 async def get_db():
     async with async_session() as session:

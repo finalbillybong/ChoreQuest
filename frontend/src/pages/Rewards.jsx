@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
 import { useAuth } from '../hooks/useAuth';
 import Modal from '../components/Modal';
@@ -8,11 +9,8 @@ import {
   Pencil,
   Trash2,
   Coins,
-  CheckCircle2,
-  XCircle,
   Package,
   Sparkles,
-  Clock,
   Gift,
 } from 'lucide-react';
 
@@ -22,17 +20,16 @@ const emptyForm = {
   point_cost: 50,
   icon: '',
   stock: '',
-  auto_approve_threshold: '',
 };
 
 export default function Rewards() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const isParent = user?.role === 'parent' || user?.role === 'admin';
   const isKid = user?.role === 'kid';
 
   // Data state
   const [rewards, setRewards] = useState([]);
-  const [pendingRedemptions, setPendingRedemptions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -51,9 +48,6 @@ export default function Rewards() {
   const [redeemingId, setRedeemingId] = useState(null);
   const [redeemMessage, setRedeemMessage] = useState('');
 
-  // Redemption action state
-  const [processingRedemption, setProcessingRedemption] = useState(null);
-
   const userXp = user?.points_balance ?? 0;
 
   const fetchRewards = useCallback(async () => {
@@ -66,30 +60,16 @@ export default function Rewards() {
     }
   }, []);
 
-  const fetchPendingRedemptions = useCallback(async () => {
-    if (!isParent) return;
-    try {
-      const data = await api('/api/rewards/redemptions?status=pending');
-      setPendingRedemptions(
-        Array.isArray(data) ? data : data.redemptions || data.items || []
-      );
-    } catch {
-      // Non-critical for initial load
-    }
-  }, [isParent]);
-
   useEffect(() => {
-    Promise.all([fetchRewards(), fetchPendingRedemptions()]).finally(() =>
-      setLoading(false)
-    );
-  }, [fetchRewards, fetchPendingRedemptions]);
+    fetchRewards().finally(() => setLoading(false));
+  }, [fetchRewards]);
 
   // Live updates via WebSocket
   useEffect(() => {
-    const handler = () => { fetchRewards(); fetchPendingRedemptions(); };
+    const handler = () => { fetchRewards(); };
     window.addEventListener('ws:message', handler);
     return () => window.removeEventListener('ws:message', handler);
-  }, [fetchRewards, fetchPendingRedemptions]);
+  }, [fetchRewards]);
 
   // Form handlers
   const openCreateModal = () => {
@@ -107,10 +87,6 @@ export default function Rewards() {
       point_cost: reward.point_cost ?? reward.cost ?? 50,
       icon: reward.icon || '',
       stock: reward.stock != null ? String(reward.stock) : '',
-      auto_approve_threshold:
-        reward.auto_approve_threshold != null
-          ? String(reward.auto_approve_threshold)
-          : '',
     });
     setFormError('');
     setShowModal(true);
@@ -148,9 +124,6 @@ export default function Rewards() {
 
     if (form.stock !== '') {
       body.stock = Number(form.stock);
-    }
-    if (form.auto_approve_threshold !== '') {
-      body.auto_approve_threshold = Number(form.auto_approve_threshold);
     }
 
     try {
@@ -193,34 +166,6 @@ export default function Rewards() {
       setRedeemMessage(err.message || 'Redemption failed. The shopkeeper is confused.');
     } finally {
       setRedeemingId(null);
-    }
-  };
-
-  const handleApproveRedemption = async (redemption) => {
-    setProcessingRedemption(redemption.id);
-    try {
-      await api(`/api/rewards/redemptions/${redemption.id}/approve`, {
-        method: 'POST',
-      });
-      await fetchPendingRedemptions();
-    } catch (err) {
-      setError(err.message || 'Could not approve redemption.');
-    } finally {
-      setProcessingRedemption(null);
-    }
-  };
-
-  const handleDenyRedemption = async (redemption) => {
-    setProcessingRedemption(redemption.id);
-    try {
-      await api(`/api/rewards/redemptions/${redemption.id}/deny`, {
-        method: 'POST',
-      });
-      await fetchPendingRedemptions();
-    } catch (err) {
-      setError(err.message || 'Could not deny redemption.');
-    } finally {
-      setProcessingRedemption(null);
     }
   };
 
@@ -298,7 +243,17 @@ export default function Rewards() {
               : 'border-emerald/40 bg-emerald/10 text-emerald'
           }`}
         >
-          {redeemMessage}
+          {redeemMessage}{' '}
+          {!redeemMessage.toLowerCase().includes('fail') &&
+            !redeemMessage.toLowerCase().includes('confused') &&
+            !redeemMessage.toLowerCase().includes('insufficient') && (
+              <button
+                onClick={() => navigate('/inventory')}
+                className="underline font-bold hover:brightness-125 transition-all"
+              >
+                View Inventory
+              </button>
+            )}
         </div>
       )}
 
@@ -424,77 +379,6 @@ export default function Rewards() {
         </div>
       )}
 
-      {/* Pending Redemptions (Parent view) */}
-      {isParent && pendingRedemptions.length > 0 && (
-        <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <Clock size={20} className="text-sky" />
-            <h2 className="text-cream text-lg font-bold">
-              Pending Redemptions
-            </h2>
-            <span className="ml-auto bg-sky/20 text-sky text-xs font-bold px-2 py-1 rounded-full">
-              {pendingRedemptions.length}
-            </span>
-          </div>
-
-          <div className="space-y-3">
-            {pendingRedemptions.map((redemption) => {
-              const isProcessing = processingRedemption === redemption.id;
-              return (
-                <div
-                  key={redemption.id}
-                  className="game-panel p-4 flex flex-col sm:flex-row items-start sm:items-center gap-4"
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="text-cream text-base font-bold leading-relaxed">
-                      {redemption.reward_title || redemption.reward?.title || 'Reward'}
-                    </p>
-                    <div className="flex items-center gap-3 mt-1 flex-wrap">
-                      <span className="text-muted text-sm">
-                        Requested by{' '}
-                        <span className="text-sky">
-                          {redemption.kid_name ||
-                            redemption.user?.display_name ||
-                            redemption.user?.username ||
-                            'Hero'}
-                        </span>
-                      </span>
-                      <span className="flex items-center gap-1 text-gold text-xs">
-                        <Coins size={12} />
-                        {redemption.points_spent || redemption.points || redemption.reward?.point_cost || 0} XP
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <button
-                      onClick={() => handleApproveRedemption(redemption)}
-                      disabled={isProcessing}
-                      className={`game-btn game-btn-blue flex items-center gap-1 ${
-                        isProcessing ? 'opacity-60 cursor-wait' : ''
-                      }`}
-                    >
-                      <CheckCircle2 size={14} />
-                      Approve
-                    </button>
-                    <button
-                      onClick={() => handleDenyRedemption(redemption)}
-                      disabled={isProcessing}
-                      className={`game-btn game-btn-red flex items-center gap-1 ${
-                        isProcessing ? 'opacity-60 cursor-wait' : ''
-                      }`}
-                    >
-                      <XCircle size={14} />
-                      Deny
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
       {/* Create/Edit Reward Modal */}
       <Modal
         isOpen={showModal}
@@ -599,23 +483,6 @@ export default function Rewards() {
             </p>
           </div>
 
-          {/* Auto Approve Threshold */}
-          <div>
-            <label className="block text-cream text-sm font-medium mb-1 tracking-wide">
-              Auto-Approve Threshold (Optional)
-            </label>
-            <input
-              type="number"
-              min={0}
-              value={form.auto_approve_threshold}
-              onChange={(e) => updateForm('auto_approve_threshold', e.target.value)}
-              placeholder="Max cost to auto-approve"
-              className="field-input"
-            />
-            <p className="text-muted text-xs mt-1">
-              Redemptions at or below this cost are auto-approved.
-            </p>
-          </div>
         </div>
       </Modal>
 

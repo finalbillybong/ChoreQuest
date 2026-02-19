@@ -7,6 +7,7 @@ import {
   Bell,
   Swords,
   Gift,
+  Package,
   CalendarDays,
   Trophy,
   Home,
@@ -19,6 +20,7 @@ const navItems = [
   { label: 'Home', icon: Home, path: '/' },
   { label: 'Quests', icon: Swords, path: '/chores' },
   { label: 'Rewards', icon: Gift, path: '/rewards' },
+  { label: 'Inventory', icon: Package, path: '/inventory' },
   { label: 'Calendar', icon: CalendarDays, path: '/calendar' },
   { label: 'Board', icon: Trophy, path: '/leaderboard' },
 ];

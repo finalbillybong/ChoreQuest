@@ -178,6 +178,8 @@ class RedemptionResponse(BaseModel):
     status: RedemptionStatus
     approved_by: int | None
     approved_at: datetime | None
+    fulfilled_by: int | None = None
+    fulfilled_at: datetime | None = None
     created_at: datetime
     reward: RewardResponse | None = None
     user: UserResponse | None = None
