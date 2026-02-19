@@ -5,15 +5,15 @@ const ThemeContext = createContext(null);
 
 export const COLOR_THEMES = [
   // ── Boy themes ──
-  { id: 'default',  label: 'Quest Blue',        group: 'boy',  accent: '#3b82f6', bg: '#0a0e1a', surface: '#111827' },
-  { id: 'dragon',   label: 'Dragon Fire',       group: 'boy',  accent: '#ef4444', bg: '#1a0a0a', surface: '#1f1111' },
-  { id: 'forest',   label: 'Enchanted Forest',  group: 'boy',  accent: '#10b981', bg: '#061210', surface: '#0d1f1b' },
-  { id: 'arctic',   label: 'Arctic',            group: 'boy',  accent: '#06b6d4', bg: '#061217', surface: '#0b1d24' },
+  { id: 'default',  label: 'Quest Blue',        group: 'boy',  accent: '#3b82f6', secondary: '#60a5fa', tertiary: '#f59e0b' },
+  { id: 'dragon',   label: 'Dragon Fire',       group: 'boy',  accent: '#ef4444', secondary: '#f87171', tertiary: '#f59e0b' },
+  { id: 'forest',   label: 'Enchanted Forest',  group: 'boy',  accent: '#10b981', secondary: '#34d399', tertiary: '#f59e0b' },
+  { id: 'arctic',   label: 'Arctic',            group: 'boy',  accent: '#06b6d4', secondary: '#22d3ee', tertiary: '#3b82f6' },
   // ── Girl themes ──
-  { id: 'rose',     label: 'Rose Gold',         group: 'girl', accent: '#ec4899', bg: '#1a0a12', surface: '#1f1118' },
-  { id: 'galaxy',   label: 'Galaxy',            group: 'girl', accent: '#a855f7', bg: '#0f0a1a', surface: '#1a1127' },
-  { id: 'sunshine', label: 'Sunshine',          group: 'girl', accent: '#f59e0b', bg: '#1a140a', surface: '#1f1a0d' },
-  { id: 'fairy',    label: 'Fairy Dust',        group: 'girl', accent: '#c084fc', bg: '#140a1a', surface: '#1d1127' },
+  { id: 'rose',     label: 'Rose Gold',         group: 'girl', accent: '#ec4899', secondary: '#f472b6', tertiary: '#a855f7' },
+  { id: 'galaxy',   label: 'Galaxy',            group: 'girl', accent: '#a855f7', secondary: '#c084fc', tertiary: '#ec4899' },
+  { id: 'sunshine', label: 'Sunshine',          group: 'girl', accent: '#f59e0b', secondary: '#fbbf24', tertiary: '#f97316' },
+  { id: 'fairy',    label: 'Fairy Dust',        group: 'girl', accent: '#c084fc', secondary: '#d8b4fe', tertiary: '#f0abfc' },
 ];
 
 export function ThemeProvider({ children }) {

@@ -499,11 +499,11 @@ export default function Profile() {
                       />
                       <div
                         className="w-5 h-5 rounded-full border border-white/10"
-                        style={{ backgroundColor: t.bg }}
+                        style={{ backgroundColor: t.secondary }}
                       />
                       <div
                         className="w-5 h-5 rounded-full border border-white/10"
-                        style={{ backgroundColor: t.surface }}
+                        style={{ backgroundColor: t.tertiary }}
                       />
                     </div>
                     <span className="text-[11px] font-medium text-cream/80 leading-tight text-center">

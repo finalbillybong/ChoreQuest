@@ -1,9 +1,11 @@
 import json
-from sqlalchemy import select, func
+from datetime import date
+from sqlalchemy import select, func, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from backend.models import (
     ChoreCategory, Achievement, AppSetting, Chore, ChoreAssignment,
     ChoreAssignmentRule, QuestTemplate, User, UserRole, Difficulty, Recurrence,
+    AssignmentStatus,
 )
 
 DEFAULT_CATEGORIES = [
@@ -246,16 +248,20 @@ async def seed_database(db: AsyncSession):
     # Migrate existing chores to assignment rules (one-time migration)
     rule_count = await db.execute(select(func.count()).select_from(ChoreAssignmentRule))
     if rule_count.scalar() == 0:
-        # For each chore with assignments, create rules from the chore's settings
+        today = date.today()
         chores_result = await db.execute(
             select(Chore).where(Chore.is_active == True)
         )
         migrated = 0
         for chore in chores_result.scalars().all():
-            # Find distinct kids assigned to this chore
+            # Only create rules from today's pending assignments (not all historical)
             kid_result = await db.execute(
                 select(ChoreAssignment.user_id)
-                .where(ChoreAssignment.chore_id == chore.id)
+                .where(
+                    ChoreAssignment.chore_id == chore.id,
+                    ChoreAssignment.date == today,
+                    ChoreAssignment.status == AssignmentStatus.pending,
+                )
                 .distinct()
             )
             kid_ids = list(kid_result.scalars().all())
@@ -271,3 +277,22 @@ async def seed_database(db: AsyncSession):
                 migrated += 1
         if migrated > 0:
             await db.commit()
+
+    # One-time cleanup: deactivate stale rules created by migration that were
+    # never manually managed through the assign modal.
+    cleanup_key = "assignment_rules_cleanup_v1"
+    cleanup_check = await db.execute(
+        select(AppSetting).where(AppSetting.key == cleanup_key)
+    )
+    if cleanup_check.scalar_one_or_none() is None:
+        active_rules = await db.execute(
+            select(ChoreAssignmentRule).where(ChoreAssignmentRule.is_active == True)
+        )
+        deactivated = 0
+        for rule in active_rules.scalars().all():
+            # Rules from migration have created_at == updated_at (never touched)
+            if rule.created_at == rule.updated_at:
+                rule.is_active = False
+                deactivated += 1
+        db.add(AppSetting(key=cleanup_key, value=f"deactivated {deactivated} stale rules"))
+        await db.commit()
