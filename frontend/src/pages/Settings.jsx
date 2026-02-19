@@ -162,7 +162,7 @@ export default function Settings() {
       {!loading && !error && settings && (
         <div className="space-y-6">
           {/* Toggle settings */}
-          <div className="game-panel p-5">
+          <div className="game-panel p-4">
             <h2 className="text-cream text-base font-bold mb-3">
               Feature Toggles
             </h2>
@@ -187,7 +187,7 @@ export default function Settings() {
           </div>
 
           {/* Daily reset hour */}
-          <div className="game-panel p-5">
+          <div className="game-panel p-4">
             <h2 className="text-cream text-base font-bold mb-3">
               Daily Reset Hour
             </h2>
@@ -227,7 +227,7 @@ export default function Settings() {
           )}
 
           {/* Achievement point values */}
-          <div className="game-panel p-5">
+          <div className="game-panel p-4">
             <h2 className="text-cream text-base font-bold mb-3 flex items-center gap-2">
               <Award size={16} className="text-muted" />
               Achievement Point Values
@@ -253,7 +253,7 @@ export default function Settings() {
                         {ach.title || ach.name}
                       </p>
                       {ach.description && (
-                        <p className="text-muted text-xs truncate">
+                        <p className="text-muted text-xs">
                           {ach.description}
                         </p>
                       )}
@@ -297,7 +297,7 @@ export default function Settings() {
 
           {/* Admin link */}
           {user?.role === 'admin' && (
-            <div className="game-panel p-5 text-center">
+            <div className="game-panel p-4 text-center">
               <p className="text-muted text-xs mb-3">
                 Need advanced controls?
               </p>

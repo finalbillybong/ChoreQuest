@@ -205,7 +205,7 @@ export default function Chores() {
       description: chore.description || '',
       points: chore.points || 10,
       difficulty: chore.difficulty || 'easy',
-      category_id: chore.category_id || '',
+      category_id: chore.category_id ? String(chore.category_id) : '',
       recurrence: chore.recurrence || 'once',
       custom_days: chore.custom_days || [],
       requires_photo: chore.requires_photo || false,
@@ -530,16 +530,19 @@ export default function Chores() {
                 Start from existing quest
               </label>
               <select
-                value=""
+                defaultValue=""
+                key={`tpl-${showModal}`}
                 onChange={(e) => {
-                  const tpl = chores.find((c) => String(c.id) === e.target.value);
+                  const val = e.target.value;
+                  if (!val) return;
+                  const tpl = chores.find((c) => String(c.id) === val);
                   if (tpl) {
                     setForm({
                       title: tpl.title || '',
                       description: tpl.description || '',
                       points: tpl.points || 10,
                       difficulty: tpl.difficulty || 'easy',
-                      category_id: tpl.category_id || '',
+                      category_id: tpl.category_id ? String(tpl.category_id) : '',
                       recurrence: tpl.recurrence || 'once',
                       custom_days: tpl.custom_days || [],
                       requires_photo: tpl.requires_photo || false,
@@ -551,7 +554,7 @@ export default function Chores() {
               >
                 <option value="">Create from scratch...</option>
                 {chores.map((c) => (
-                  <option key={c.id} value={c.id}>
+                  <option key={c.id} value={String(c.id)}>
                     {c.title} ({c.points} XP, {c.difficulty})
                   </option>
                 ))}

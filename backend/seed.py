@@ -156,32 +156,38 @@ async def seed_database(db: AsyncSession):
             db.add(AppSetting(key=key, value=json.dumps(value) if not isinstance(value, str) else value))
     await db.commit()
 
-    # Seed template quests (only if no chores exist yet)
-    chore_count = await db.execute(select(func.count()).select_from(Chore))
-    if chore_count.scalar() == 0:
-        # Find the first admin/parent user to be the creator
-        creator_result = await db.execute(
-            select(User).where(User.role.in_([UserRole.admin, UserRole.parent])).limit(1)
-        )
-        creator = creator_result.scalar_one_or_none()
-        if creator is not None:
-            # Build category name -> id lookup
-            cat_result = await db.execute(select(ChoreCategory))
-            cat_map = {c.name: c.id for c in cat_result.scalars().all()}
+    # Seed template quests (skip any that already exist by title)
+    creator_result = await db.execute(
+        select(User).where(User.role.in_([UserRole.admin, UserRole.parent])).limit(1)
+    )
+    creator = creator_result.scalar_one_or_none()
+    if creator is not None:
+        # Build category name -> id lookup
+        cat_result = await db.execute(select(ChoreCategory))
+        cat_map = {c.name: c.id for c in cat_result.scalars().all()}
 
-            for quest in DEFAULT_QUESTS:
-                cat_id = cat_map.get(quest["category"])
-                if cat_id is None:
-                    continue
-                db.add(Chore(
-                    title=quest["title"],
-                    description=quest["description"],
-                    points=quest["points"],
-                    difficulty=quest["difficulty"],
-                    icon=quest.get("icon"),
-                    category_id=cat_id,
-                    recurrence=quest["recurrence"],
-                    requires_photo=False,
-                    created_by=creator.id,
-                ))
+        # Get existing chore titles to avoid duplicates
+        existing_result = await db.execute(select(Chore.title))
+        existing_titles = {row[0] for row in existing_result.all()}
+
+        added = 0
+        for quest in DEFAULT_QUESTS:
+            if quest["title"] in existing_titles:
+                continue
+            cat_id = cat_map.get(quest["category"])
+            if cat_id is None:
+                continue
+            db.add(Chore(
+                title=quest["title"],
+                description=quest["description"],
+                points=quest["points"],
+                difficulty=quest["difficulty"],
+                icon=quest.get("icon"),
+                category_id=cat_id,
+                recurrence=quest["recurrence"],
+                requires_photo=False,
+                created_by=creator.id,
+            ))
+            added += 1
+        if added > 0:
             await db.commit()
