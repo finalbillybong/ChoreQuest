@@ -61,6 +61,76 @@ const ENCHANTED_MAP = {
     description:
       'The palace needs supplies from the village! Accompany the Royal Steward on this exciting journey through the enchanted marketplace.',
   },
+  'The Royal Table': {
+    title: 'The Grand Tea Party',
+    description:
+      'The enchanted tea party awaits but the table is bare! Set out the fairy china, arrange the crystal goblets, and prepare the grand hall for the royal gathering.',
+  },
+  'Bin Banishment': {
+    title: 'The Vanishing Spell',
+    description:
+      'Unwanted things are cluttering the palace! Gather them into enchanted sacks and cast them beyond the castle gates before they attract mischievous pixies.',
+  },
+  'The Dawn Ritual': {
+    title: 'Morning Star Sparkle',
+    description:
+      'As the morning star rises over the kingdom, visit the Enchanted Basin to polish your smile. Two minutes of sparkling keeps the fairy glow bright all day.',
+  },
+  'The Twilight Ritual': {
+    title: 'Moonlight Sparkle',
+    description:
+      'Before the sandman visits, return to the Enchanted Basin. Brush away the day\'s adventures and let your smile sparkle under the moonlight.',
+  },
+  "The Warrior's Cleanse": {
+    title: 'The Crystal Waterfall',
+    description:
+      'Step beneath the Crystal Waterfall, wash away the day\'s adventures, and emerge sparkling and refreshed, ready for enchanted dreams.',
+  },
+  'Armour Up': {
+    title: 'Royal Dress-Up',
+    description:
+      'A princess is always prepared! Choose your finest attire from the enchanted wardrobe, dress with elegance, and present yourself to the royal court.',
+  },
+  "The Scholar's Pack": {
+    title: 'The Princess Satchel',
+    description:
+      'Before the Academy bells chime, gather your enchanted quills, stardust notebooks, and spellbooks. Pack your satchel for a magical day of learning.',
+  },
+  "The Hound's March": {
+    title: 'Magical Creature Walk',
+    description:
+      'Your loyal companion longs for a stroll through the enchanted grounds. Attach the silken lead and explore the fairy paths together.',
+  },
+  "Dragon's Den Duty": {
+    title: "Creature's Cosy Corner",
+    description:
+      'Your magical pet\'s enchanted corner needs freshening up. Fluff the bedding, tidy the space, and make it a worthy retreat for your beloved companion.',
+  },
+  'The Sacred Water Bowl': {
+    title: 'The Crystal Fountain',
+    description:
+      'The crystal fountain that sustains your magical companion has run dry. Rinse it clean, refill with sparkling spring water, and watch them drink happily.',
+  },
+  "Tome Reader's Quest": {
+    title: 'Story Time in the Tower',
+    description:
+      'The tower library holds enchanted tales and fairy stories! Find a cosy nook, open a book of your choosing, and read for twenty magical minutes.',
+  },
+  "Bard's Practice": {
+    title: 'Fairy Song Practice',
+    description:
+      'The fairy flowers only bloom to beautiful melodies. Take up your instrument, practise the enchanted songs, and fill the palace with music.',
+  },
+  'Spell Studies': {
+    title: 'Enchantment Studies',
+    description:
+      'The Royal Academy requires you to learn this week\'s enchantments. Review your spelling scrolls and practise each magical word until it sparkles.',
+  },
+  'The Lawn Guardian': {
+    title: "Garden Fairy's Task",
+    description:
+      'The enchanted meadows around the palace have grown wild with fairy grass. Summon the magical mower and restore the sparkling green fields to order.',
+  },
 };
 
 /**

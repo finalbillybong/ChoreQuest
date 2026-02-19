@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { api } from '../api/client';
+import { useTheme } from '../hooks/useTheme';
+import { themedTitle, themedDescription } from '../utils/questThemeText';
 import Modal from './Modal';
 import {
   BookTemplate,
@@ -33,6 +35,7 @@ export default function QuestCreateModal({
   categories,
   editingChore,
 }) {
+  const { colorTheme } = useTheme();
   const [form, setForm] = useState({ ...emptyForm });
   const [formError, setFormError] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -185,7 +188,7 @@ export default function QuestCreateModal({
                         >
                           <div className="flex items-center justify-between gap-2">
                             <span className="text-cream text-sm font-medium">
-                              {tpl.title}
+                              {themedTitle(tpl.title, colorTheme)}
                             </span>
                             <span className="flex items-center gap-1 text-gold text-xs">
                               <Star size={10} className="fill-gold" />
@@ -194,7 +197,7 @@ export default function QuestCreateModal({
                           </div>
                           {tpl.description && (
                             <p className="text-muted text-xs line-clamp-1 mt-0.5">
-                              {tpl.description}
+                              {themedDescription(tpl.title, tpl.description, colorTheme)}
                             </p>
                           )}
                         </button>

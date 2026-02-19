@@ -13,6 +13,8 @@ import {
   Sparkles,
   Camera,
 } from 'lucide-react';
+import { useTheme } from '../hooks/useTheme';
+import { themedTitle } from '../utils/questThemeText';
 import { api } from '../api/client';
 import { useAuth } from '../hooks/useAuth';
 import AvatarDisplay from '../components/AvatarDisplay';
@@ -39,6 +41,7 @@ const sectionVariants = {
 export default function ParentDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { colorTheme } = useTheme();
 
   // data state
   const [familyStats, setFamilyStats] = useState([]);
@@ -311,7 +314,7 @@ export default function ParentDashboard() {
                         className="text-cream text-sm font-medium truncate cursor-pointer hover:text-sky transition-colors"
                         onClick={() => navigate(`/chores/${assignment.chore_id}`)}
                       >
-                        {assignment.chore?.title || 'Chore'}
+                        {themedTitle(assignment.chore?.title || 'Chore', colorTheme)}
                       </p>
                       <p className="text-muted text-xs mt-0.5">
                         by {assignment.user?.display_name || 'Kid'}

@@ -238,12 +238,14 @@ export default function Chores() {
   const filteredChores = currentChores.filter((chore) => {
     if (filterCategory && chore.category?.name !== filterCategory) return false;
     if (filterDifficulty && chore.difficulty !== filterDifficulty) return false;
-    if (
-      searchTerm &&
-      !chore.title?.toLowerCase().includes(searchTerm.toLowerCase()) &&
-      !chore.description?.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-      return false;
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      const tTitle = themedTitle(chore.title || '', colorTheme).toLowerCase();
+      const tDesc = themedDescription(chore.title || '', chore.description || '', colorTheme).toLowerCase();
+      if (!tTitle.includes(term) && !tDesc.includes(term) &&
+          !chore.title?.toLowerCase().includes(term) && !chore.description?.toLowerCase().includes(term))
+        return false;
+    }
     if (isKid && !showCompleted) {
       const status = assignmentStatusMap[chore.id];
       if (status === 'completed' || status === 'verified') return false;
@@ -641,7 +643,7 @@ export default function Chores() {
         <p className="text-muted">
           Are you sure you want to remove the quest{' '}
           <span className="text-cream text-lg font-bold">
-            "{deleteTarget?.title}"
+            "{themedTitle(deleteTarget?.title || '', colorTheme)}"
           </span>
           ? This action cannot be undone. All associated records will be archived.
         </p>

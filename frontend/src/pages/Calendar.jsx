@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
 import { useAuth } from '../hooks/useAuth';
+import { useTheme } from '../hooks/useTheme';
+import { themedTitle } from '../utils/questThemeText';
 import Modal from '../components/Modal';
 import {
   ChevronLeft,
@@ -71,6 +73,7 @@ function statusStyle(assignment, dayStr) {
 export default function Calendar() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { colorTheme } = useTheme();
   const isKid = user?.role === 'kid';
 
   const [startDate, setStartDate] = useState(() => toISO(new Date()));
@@ -312,7 +315,7 @@ export default function Calendar() {
                                 style.textClass || 'text-cream'
                               }`}
                             >
-                              {a.chore?.title || a.chore_title || 'Quest'}
+                              {themedTitle(a.chore?.title || a.chore_title || 'Quest', colorTheme)}
                             </p>
                             {/* Show assigned kid for parents */}
                             {!isKid && (a.user?.display_name || a.assigned_to_name) && (
@@ -408,7 +411,7 @@ export default function Calendar() {
           <p className="text-muted text-sm">
             Trade{' '}
             <span className="text-cream font-bold">
-              {tradeAssignment?.chore?.title || tradeAssignment?.chore_title || 'Quest'}
+              {themedTitle(tradeAssignment?.chore?.title || tradeAssignment?.chore_title || 'Quest', colorTheme)}
             </span>{' '}
             with another hero:
           </p>
@@ -470,7 +473,7 @@ export default function Calendar() {
       >
         <p className="text-muted text-sm">
           <span className="text-cream font-bold">
-            {removeTarget?.chore?.title || 'Quest'}
+            {themedTitle(removeTarget?.chore?.title || 'Quest', colorTheme)}
           </span>{' '}
           is a recurring quest{removeTarget?.user?.display_name ? ` for ${removeTarget.user.display_name}` : ''}.
           Remove just this one instance, or all future pending instances for this kid?

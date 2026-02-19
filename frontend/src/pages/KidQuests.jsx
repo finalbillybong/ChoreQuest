@@ -13,6 +13,8 @@ import {
   SkipForward,
 } from 'lucide-react';
 import { api } from '../api/client';
+import { useTheme } from '../hooks/useTheme';
+import { themedTitle, themedDescription } from '../utils/questThemeText';
 import AvatarDisplay from '../components/AvatarDisplay';
 
 const STATUS_CONFIG = {
@@ -34,6 +36,7 @@ const cardVariants = {
 export default function KidQuests() {
   const { kidId } = useParams();
   const navigate = useNavigate();
+  const { colorTheme } = useTheme();
 
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -196,7 +199,7 @@ export default function KidQuests() {
                   >
                     <div className="flex items-center gap-2 mb-1">
                       <h3 className="text-cream text-sm font-bold truncate">
-                        {a.chore.title}
+                        {themedTitle(a.chore.title, colorTheme)}
                       </h3>
                       {a.chore.requires_photo && (
                         <Camera size={12} className="text-sky flex-shrink-0" />
@@ -204,7 +207,7 @@ export default function KidQuests() {
                     </div>
                     {a.chore.description && (
                       <p className="text-muted text-xs line-clamp-1 mb-1.5">
-                        {a.chore.description}
+                        {themedDescription(a.chore.title, a.chore.description, colorTheme)}
                       </p>
                     )}
                     <div className="flex items-center flex-wrap gap-3">

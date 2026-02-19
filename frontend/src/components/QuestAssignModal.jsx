@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../api/client';
+import { useTheme } from '../hooks/useTheme';
+import { themedTitle } from '../utils/questThemeText';
 import Modal from './Modal';
 import AvatarDisplay from './AvatarDisplay';
 import {
@@ -39,6 +41,7 @@ export default function QuestAssignModal({
   chore,
   kids,
 }) {
+  const { colorTheme } = useTheme();
   // Per-kid assignment configs: { [kidId]: { selected, recurrence, custom_days, requires_photo } }
   const [kidConfigs, setKidConfigs] = useState({});
   const [expandedKid, setExpandedKid] = useState(null);
@@ -213,7 +216,7 @@ export default function QuestAssignModal({
 
         {/* Quest summary */}
         <div className="p-3 rounded-lg border border-border bg-surface-raised/30">
-          <h3 className="text-cream font-bold text-base">{chore.title}</h3>
+          <h3 className="text-cream font-bold text-base">{themedTitle(chore.title, colorTheme)}</h3>
           <div className="flex items-center gap-3 mt-1">
             <span className="flex items-center gap-1 text-gold text-sm font-bold">
               <Star size={12} className="fill-gold" />
