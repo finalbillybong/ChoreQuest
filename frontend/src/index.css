@@ -95,12 +95,12 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .game-btn-blue {
-  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  background: linear-gradient(135deg, var(--color-accent), color-mix(in srgb, var(--color-accent) 80%, black));
   color: white;
 }
 
 .game-btn-blue:hover {
-  box-shadow: 0 4px 16px rgba(59,130,246,0.3);
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--color-accent) 30%, transparent);
 }
 
 .game-btn-red {
@@ -142,7 +142,7 @@ h1, h2, h3, h4, h5, h6 {
 .field-input:focus {
   outline: none;
   border-color: var(--color-accent);
-  box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 15%, transparent);
 }
 
 /* XP progress bar */
@@ -155,16 +155,16 @@ h1, h2, h3, h4, h5, h6 {
 
 .xp-bar-fill {
   height: 100%;
-  background: linear-gradient(90deg, #3b82f6, #60a5fa);
+  background: linear-gradient(90deg, var(--color-accent), var(--color-accent-light));
   border-radius: 4px;
   transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 /* Level-up glow keyframe */
 @keyframes levelGlow {
-  0% { box-shadow: 0 0 0 0 rgba(59,130,246,0.4); }
-  50% { box-shadow: 0 0 20px 8px rgba(59,130,246,0.2); }
-  100% { box-shadow: 0 0 0 0 rgba(59,130,246,0); }
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-accent) 40%, transparent); }
+  50% { box-shadow: 0 0 20px 8px color-mix(in srgb, var(--color-accent) 20%, transparent); }
+  100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-accent) 0%, transparent); }
 }
 
 .level-up-glow {
@@ -240,4 +240,140 @@ h1, h2, h3, h4, h5, h6 {
 
 .light-mode ::-webkit-scrollbar-thumb:hover {
   background: var(--color-border-light);
+}
+
+/* ═══════════════════════════════════════════
+   Color Themes
+   ═══════════════════════════════════════════ */
+
+/* Dragon Fire — red/orange fiery theme */
+.theme-dragon {
+  --color-sky: #ef4444;
+  --color-accent: #ef4444;
+  --color-accent-light: #f87171;
+  --color-navy: #1a0a0a;
+  --color-navy-light: #1f1111;
+  --color-surface: #1f1111;
+  --color-surface-raised: #2d1919;
+  --color-border: #2d1919;
+  --color-border-light: #442222;
+}
+
+.theme-dragon.light-mode {
+  --color-navy: #fef2f2;
+  --color-navy-light: #fee2e2;
+  --color-surface: #ffffff;
+  --color-surface-raised: #fef2f2;
+  --color-border: #fecaca;
+  --color-border-light: #fca5a5;
+}
+
+/* Enchanted Forest — green/earth tones */
+.theme-forest {
+  --color-sky: #10b981;
+  --color-accent: #10b981;
+  --color-accent-light: #34d399;
+  --color-navy: #061210;
+  --color-navy-light: #0d1f1b;
+  --color-surface: #0d1f1b;
+  --color-surface-raised: #163330;
+  --color-border: #163330;
+  --color-border-light: #1f4a44;
+}
+
+.theme-forest.light-mode {
+  --color-navy: #ecfdf5;
+  --color-navy-light: #d1fae5;
+  --color-surface: #ffffff;
+  --color-surface-raised: #ecfdf5;
+  --color-border: #a7f3d0;
+  --color-border-light: #6ee7b7;
+}
+
+/* Galaxy — purple/magenta space theme */
+.theme-galaxy {
+  --color-sky: #a855f7;
+  --color-accent: #a855f7;
+  --color-accent-light: #c084fc;
+  --color-navy: #0f0a1a;
+  --color-navy-light: #1a1127;
+  --color-surface: #1a1127;
+  --color-surface-raised: #271a3b;
+  --color-border: #271a3b;
+  --color-border-light: #3b2960;
+}
+
+.theme-galaxy.light-mode {
+  --color-navy: #faf5ff;
+  --color-navy-light: #f3e8ff;
+  --color-surface: #ffffff;
+  --color-surface-raised: #faf5ff;
+  --color-border: #e9d5ff;
+  --color-border-light: #d8b4fe;
+}
+
+/* Rose Gold — pink/rose warm theme */
+.theme-rose {
+  --color-sky: #ec4899;
+  --color-accent: #ec4899;
+  --color-accent-light: #f472b6;
+  --color-navy: #1a0a12;
+  --color-navy-light: #1f1118;
+  --color-surface: #1f1118;
+  --color-surface-raised: #2d1924;
+  --color-border: #2d1924;
+  --color-border-light: #44223a;
+}
+
+.theme-rose.light-mode {
+  --color-navy: #fdf2f8;
+  --color-navy-light: #fce7f3;
+  --color-surface: #ffffff;
+  --color-surface-raised: #fdf2f8;
+  --color-border: #fbcfe8;
+  --color-border-light: #f9a8d4;
+}
+
+/* Sunshine — yellow/coral warm theme */
+.theme-sunshine {
+  --color-sky: #f59e0b;
+  --color-accent: #f59e0b;
+  --color-accent-light: #fbbf24;
+  --color-navy: #1a140a;
+  --color-navy-light: #1f1a0d;
+  --color-surface: #1f1a0d;
+  --color-surface-raised: #2d2614;
+  --color-border: #2d2614;
+  --color-border-light: #44391e;
+}
+
+.theme-sunshine.light-mode {
+  --color-navy: #fffbeb;
+  --color-navy-light: #fef3c7;
+  --color-surface: #ffffff;
+  --color-surface-raised: #fffbeb;
+  --color-border: #fde68a;
+  --color-border-light: #fcd34d;
+}
+
+/* Arctic — ice blue/cool theme */
+.theme-arctic {
+  --color-sky: #06b6d4;
+  --color-accent: #06b6d4;
+  --color-accent-light: #22d3ee;
+  --color-navy: #061217;
+  --color-navy-light: #0b1d24;
+  --color-surface: #0b1d24;
+  --color-surface-raised: #132e38;
+  --color-border: #132e38;
+  --color-border-light: #1e4a58;
+}
+
+.theme-arctic.light-mode {
+  --color-navy: #ecfeff;
+  --color-navy-light: #cffafe;
+  --color-surface: #ffffff;
+  --color-surface-raised: #ecfeff;
+  --color-border: #a5f3fc;
+  --color-border-light: #67e8f9;
 }

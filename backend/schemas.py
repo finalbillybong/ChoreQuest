@@ -251,6 +251,7 @@ class SpinResultResponse(BaseModel):
 class SpinAvailabilityResponse(BaseModel):
     can_spin: bool
     last_result: int | None = None
+    reason: str | None = None
 
 
 # Calendar

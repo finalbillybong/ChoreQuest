@@ -40,13 +40,17 @@ function describeArc(cx, cy, r, startAngle, endAngle) {
   ].join(' ');
 }
 
-export default function SpinWheel({ onResult, disabled = false }) {
+export default function SpinWheel({ availability, onSpinComplete }) {
   const [spinning, setSpinning] = useState(false);
   const [rotation, setRotation] = useState(0);
   const [result, setResult] = useState(null);
   const [showConfetti, setShowConfetti] = useState(false);
   const [error, setError] = useState(null);
   const hasSpunRef = useRef(false);
+
+  const canSpin = availability?.can_spin ?? true;
+  const reason = availability?.reason ?? null;
+  const disabled = !canSpin;
 
   const handleSpin = useCallback(async () => {
     if (spinning || disabled) return;
@@ -58,7 +62,7 @@ export default function SpinWheel({ onResult, disabled = false }) {
     try {
       // Call API to get the spin result
       const data = await api('/api/spin/spin', { method: 'POST' });
-      const wonPoints = data.points || data.result || 5;
+      const wonPoints = data.points_won ?? data.points ?? data.result ?? 5;
 
       // Find segment index that matches (or pick random one with similar value)
       let targetIdx = SEGMENTS.findIndex((s) => s.value === wonPoints);
@@ -76,13 +80,14 @@ export default function SpinWheel({ onResult, disabled = false }) {
         setResult(wonPoints);
         setShowConfetti(true);
         setSpinning(false);
-        onResult?.(wonPoints);
+        hasSpunRef.current = true;
+        onSpinComplete?.(wonPoints);
       }, 3500);
     } catch (err) {
       setError(err.message || 'Spin failed!');
       setSpinning(false);
     }
-  }, [spinning, disabled, rotation, onResult]);
+  }, [spinning, disabled, rotation, onSpinComplete]);
 
   const cx = 150;
   const cy = 150;
@@ -144,7 +149,7 @@ export default function SpinWheel({ onResult, disabled = false }) {
                     fill={seg.color}
                     stroke="#0a0e1a"
                     strokeWidth="2"
-                    opacity={0.9}
+                    opacity={disabled && !spinning ? 0.4 : 0.9}
                   />
                   <text
                     x={labelPos.x}
@@ -180,6 +185,11 @@ export default function SpinWheel({ onResult, disabled = false }) {
         </div>
       )}
 
+      {/* Reason why spin is disabled */}
+      {disabled && !spinning && reason && (
+        <p className="text-gold text-sm text-center max-w-xs">{reason}</p>
+      )}
+
       {/* Error */}
       {error && (
         <p className="text-crimson text-sm text-center">{error}</p>
@@ -193,7 +203,7 @@ export default function SpinWheel({ onResult, disabled = false }) {
           spinning || disabled ? 'opacity-50 cursor-not-allowed' : ''
         }`}
       >
-        {spinning ? 'SPINNING...' : 'SPIN!'}
+        {spinning ? 'SPINNING...' : disabled ? 'LOCKED' : 'SPIN!'}
       </button>
     </div>
   );

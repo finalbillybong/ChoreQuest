@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { api } from '../api/client';
 import { useAuth } from '../hooks/useAuth';
-import { useTheme } from '../hooks/useTheme';
+import { useTheme, COLOR_THEMES } from '../hooks/useTheme';
 import AvatarDisplay from '../components/AvatarDisplay';
 import AvatarEditor from '../components/AvatarEditor';
 import { useNavigate } from 'react-router-dom';
@@ -28,7 +28,7 @@ import {
 export default function Profile() {
   const navigate = useNavigate();
   const { user, logout, updateUser } = useAuth();
-  const { theme, toggle: toggleTheme } = useTheme();
+  const { theme, toggle: toggleTheme, colorTheme, setColorTheme } = useTheme();
 
   const [showEditor, setShowEditor] = useState(false);
 
@@ -446,7 +446,7 @@ export default function Profile() {
         <h2 className="text-cream text-sm font-bold mb-4">
           Appearance
         </h2>
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-2 text-cream text-sm">
             {theme === 'dark' ? <Moon size={16} className="text-purple" /> : <Sun size={16} className="text-gold" />}
             <span>{theme === 'dark' ? 'Dark Mode' : 'Light Mode'}</span>
@@ -467,6 +467,52 @@ export default function Profile() {
               }`}
             />
           </button>
+        </div>
+
+        {/* Color Theme Picker */}
+        <h3 className="text-cream/80 text-xs font-semibold uppercase tracking-wider mb-3">
+          Color Theme
+        </h3>
+        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+          {COLOR_THEMES.map((t) => {
+            const isActive = colorTheme === t.id;
+            return (
+              <button
+                key={t.id}
+                onClick={() => setColorTheme(t.id)}
+                className={`relative flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all ${
+                  isActive
+                    ? 'border-accent bg-accent/10 scale-[1.02]'
+                    : 'border-border hover:border-border-light bg-surface-raised/30'
+                }`}
+              >
+                {/* Colour swatch */}
+                <div className="flex gap-1">
+                  <div
+                    className="w-5 h-5 rounded-full border border-white/10"
+                    style={{ backgroundColor: t.accent }}
+                  />
+                  <div
+                    className="w-5 h-5 rounded-full border border-white/10"
+                    style={{ backgroundColor: t.bg }}
+                  />
+                  <div
+                    className="w-5 h-5 rounded-full border border-white/10"
+                    style={{ backgroundColor: t.surface }}
+                  />
+                </div>
+                <span className="text-[11px] font-medium text-cream/80 leading-tight text-center">
+                  {t.label}
+                </span>
+                {isActive && (
+                  <div
+                    className="absolute top-1 right-1 w-3 h-3 rounded-full"
+                    style={{ backgroundColor: t.accent }}
+                  />
+                )}
+              </button>
+            );
+          })}
         </div>
       </div>
 

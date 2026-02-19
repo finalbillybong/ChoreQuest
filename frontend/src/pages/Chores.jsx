@@ -2,8 +2,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
 import { useAuth } from '../hooks/useAuth';
+import { useTheme } from '../hooks/useTheme';
+import { themedTitle, themedDescription } from '../utils/questThemeText';
 import Modal from '../components/Modal';
-  import {
+import {
   Swords,
   Plus,
   Pencil,
@@ -15,6 +17,10 @@ import Modal from '../components/Modal';
   Filter,
   Search,
   BookTemplate,
+  CheckCircle2,
+  Eye,
+  EyeOff,
+  Loader2,
 } from 'lucide-react';
 
 const DIFFICULTY_OPTIONS = [
@@ -99,15 +105,31 @@ const emptyForm = {
   assigned_user_ids: [],
 };
 
+function getMondayOfThisWeek() {
+  const now = new Date();
+  const day = now.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  const monday = new Date(now);
+  monday.setDate(now.getDate() + diff);
+  return monday.toISOString().slice(0, 10);
+}
+
+function todayISO() {
+  return new Date().toISOString().slice(0, 10);
+}
+
 export default function Chores() {
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
+  const { colorTheme } = useTheme();
   const navigate = useNavigate();
   const isParent = user?.role === 'parent' || user?.role === 'admin';
+  const isKid = user?.role === 'kid';
 
   // Data state
   const [chores, setChores] = useState([]);
   const [categories, setCategories] = useState([]);
   const [kids, setKids] = useState([]);
+  const [todayAssignments, setTodayAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -115,6 +137,7 @@ export default function Chores() {
   const [filterCategory, setFilterCategory] = useState('');
   const [filterDifficulty, setFilterDifficulty] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [showCompleted, setShowCompleted] = useState(false);
 
   // Modal state
   const [showModal, setShowModal] = useState(false);
@@ -127,6 +150,10 @@ export default function Chores() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
+  // Kid completion state
+  const [completingId, setCompletingId] = useState(null);
+  const [photoFiles, setPhotoFiles] = useState({});
+
   const fetchChores = useCallback(async () => {
     try {
       setError('');
@@ -136,6 +163,19 @@ export default function Chores() {
       setError(err.message || 'Failed to load quests from the guild board.');
     }
   }, []);
+
+  const fetchAssignments = useCallback(async () => {
+    if (!isKid) return;
+    try {
+      const monday = getMondayOfThisWeek();
+      const today = todayISO();
+      const calendarRes = await api(`/api/calendar?week_start=${monday}`);
+      const dayAssignments = (calendarRes.days && calendarRes.days[today]) || [];
+      setTodayAssignments(dayAssignments);
+    } catch {
+      // Non-critical
+    }
+  }, [isKid]);
 
   const fetchCategories = useCallback(async () => {
     try {
@@ -149,11 +189,9 @@ export default function Chores() {
   const fetchKids = useCallback(async () => {
     if (!isParent) return;
     try {
-      // /api/stats/family returns a list of kid objects directly
       const data = await api('/api/stats/family');
       setKids(Array.isArray(data) ? data : []);
     } catch {
-      // Fallback: fetch all users and filter to kids
       try {
         const data = await api('/api/admin/users');
         const users = Array.isArray(data) ? data : data.users || [];
@@ -164,18 +202,55 @@ export default function Chores() {
     }
   }, [isParent]);
 
+  const fetchAll = useCallback(async () => {
+    await Promise.all([fetchChores(), fetchAssignments(), fetchCategories(), fetchKids()]);
+  }, [fetchChores, fetchAssignments, fetchCategories, fetchKids]);
+
   useEffect(() => {
-    Promise.all([fetchChores(), fetchCategories(), fetchKids()]).finally(() =>
-      setLoading(false)
-    );
-  }, [fetchChores, fetchCategories, fetchKids]);
+    fetchAll().finally(() => setLoading(false));
+  }, [fetchAll]);
 
   // Live updates via WebSocket
   useEffect(() => {
-    const handler = () => { fetchChores(); };
+    const handler = () => { fetchChores(); fetchAssignments(); };
     window.addEventListener('ws:message', handler);
     return () => window.removeEventListener('ws:message', handler);
-  }, [fetchChores]);
+  }, [fetchChores, fetchAssignments]);
+
+  // Kid: complete quest handler
+  const handleKidComplete = async (chore) => {
+    const choreId = chore.id;
+    if (chore.requires_photo && !photoFiles[choreId]) return;
+
+    setCompletingId(choreId);
+    try {
+      if (chore.requires_photo && photoFiles[choreId]) {
+        const fd = new FormData();
+        fd.append('file', photoFiles[choreId]);
+        await api(`/api/chores/${choreId}/complete`, { method: 'POST', body: fd });
+      } else {
+        await api(`/api/chores/${choreId}/complete`, { method: 'POST' });
+      }
+      if (chore.points && user) {
+        updateUser({ points_balance: user.points_balance + chore.points });
+      }
+      setPhotoFiles((prev) => { const next = { ...prev }; delete next[choreId]; return next; });
+      await fetchAll();
+    } catch (err) {
+      setError(err.message || 'Failed to complete quest');
+    } finally {
+      setCompletingId(null);
+    }
+  };
+
+  // Build assignment status map for kids: choreId -> assignment status
+  const assignmentStatusMap = {};
+  if (isKid) {
+    for (const a of todayAssignments) {
+      const cid = a.chore_id || a.chore?.id;
+      if (cid) assignmentStatusMap[cid] = a.status;
+    }
+  }
 
   // Filtering
   const filteredChores = chores.filter((chore) => {
@@ -187,8 +262,17 @@ export default function Chores() {
       !chore.description?.toLowerCase().includes(searchTerm.toLowerCase())
     )
       return false;
+    // Kid view: hide completed/verified unless toggle is on
+    if (isKid && !showCompleted) {
+      const status = assignmentStatusMap[chore.id];
+      if (status === 'completed' || status === 'verified') return false;
+    }
     return true;
   });
+
+  const completedCount = isKid
+    ? Object.values(assignmentStatusMap).filter((s) => s === 'completed' || s === 'verified').length
+    : 0;
 
   // Form handlers
   const openCreateModal = () => {
@@ -328,15 +412,26 @@ export default function Chores() {
             {isParent ? 'Quest Management' : 'My Quests'}
           </h1>
         </div>
-        {isParent && (
-          <button
-            onClick={openCreateModal}
-            className="game-btn game-btn-blue flex items-center gap-2"
-          >
-            <Plus size={16} />
-            Create Quest
-          </button>
-        )}
+        <div className="flex items-center gap-3">
+          {isKid && completedCount > 0 && (
+            <button
+              onClick={() => setShowCompleted((v) => !v)}
+              className="flex items-center gap-1.5 text-muted hover:text-cream text-sm transition-colors"
+            >
+              {showCompleted ? <EyeOff size={16} /> : <Eye size={16} />}
+              {showCompleted ? 'Hide' : 'Show'} completed ({completedCount})
+            </button>
+          )}
+          {isParent && (
+            <button
+              onClick={openCreateModal}
+              className="game-btn game-btn-blue flex items-center gap-2"
+            >
+              <Plus size={16} />
+              Create Quest
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Error */}
@@ -417,78 +512,143 @@ export default function Chores() {
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredChores.map((chore) => (
-            <div
-              key={chore.id}
-              className="game-panel p-4 flex flex-col gap-3 cursor-pointer hover:border-sky/40 transition-colors"
-              onClick={() => navigate(`/chores/${chore.id}`)}
-            >
-              {/* Title row */}
-              <div className="flex items-start justify-between gap-2">
-                <h3 className="text-cream text-lg font-bold leading-relaxed flex-1">
-                  {chore.title}
-                </h3>
-                {isParent && (
-                  <div className="flex items-center gap-1 flex-shrink-0">
+          {filteredChores.map((chore) => {
+            const kidStatus = isKid ? assignmentStatusMap[chore.id] : null;
+            const isDone = kidStatus === 'completed' || kidStatus === 'verified';
+            const isPending = isKid && (kidStatus === 'pending' || kidStatus === 'assigned');
+            const isCompleting = completingId === chore.id;
+
+            return (
+              <div
+                key={chore.id}
+                className={`game-panel p-4 flex flex-col gap-3 cursor-pointer hover:border-sky/40 transition-colors ${
+                  isDone ? 'opacity-50' : ''
+                }`}
+                onClick={() => navigate(`/chores/${chore.id}`)}
+              >
+                {/* Title row */}
+                <div className="flex items-start justify-between gap-2">
+                  <h3 className="text-cream text-lg font-bold leading-relaxed flex-1">
+                    {themedTitle(chore.title, colorTheme)}
+                  </h3>
+                  {isParent && (
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openEditModal(chore);
+                        }}
+                        className="p-1.5 rounded hover:bg-surface-raised transition-colors text-muted hover:text-sky"
+                        aria-label="Edit quest"
+                      >
+                        <Pencil size={14} />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeleteTarget(chore);
+                        }}
+                        className="p-1.5 rounded hover:bg-surface-raised transition-colors text-muted hover:text-crimson"
+                        aria-label="Delete quest"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  )}
+                  {isDone && (
+                    <CheckCircle2 size={18} className="text-emerald flex-shrink-0" />
+                  )}
+                </div>
+
+                {/* Description */}
+                {chore.description && (
+                  <p className="text-muted text-sm line-clamp-2">
+                    {themedDescription(chore.title, chore.description, colorTheme)}
+                  </p>
+                )}
+
+                {/* Meta row */}
+                <div className="flex items-center flex-wrap gap-2 mt-auto">
+                  <span className="flex items-center gap-1 text-gold font-bold text-sm">
+                    <span className="text-lg">&#9733;</span>
+                    {chore.points} XP
+                  </span>
+                  <DifficultyStars level={chore.difficulty || 1} />
+                </div>
+
+                {/* Bottom row */}
+                <div className="flex items-center flex-wrap gap-2">
+                  <CategoryBadge category={chore.category} />
+                  <RecurrenceIndicator
+                    recurrence={chore.recurrence}
+                    customDays={chore.custom_days}
+                  />
+                  {chore.requires_photo && (
+                    <span className="flex items-center gap-1 text-muted text-xs">
+                      <Camera size={12} />
+                      Photo
+                    </span>
+                  )}
+                </div>
+
+                {/* Kid: photo upload + complete button */}
+                {isPending && (
+                  <div
+                    className="mt-1 space-y-2"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {chore.requires_photo && (
+                      <label className="inline-flex items-center gap-1.5 text-xs text-muted cursor-pointer hover:text-cream transition-colors bg-surface-raised px-3 py-1.5 rounded-lg border border-border">
+                        <Camera size={14} />
+                        <span>
+                          {photoFiles[chore.id]
+                            ? photoFiles[chore.id].name
+                            : 'Attach proof photo'}
+                        </span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) =>
+                            setPhotoFiles((prev) => ({
+                              ...prev,
+                              [chore.id]: e.target.files?.[0] || null,
+                            }))
+                          }
+                        />
+                      </label>
+                    )}
                     <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openEditModal(chore);
-                      }}
-                      className="p-1.5 rounded hover:bg-surface-raised transition-colors text-muted hover:text-sky"
-                      aria-label="Edit quest"
+                      onClick={() => handleKidComplete(chore)}
+                      disabled={
+                        isCompleting ||
+                        (chore.requires_photo && !photoFiles[chore.id])
+                      }
+                      className={`game-btn game-btn-blue w-full flex items-center justify-center gap-2 ${
+                        isCompleting ? 'opacity-60 cursor-wait' : ''
+                      } ${
+                        chore.requires_photo && !photoFiles[chore.id]
+                          ? 'opacity-40 cursor-not-allowed'
+                          : ''
+                      }`}
                     >
-                      <Pencil size={14} />
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setDeleteTarget(chore);
-                      }}
-                      className="p-1.5 rounded hover:bg-surface-raised transition-colors text-muted hover:text-crimson"
-                      aria-label="Delete quest"
-                    >
-                      <Trash2 size={14} />
+                      {isCompleting ? (
+                        <>
+                          <Loader2 size={14} className="animate-spin" />
+                          Completing...
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 size={14} />
+                          Complete Quest
+                        </>
+                      )}
                     </button>
                   </div>
                 )}
               </div>
-
-              {/* Description */}
-              {chore.description && (
-                <p className="text-muted text-sm line-clamp-2">
-                  {chore.description}
-                </p>
-              )}
-
-              {/* Meta row */}
-              <div className="flex items-center flex-wrap gap-2 mt-auto">
-                {/* XP */}
-                <span className="flex items-center gap-1 text-gold font-bold text-sm">
-                  <span className="text-lg">&#9733;</span>
-                  {chore.points} XP
-                </span>
-
-                {/* Difficulty */}
-                <DifficultyStars level={chore.difficulty || 1} />
-              </div>
-
-              {/* Bottom row */}
-              <div className="flex items-center flex-wrap gap-2">
-                <CategoryBadge category={chore.category} />
-                <RecurrenceIndicator
-                  recurrence={chore.recurrence}
-                  customDays={chore.custom_days}
-                />
-                {chore.requires_photo && (
-                  <span className="flex items-center gap-1 text-muted text-xs">
-                    <Camera size={12} />
-                    Photo
-                  </span>
-                )}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

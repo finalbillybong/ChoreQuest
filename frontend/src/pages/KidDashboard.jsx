@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Star,
@@ -9,9 +10,12 @@ import {
   Camera,
   Loader2,
   AlertTriangle,
+  ChevronRight,
 } from 'lucide-react';
 import { api } from '../api/client';
 import { useAuth } from '../hooks/useAuth';
+import { useTheme } from '../hooks/useTheme';
+import { themedTitle } from '../utils/questThemeText';
 import PointCounter from '../components/PointCounter';
 import StreakDisplay from '../components/StreakDisplay';
 import SpinWheel from '../components/SpinWheel';
@@ -67,6 +71,8 @@ const completeButtonVariants = {
 
 export default function KidDashboard() {
   const { user, updateUser } = useAuth();
+  const { colorTheme } = useTheme();
+  const navigate = useNavigate();
 
   // data state
   const [assignments, setAssignments] = useState([]);
@@ -76,9 +82,7 @@ export default function KidDashboard() {
   // ui state
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [completingId, setCompletingId] = useState(null);
   const [showConfetti, setShowConfetti] = useState(false);
-  const [photoFiles, setPhotoFiles] = useState({}); // { choreId: File }
 
   // ---- data fetching ----
 
@@ -96,8 +100,9 @@ export default function KidDashboard() {
 
       setChores(choresRes);
 
-      // Filter calendar assignments to today only
-      const todayAssignments = (calendarRes.days && calendarRes.days[today]) || [];
+      // Filter calendar assignments to today and this user only
+      const allToday = (calendarRes.days && calendarRes.days[today]) || [];
+      const todayAssignments = allToday.filter((a) => a.user_id === user?.id);
       setAssignments(todayAssignments);
 
       setSpinAvailability(spinRes);
@@ -106,7 +111,7 @@ export default function KidDashboard() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user?.id]);
 
   useEffect(() => {
     fetchData();
@@ -122,80 +127,6 @@ export default function KidDashboard() {
     return () => window.removeEventListener('ws:message', handler);
   }, [fetchData]);
 
-  // ---- complete quest ----
-
-  const handleComplete = async (assignment) => {
-    const choreId = assignment.chore_id;
-    const chore = assignment.chore;
-
-    // If photo required, validate
-    if (chore?.requires_photo && !photoFiles[choreId]) {
-      return; // silently wait for photo
-    }
-
-    setCompletingId(choreId);
-    try {
-      // If there's a photo, upload it first via FormData
-      if (chore?.requires_photo && photoFiles[choreId]) {
-        const fd = new FormData();
-        fd.append('file', photoFiles[choreId]);
-        await api(`/api/chores/${choreId}/complete`, {
-          method: 'POST',
-          body: fd,
-        });
-      } else {
-        await api(`/api/chores/${choreId}/complete`, { method: 'POST' });
-      }
-
-      // Show confetti
-      setShowConfetti(true);
-
-      // Update local user points if the user object is in context
-      if (chore?.points && user) {
-        updateUser({ points_balance: user.points_balance + chore.points });
-      }
-
-      // Remove photo for this chore
-      setPhotoFiles((prev) => {
-        const next = { ...prev };
-        delete next[choreId];
-        return next;
-      });
-
-      // Refresh data
-      await fetchData();
-    } catch (err) {
-      setError(err.message || 'Failed to complete quest');
-    } finally {
-      setCompletingId(null);
-    }
-  };
-
-  // ---- photo handler ----
-
-  const handlePhotoChange = (choreId, file) => {
-    setPhotoFiles((prev) => ({ ...prev, [choreId]: file }));
-  };
-
-  // ---- status helpers ----
-
-  function statusBadge(status) {
-    if (status === 'verified') {
-      return (
-        <span className="inline-flex items-center gap-1 text-emerald text-xs font-medium bg-emerald/10 px-2 py-0.5 rounded-full">
-          <CheckCheck size={12} /> Verified
-        </span>
-      );
-    }
-    if (status === 'completed') {
-      return (
-        <span className="inline-flex items-center gap-1 text-gold text-xs font-medium bg-gold/10 px-2 py-0.5 rounded-full">
-          <CheckCircle2 size={12} /> Pending
-        </span>
-      );
-    }
-    return null;
-  }
 
   // ---- render ----
 
@@ -259,133 +190,101 @@ export default function KidDashboard() {
         </div>
       )}
 
-      {/* ── Quest cards ── */}
-      {assignments.length === 0 && !loading ? (
-        <motion.div
-          className="game-panel p-10 flex flex-col items-center gap-3 text-center"
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          <Sword size={36} className="text-muted" />
-          <p className="text-muted text-sm">
-            No quests for today. Take a break!
-          </p>
-        </motion.div>
-      ) : (
-        <div className="space-y-3">
-          {assignments.map((assignment, idx) => {
-            const chore = assignment.chore;
-            if (!chore) return null;
+      {/* ── Active Quest cards (pending only) ── */}
+      {(() => {
+        const pendingAssignments = assignments.filter(
+          (a) => a.status === 'pending' || a.status === 'assigned'
+        );
 
-            const isPending = assignment.status === 'pending';
-            const isCompleting = completingId === chore.id;
-            const diff = difficultyLabel(chore.difficulty);
-            const categoryColor = chore.category?.colour || '#3b82f6';
+        if (pendingAssignments.length === 0 && !loading) {
+          return (
+            <motion.div
+              className="game-panel p-10 flex flex-col items-center gap-3 text-center"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <Sword size={36} className="text-muted" />
+              <p className="text-muted text-sm">
+                {assignments.length === 0
+                  ? 'No quests for today. Take a break!'
+                  : 'All quests complete! Time to spin the wheel!'}
+              </p>
+            </motion.div>
+          );
+        }
 
-            return (
-              <motion.div
-                key={assignment.id}
-                className="game-panel p-4 transition-all"
-                variants={cardVariants}
-                initial="hidden"
-                animate="visible"
-                custom={idx}
-              >
-                <div className="flex items-start gap-3">
-                  {/* Category indicator */}
-                  <div
-                    className="mt-0.5 w-1 h-12 rounded-full flex-shrink-0"
-                    style={{ backgroundColor: categoryColor }}
-                  />
+        return (
+          <div className="space-y-3">
+            {pendingAssignments.map((assignment, idx) => {
+              const chore = assignment.chore;
+              if (!chore) return null;
 
-                  {/* Content */}
-                  <div className="flex-1 min-w-0">
-                    {/* Title row */}
-                    <div className="flex items-center justify-between gap-2 mb-1.5">
-                      <h3 className="text-cream text-sm font-semibold truncate">
-                        {chore.title}
-                      </h3>
-                      {statusBadge(assignment.status)}
-                    </div>
+              const diff = difficultyLabel(chore.difficulty);
+              const categoryColor = chore.category?.colour || '#3b82f6';
 
-                    {/* Meta row */}
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {/* XP */}
-                      <span className="inline-flex items-center gap-1 text-gold text-xs font-semibold">
-                        <Star size={12} fill="currentColor" />
-                        {chore.points} XP
-                      </span>
+              return (
+                <motion.div
+                  key={assignment.id}
+                  className="game-panel p-4 transition-all cursor-pointer hover:border-sky/40"
+                  variants={cardVariants}
+                  initial="hidden"
+                  animate="visible"
+                  custom={idx}
+                  onClick={() => navigate(`/chores/${chore.id}`)}
+                >
+                  <div className="flex items-start gap-3">
+                    {/* Category indicator */}
+                    <div
+                      className="mt-0.5 w-1 h-12 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: categoryColor }}
+                    />
 
-                      {/* Difficulty */}
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${diff.color}`}>
-                        {diff.text}
-                      </span>
-
-                      {/* Category */}
-                      {chore.category?.name && (
-                        <span className="text-muted text-xs">
-                          {chore.category.name}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Photo upload (if required and still pending) */}
-                    {chore.requires_photo && isPending && (
-                      <div className="mt-2">
-                        <label className="inline-flex items-center gap-1.5 text-xs text-muted cursor-pointer hover:text-cream transition-colors bg-surface-raised px-3 py-1.5 rounded-lg border border-border">
-                          <Camera size={14} />
-                          <span>
-                            {photoFiles[chore.id]
-                              ? photoFiles[chore.id].name
-                              : 'Attach proof photo'}
-                          </span>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={(e) =>
-                              handlePhotoChange(chore.id, e.target.files?.[0] || null)
-                            }
-                          />
-                        </label>
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      {/* Title row */}
+                      <div className="flex items-center justify-between gap-2 mb-1.5">
+                        <h3 className="text-cream text-sm font-semibold truncate">
+                          {themedTitle(chore.title, colorTheme)}
+                        </h3>
+                        <ChevronRight size={16} className="text-muted flex-shrink-0" />
                       </div>
-                    )}
 
-                    {/* Complete button */}
-                    {isPending && (
-                      <motion.button
-                        className={`game-btn game-btn-blue mt-3 w-full sm:w-auto ${
-                          isCompleting ? 'opacity-60 cursor-wait' : ''
-                        } ${
-                          chore.requires_photo && !photoFiles[chore.id]
-                            ? 'opacity-40 cursor-not-allowed'
-                            : ''
-                        }`}
-                        variants={completeButtonVariants}
-                        whileTap="tap"
-                        disabled={
-                          isCompleting ||
-                          (chore.requires_photo && !photoFiles[chore.id])
-                        }
-                        onClick={() => handleComplete(assignment)}
-                      >
-                        {isCompleting ? (
-                          <span className="flex items-center gap-2 justify-center">
-                            <Loader2 size={14} className="animate-spin" />
-                            Completing...
+                      {/* Meta row */}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {/* XP */}
+                        <span className="inline-flex items-center gap-1 text-gold text-xs font-semibold">
+                          <Star size={12} fill="currentColor" />
+                          {chore.points} XP
+                        </span>
+
+                        {/* Difficulty */}
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${diff.color}`}>
+                          {diff.text}
+                        </span>
+
+                        {/* Category */}
+                        {chore.category?.name && (
+                          <span className="text-muted text-xs">
+                            {chore.category.name}
                           </span>
-                        ) : (
-                          'Complete Quest'
                         )}
-                      </motion.button>
-                    )}
+
+                        {/* Photo indicator */}
+                        {chore.requires_photo && (
+                          <span className="inline-flex items-center gap-1 text-muted text-xs">
+                            <Camera size={10} />
+                            Photo
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </motion.div>
-            );
-          })}
-        </div>
-      )}
+                </motion.div>
+              );
+            })}
+          </div>
+        );
+      })()}
 
       {/* ── Spin Wheel Section ── */}
       <div className="pt-2">

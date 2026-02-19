@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { useTheme } from '../hooks/useTheme';
 import { useNotifications } from '../hooks/useNotifications';
 import {
   Bell,
@@ -37,7 +38,13 @@ export default function Layout({ children }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
+  const { syncFromUser } = useTheme();
   const { notifications, unreadCount, markRead, markAllRead } = useNotifications();
+
+  // Sync color theme from server on login
+  useEffect(() => {
+    if (user) syncFromUser(user);
+  }, [user, syncFromUser]);
   const [showNotifs, setShowNotifs] = useState(false);
   const panelRef = useRef(null);
 
@@ -149,25 +156,25 @@ export default function Layout({ children }) {
 
               {/* Notification Panel */}
               {showNotifs && (
-                <div className="absolute right-0 top-full mt-2 w-[calc(100vw-2rem)] sm:w-80 max-h-96 bg-surface border border-border rounded-xl shadow-2xl overflow-hidden z-50">
+                <div className="fixed right-2 left-2 sm:left-auto sm:absolute sm:right-0 top-14 sm:top-full sm:mt-2 sm:w-80 max-h-96 bg-surface border border-border rounded-xl shadow-2xl overflow-hidden z-50">
                   {/* Header */}
                   <div className="flex items-center justify-between px-4 py-3 border-b border-border">
                     <span className="font-heading text-cream text-sm font-bold">Notifications</span>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1">
                       {unreadCount > 0 && (
                         <button
                           onClick={markAllRead}
-                          className="text-muted hover:text-cream text-xs flex items-center gap-1 transition-colors"
+                          className="text-muted hover:text-cream text-xs flex items-center justify-center gap-1 transition-colors min-w-[44px] min-h-[44px]"
                           title="Mark all read"
                         >
-                          <CheckCheck size={14} />
+                          <CheckCheck size={20} />
                         </button>
                       )}
                       <button
                         onClick={() => setShowNotifs(false)}
-                        className="text-muted hover:text-cream transition-colors"
+                        className="text-muted hover:text-cream transition-colors flex items-center justify-center min-w-[44px] min-h-[44px]"
                       >
-                        <X size={16} />
+                        <X size={22} />
                       </button>
                     </div>
                   </div>
@@ -185,7 +192,7 @@ export default function Layout({ children }) {
                           onClick={() => {
                             if (!n.is_read) markRead(n.id);
                           }}
-                          className={`w-full text-left px-4 py-3 border-b border-border/50 hover:bg-surface-raised transition-colors ${
+                          className={`w-full text-left px-4 py-3.5 border-b border-border/50 hover:bg-surface-raised transition-colors ${
                             !n.is_read ? 'bg-sky/5' : ''
                           }`}
                         >
