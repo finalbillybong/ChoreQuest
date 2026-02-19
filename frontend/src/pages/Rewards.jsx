@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../api/client';
 import { useAuth } from '../hooks/useAuth';
 import Modal from '../components/Modal';
+import Inventory from './Inventory';
+import Wishlist from './Wishlist';
 import {
   ShoppingBag,
   Plus,
@@ -12,6 +14,7 @@ import {
   Package,
   Sparkles,
   Gift,
+  Star,
 } from 'lucide-react';
 
 const emptyForm = {
@@ -22,11 +25,39 @@ const emptyForm = {
   stock: '',
 };
 
+const TABS = [
+  { key: 'shop', label: 'Shop', icon: ShoppingBag },
+  { key: 'inventory', label: 'Inventory', icon: Package },
+  { key: 'wishlist', label: 'Wishlist', icon: Star },
+];
+
 export default function Rewards() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user, updateUser } = useAuth();
   const isParent = user?.role === 'parent' || user?.role === 'admin';
   const isKid = user?.role === 'kid';
+
+  const activeTab = searchParams.get('tab') || 'shop';
+  const setTab = (key) => setSearchParams(key === 'shop' ? {} : { tab: key }, { replace: true });
+
+  // Render sub-pages
+  if (activeTab === 'inventory') {
+    return (
+      <div className="max-w-5xl mx-auto space-y-6">
+        <TabBar activeTab={activeTab} setTab={setTab} />
+        <Inventory />
+      </div>
+    );
+  }
+  if (activeTab === 'wishlist') {
+    return (
+      <div className="max-w-5xl mx-auto space-y-6">
+        <TabBar activeTab={activeTab} setTab={setTab} />
+        <Wishlist />
+      </div>
+    );
+  }
 
   // Data state
   const [rewards, setRewards] = useState([]);
@@ -193,6 +224,8 @@ export default function Rewards() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
+      <TabBar activeTab={activeTab} setTab={setTab} />
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
@@ -250,7 +283,7 @@ export default function Rewards() {
             !redeemMessage.toLowerCase().includes('confused') &&
             !redeemMessage.toLowerCase().includes('insufficient') && (
               <button
-                onClick={() => navigate('/inventory')}
+                onClick={() => setTab('inventory')}
                 className="underline font-bold hover:brightness-125 transition-all"
               >
                 View Inventory
@@ -515,6 +548,27 @@ export default function Rewards() {
           from the treasure shop? Heroes can no longer redeem this reward.
         </p>
       </Modal>
+    </div>
+  );
+}
+
+function TabBar({ activeTab, setTab }) {
+  return (
+    <div className="flex gap-1 bg-surface-raised rounded-lg p-1">
+      {TABS.map(({ key, label, icon: Icon }) => (
+        <button
+          key={key}
+          onClick={() => setTab(key)}
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-md text-sm font-semibold transition-all ${
+            activeTab === key
+              ? 'bg-sky/15 text-sky border border-sky/25'
+              : 'text-muted hover:text-cream border border-transparent'
+          }`}
+        >
+          <Icon size={16} />
+          <span>{label}</span>
+        </button>
+      ))}
     </div>
   );
 }

@@ -119,7 +119,7 @@ function todayISO() {
 }
 
 export default function Chores() {
-  const { user, updateUser } = useAuth();
+  const { user } = useAuth();
   const { colorTheme } = useTheme();
   const navigate = useNavigate();
   const isParent = user?.role === 'parent' || user?.role === 'admin';
@@ -230,9 +230,6 @@ export default function Chores() {
         await api(`/api/chores/${choreId}/complete`, { method: 'POST', body: fd });
       } else {
         await api(`/api/chores/${choreId}/complete`, { method: 'POST' });
-      }
-      if (chore.points && user) {
-        updateUser({ points_balance: user.points_balance + chore.points });
       }
       setPhotoFiles((prev) => { const next = { ...prev }; delete next[choreId]; return next; });
       await fetchAll();

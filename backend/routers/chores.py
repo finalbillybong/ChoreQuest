@@ -193,6 +193,18 @@ async def create_chore(
         )
         db.add(assignment)
 
+    # Notify assigned kids about the new quest
+    for uid in body.assigned_user_ids:
+        notif = Notification(
+            user_id=uid,
+            type=NotificationType.chore_assigned,
+            title="New Quest Assigned!",
+            message=f"You've been given a new quest: '{chore.title}' (+{chore.points} XP)",
+            reference_type="chore",
+            reference_id=chore.id,
+        )
+        db.add(notif)
+
     await db.commit()
     await db.refresh(chore)
 
@@ -253,6 +265,7 @@ async def update_chore(
     chore.updated_at = datetime.now(timezone.utc)
 
     # Handle assignment updates if provided
+    newly_assigned = []
     if assigned_user_ids is not None:
         today = date.today()
         for uid in assigned_user_ids:
@@ -271,6 +284,7 @@ async def update_chore(
                     date=today,
                 )
                 db.add(assignment)
+                newly_assigned.append(uid)
 
         # Remove pending assignments for kids no longer in the list
         stale = await db.execute(
@@ -283,6 +297,18 @@ async def update_chore(
         )
         for old in stale.scalars().all():
             await db.delete(old)
+
+    # Notify newly assigned kids
+    for uid in newly_assigned:
+        notif = Notification(
+            user_id=uid,
+            type=NotificationType.chore_assigned,
+            title="New Quest Assigned!",
+            message=f"You've been given a new quest: '{chore.title}' (+{chore.points} XP)",
+            reference_type="chore",
+            reference_id=chore.id,
+        )
+        db.add(notif)
 
     await db.commit()
     await db.refresh(chore)
