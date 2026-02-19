@@ -403,6 +403,12 @@ async def accept_trade(
         },
     )
 
+    # Broadcast to parents so their calendar view reflects the reassignment
+    await ws_manager.broadcast(
+        {"type": "data_changed", "data": {"entity": "assignment"}},
+        exclude_user=current_user.id,
+    )
+
     return {"message": "Trade accepted", "assignment_id": assignment.id}
 
 
@@ -522,8 +528,21 @@ async def remove_assignment(
                 ChoreAssignment.status == AssignmentStatus.pending,
             )
         )
+        if is_recurring:
+            # Find existing exclusions so we don't insert duplicates
+            existing_excl = await db.execute(
+                select(ChoreExclusion).where(
+                    ChoreExclusion.chore_id == assignment.chore_id,
+                    ChoreExclusion.user_id == assignment.user_id,
+                    ChoreExclusion.date >= assignment.date,
+                )
+            )
+            existing_set = {
+                (e.chore_id, e.user_id, e.date)
+                for e in existing_excl.scalars().all()
+            }
         for a in future_result.scalars().all():
-            if is_recurring:
+            if is_recurring and (a.chore_id, a.user_id, a.date) not in existing_set:
                 db.add(ChoreExclusion(
                     chore_id=a.chore_id,
                     user_id=a.user_id,
@@ -532,11 +551,20 @@ async def remove_assignment(
             await db.delete(a)
     else:
         if is_recurring:
-            db.add(ChoreExclusion(
-                chore_id=assignment.chore_id,
-                user_id=assignment.user_id,
-                date=assignment.date,
-            ))
+            # Check for existing exclusion before inserting
+            existing = await db.execute(
+                select(ChoreExclusion).where(
+                    ChoreExclusion.chore_id == assignment.chore_id,
+                    ChoreExclusion.user_id == assignment.user_id,
+                    ChoreExclusion.date == assignment.date,
+                )
+            )
+            if not existing.scalar_one_or_none():
+                db.add(ChoreExclusion(
+                    chore_id=assignment.chore_id,
+                    user_id=assignment.user_id,
+                    date=assignment.date,
+                ))
         await db.delete(assignment)
 
     await db.commit()

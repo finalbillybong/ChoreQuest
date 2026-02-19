@@ -1,9 +1,10 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { api } from '../api/client';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
 import { useNotifications } from '../hooks/useNotifications';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import {
   Bell,
   Swords,
@@ -14,6 +15,7 @@ import {
   X,
   Sparkles,
   ArrowLeft,
+  Loader2,
 } from 'lucide-react';
 import AvatarDisplay from './AvatarDisplay';
 
@@ -42,6 +44,14 @@ export default function Layout({ children }) {
   const { user } = useAuth();
   const { syncFromUser } = useTheme();
   const { notifications, unreadCount, markRead, markAllRead, refresh } = useNotifications();
+
+  // Pull-to-refresh: dispatch a global event that page components listen for
+  const handlePullRefresh = useCallback(async () => {
+    window.dispatchEvent(new CustomEvent('ws:message', { detail: { type: 'pull_refresh' } }));
+    // Small delay so the pages' fetchData calls have time to fire
+    await new Promise((r) => setTimeout(r, 600));
+  }, []);
+  const { pulling, pullDistance, refreshing } = usePullToRefresh(handlePullRefresh);
 
   // Sync color theme from server on login
   useEffect(() => {
@@ -278,6 +288,23 @@ export default function Layout({ children }) {
             )}
           </div>
         </header>
+
+        {/* Pull-to-refresh indicator */}
+        {(pulling || refreshing) && (
+          <div
+            className="flex items-center justify-center overflow-hidden transition-all duration-200"
+            style={{ height: refreshing ? 48 : pullDistance }}
+          >
+            <Loader2
+              size={22}
+              className={`text-sky ${refreshing ? 'animate-spin' : ''}`}
+              style={{
+                opacity: refreshing ? 1 : Math.min(pullDistance / 40, 1),
+                transform: refreshing ? 'none' : `rotate(${pullDistance * 3}deg)`,
+              }}
+            />
+          </div>
+        )}
 
         <main className="flex-1 p-4 pb-24 md:pb-6 overflow-x-hidden">{children}</main>
       </div>
