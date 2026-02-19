@@ -280,22 +280,20 @@ async def cleanup_all_stale(
     """Nuke ALL stale pending assignments and exclusions across every chore.
 
     This removes:
-    - All pending assignments with a date before today (overdue ghosts)
+    - All pending assignments (past AND future) — auto-gen will recreate correct ones
     - All ChoreExclusion records (so auto-gen works fresh)
     """
-    today = date.today()
 
-    # 1. Delete all OLD pending assignments (date < today, still pending)
-    old_pending_result = await db.execute(
+    # 1. Delete ALL pending assignments (past and future ghosts from testing)
+    pending_result = await db.execute(
         select(ChoreAssignment).where(
             ChoreAssignment.status == AssignmentStatus.pending,
-            ChoreAssignment.date < today,
         )
     )
-    old_pending = old_pending_result.scalars().all()
-    for a in old_pending:
+    pending = pending_result.scalars().all()
+    for a in pending:
         await db.delete(a)
-    old_count = len(old_pending)
+    pending_count = len(pending)
 
     # 2. Delete ALL exclusions (they block auto-gen)
     all_excl_result = await db.execute(select(ChoreExclusion))
@@ -307,8 +305,8 @@ async def cleanup_all_stale(
     await db.commit()
 
     return {
-        "message": f"Cleaned up {old_count} stale pending assignments and {excl_count} exclusions",
-        "old_pending_removed": old_count,
+        "message": f"Cleaned up {pending_count} pending assignments and {excl_count} exclusions",
+        "pending_removed": pending_count,
         "exclusions_removed": excl_count,
     }
 
