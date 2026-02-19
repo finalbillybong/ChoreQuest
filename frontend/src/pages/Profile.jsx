@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
 import AvatarDisplay from '../components/AvatarDisplay';
 import AvatarEditor from '../components/AvatarEditor';
+import { useNavigate } from 'react-router-dom';
 import {
   UserCircle,
   Save,
@@ -17,9 +18,12 @@ import {
   Star,
   Loader2,
   Paintbrush,
+  ShieldCheck,
+  Settings,
 } from 'lucide-react';
 
 export default function Profile() {
+  const navigate = useNavigate();
   const { user, logout, updateUser } = useAuth();
   const { theme, toggle: toggleTheme } = useTheme();
 
@@ -365,6 +369,31 @@ export default function Profile() {
           </button>
         </div>
       </div>
+
+      {/* Quick Access */}
+      {(user?.role === 'admin' || user?.role === 'parent') && (
+        <div className="game-panel p-5 space-y-2">
+          <h2 className="text-cream text-sm font-bold mb-3">Quick Access</h2>
+          {(user?.role === 'admin' || user?.role === 'parent') && (
+            <button
+              onClick={() => navigate('/settings')}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-muted hover:text-cream hover:bg-surface-raised transition-colors text-left"
+            >
+              <Settings size={18} />
+              <span className="text-sm font-medium">Family Settings</span>
+            </button>
+          )}
+          {user?.role === 'admin' && (
+            <button
+              onClick={() => navigate('/admin')}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-muted hover:text-cream hover:bg-surface-raised transition-colors text-left"
+            >
+              <ShieldCheck size={18} />
+              <span className="text-sm font-medium">Admin Dashboard</span>
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Logout */}
       <div className="pb-6">

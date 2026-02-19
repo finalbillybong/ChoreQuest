@@ -3,7 +3,7 @@ import { api } from '../api/client';
 import { useAuth } from '../hooks/useAuth';
 import AvatarDisplay from '../components/AvatarDisplay';
 import { motion } from 'framer-motion';
-import { Trophy, Loader2 } from 'lucide-react';
+import { Trophy, Loader2, Flame, Swords } from 'lucide-react';
 
 const MEDALS = ['🥇', '🥈', '🥉'];
 
@@ -79,6 +79,9 @@ export default function Leaderboard() {
             const xp = entry.weekly_xp || entry.xp || 0;
             const pct = topScore > 0 ? (xp / topScore) * 100 : 0;
             const isCurrentUser = entry.user_id === user?.id || entry.id === user?.id;
+            const questsDone = entry.quests_completed || 0;
+            const streak = entry.current_streak || 0;
+            const totalXp = entry.total_xp || 0;
 
             return (
               <div
@@ -101,11 +104,28 @@ export default function Leaderboard() {
                   />
                 </div>
 
-                {/* Info + XP bar */}
+                {/* Info + XP bar + stats */}
                 <div className="flex-1 min-w-0">
-                  <p className="text-cream text-sm font-bold truncate mb-2">
+                  <p className="text-cream text-sm font-bold truncate mb-1">
                     {entry.display_name || entry.username}
                   </p>
+
+                  {/* Stats row */}
+                  <div className="flex items-center gap-3 mb-2 text-xs">
+                    <span className="flex items-center gap-1 text-muted">
+                      <Swords size={12} className="text-sky" />
+                      {questsDone} quest{questsDone !== 1 ? 's' : ''}
+                    </span>
+                    {streak > 0 && (
+                      <span className="flex items-center gap-1 text-muted">
+                        <Flame size={12} className="text-orange-400" />
+                        {streak} day{streak !== 1 ? 's' : ''}
+                      </span>
+                    )}
+                    <span className="text-muted/60">
+                      {totalXp} total XP
+                    </span>
+                  </div>
 
                   {/* Animated XP bar */}
                   <div className="xp-bar !h-5">
@@ -116,7 +136,7 @@ export default function Leaderboard() {
                       transition={{ duration: 1, delay: idx * 0.15, ease: 'easeOut' }}
                     />
                     <span className="absolute inset-0 flex items-center justify-center text-navy font-medium text-xs z-10">
-                      {xp} XP
+                      {xp} XP this week
                     </span>
                   </div>
                 </div>
@@ -132,6 +152,7 @@ export default function Leaderboard() {
                 const xp = entry.weekly_xp || entry.xp || 0;
                 const pct = topScore > 0 ? (xp / topScore) * 100 : 0;
                 const isCurrentUser = entry.user_id === user?.id || entry.id === user?.id;
+                const questsDone = entry.quests_completed || 0;
 
                 return (
                   <div
@@ -156,10 +177,15 @@ export default function Leaderboard() {
                       />
                     </div>
 
-                    {/* Name */}
-                    <p className="text-cream text-sm truncate flex-shrink min-w-0">
-                      {entry.display_name || entry.username}
-                    </p>
+                    {/* Name + quests */}
+                    <div className="min-w-0 flex-shrink">
+                      <p className="text-cream text-sm truncate">
+                        {entry.display_name || entry.username}
+                      </p>
+                      <p className="text-muted text-xs">
+                        {questsDone} quest{questsDone !== 1 ? 's' : ''} done
+                      </p>
+                    </div>
 
                     {/* XP bar */}
                     <div className="flex-1 min-w-0 ml-auto max-w-[200px]">
@@ -174,7 +200,7 @@ export default function Leaderboard() {
                     </div>
 
                     {/* XP label */}
-                    <span className="flex-shrink-0 font-medium text-gold text-xs min-w-[60px] text-right">
+                    <span className="flex-shrink-0 font-medium text-sky text-xs min-w-[60px] text-right">
                       {xp} XP
                     </span>
                   </div>

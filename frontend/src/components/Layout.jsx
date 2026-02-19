@@ -71,7 +71,8 @@ export default function Layout({ children }) {
 
   const navItems = getNavItems(user?.role);
   const isActive = (path) => path === '/' ? location.pathname === '/' : (location.pathname === path || location.pathname.startsWith(path + '/'));
-  const mobileNavItems = navItems.slice(0, 5);
+  // Show all nav items on mobile (including Settings/Admin for parent/admin)
+  const mobileNavItems = navItems;
 
   return (
     <div className="min-h-screen bg-navy flex">
