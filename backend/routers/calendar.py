@@ -109,6 +109,14 @@ async def _auto_generate_assignments(
             )
             rotation = rot_result.scalar_one_or_none()
 
+            if rotation:
+                print(
+                    f"[AUTOGEN] chore={chore.id} rotation kid_ids={rotation.kid_ids}"
+                    f" (types={[type(k).__name__ for k in rotation.kid_ids]})"
+                    f" cadence={rotation.cadence} idx={rotation.current_index}",
+                    flush=True,
+                )
+
             # Use per-kid assignment rules (new flow)
             for rule in rules:
                 if rule.recurrence == Recurrence.once:
@@ -159,6 +167,10 @@ async def _auto_generate_assignments(
                             date=day,
                             status=AssignmentStatus.pending,
                         ))
+                        print(
+                            f"[AUTOGEN]   CREATED chore={chore.id} kid={rule.user_id} day={day}",
+                            flush=True,
+                        )
         else:
             # Legacy fallback: use chore-level recurrence
             if chore.recurrence == Recurrence.once:

@@ -1,4 +1,4 @@
-from datetime import datetime, date, timezone
+from datetime import datetime, date, timezone, timedelta
 import logging
 
 import os
@@ -520,11 +520,13 @@ async def assign_chore(
     if rotation_active and existing_rotation and existing_rotation.kid_ids:
         rotation_kid_id = existing_rotation.kid_ids[existing_rotation.current_index]
 
-    logger = logging.getLogger("chorequest.assign")
-    logger.info(
-        "Assign chore=%d rotation_active=%s rotation_kid_id=%s kid_ids=%s",
-        chore_id, rotation_active, rotation_kid_id,
-        existing_rotation.kid_ids if existing_rotation else None,
+    print(
+        f"[ASSIGN] chore={chore_id} rotation_active={rotation_active}"
+        f" rotation_kid_id={rotation_kid_id}"
+        f" kid_ids={existing_rotation.kid_ids if existing_rotation else None}"
+        f" cadence={existing_rotation.cadence if existing_rotation else None}"
+        f" current_index={existing_rotation.current_index if existing_rotation else None}",
+        flush=True,
     )
 
     created_rules = []
@@ -577,9 +579,10 @@ async def assign_chore(
         if should_create and rotation_kid_id is not None and int(item.user_id) != int(rotation_kid_id):
             should_create = False
 
-        logger.info(
-            "  kid=%d recurrence=%s should_create=%s (rotation_kid=%s)",
-            item.user_id, item.recurrence.value, should_create, rotation_kid_id,
+        print(
+            f"[ASSIGN]   kid={item.user_id} recurrence={item.recurrence.value}"
+            f" should_create={should_create} rotation_kid={rotation_kid_id}",
+            flush=True,
         )
 
         if should_create:
@@ -590,13 +593,17 @@ async def assign_chore(
                     ChoreAssignment.date == today,
                 )
             )
-            if existing_assignment.scalar_one_or_none() is None:
+            existing_rec = existing_assignment.scalar_one_or_none()
+            if existing_rec is None:
                 db.add(ChoreAssignment(
                     chore_id=chore_id,
                     user_id=item.user_id,
                     date=today,
                     status=AssignmentStatus.pending,
                 ))
+                print(f"[ASSIGN]   -> CREATED assignment for kid={item.user_id} date={today}", flush=True)
+            else:
+                print(f"[ASSIGN]   -> SKIPPED (already exists id={existing_rec.id})", flush=True)
 
         # Notify assigned kid
         notif = Notification(
@@ -620,6 +627,98 @@ async def assign_chore(
     if count == 0:
         return {"message": "All heroes unassigned from this quest"}
     return {"message": f"Quest assigned to {count} hero(es)"}
+
+
+@router.get("/{chore_id}/debug")
+async def debug_chore(
+    chore_id: int,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_parent),
+):
+    """Debug endpoint: show all DB state for a chore's rotation/assignments."""
+    from backend.models import ChoreRotation, ChoreAssignmentRule, ChoreAssignment, ChoreExclusion
+
+    chore_result = await db.execute(select(Chore).where(Chore.id == chore_id))
+    chore = chore_result.scalar_one_or_none()
+    if not chore:
+        raise HTTPException(status_code=404, detail="Chore not found")
+
+    rot_result = await db.execute(
+        select(ChoreRotation).where(ChoreRotation.chore_id == chore_id)
+    )
+    rotation = rot_result.scalar_one_or_none()
+
+    rules_result = await db.execute(
+        select(ChoreAssignmentRule).where(ChoreAssignmentRule.chore_id == chore_id)
+    )
+    rules = rules_result.scalars().all()
+
+    today = date.today()
+    week_start = today - timedelta(days=today.weekday())
+    week_end = week_start + timedelta(days=6)
+
+    assign_result = await db.execute(
+        select(ChoreAssignment).where(
+            ChoreAssignment.chore_id == chore_id,
+            ChoreAssignment.date >= week_start,
+            ChoreAssignment.date <= week_end,
+        ).order_by(ChoreAssignment.date)
+    )
+    assignments = assign_result.scalars().all()
+
+    excl_result = await db.execute(
+        select(ChoreExclusion).where(
+            ChoreExclusion.chore_id == chore_id,
+            ChoreExclusion.date >= week_start,
+            ChoreExclusion.date <= week_end,
+        )
+    )
+    exclusions = excl_result.scalars().all()
+
+    return {
+        "chore": {
+            "id": chore.id,
+            "title": chore.title,
+            "is_active": chore.is_active,
+            "recurrence": chore.recurrence.value,
+        },
+        "rotation": {
+            "id": rotation.id,
+            "kid_ids": rotation.kid_ids,
+            "kid_ids_types": [type(k).__name__ for k in rotation.kid_ids] if rotation.kid_ids else [],
+            "cadence": rotation.cadence.value if rotation.cadence else None,
+            "current_index": rotation.current_index,
+            "last_rotated": str(rotation.last_rotated) if rotation.last_rotated else None,
+        } if rotation else None,
+        "rules": [
+            {
+                "id": r.id,
+                "user_id": r.user_id,
+                "recurrence": r.recurrence.value,
+                "is_active": r.is_active,
+            }
+            for r in rules
+        ],
+        "assignments_this_week": [
+            {
+                "id": a.id,
+                "user_id": a.user_id,
+                "date": a.date.isoformat(),
+                "status": a.status.value if a.status else None,
+            }
+            for a in assignments
+        ],
+        "exclusions_this_week": [
+            {
+                "chore_id": e.chore_id,
+                "user_id": e.user_id,
+                "date": e.date.isoformat(),
+            }
+            for e in exclusions
+        ],
+        "server_today": today.isoformat(),
+        "week_start": week_start.isoformat(),
+    }
 
 
 @router.put("/rules/{rule_id}", response_model=AssignmentRuleResponse)
