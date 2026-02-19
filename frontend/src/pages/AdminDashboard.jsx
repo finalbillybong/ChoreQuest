@@ -466,7 +466,7 @@ function InviteCodesTab() {
                 <span className="text-muted text-xs">
                   Uses:{' '}
                   <span className="text-sky">
-                    {c.use_count ?? c.uses ?? 0}
+                    {c.times_used ?? 0}
                     {c.max_uses ? ` / ${c.max_uses}` : ' / ∞'}
                   </span>
                 </span>

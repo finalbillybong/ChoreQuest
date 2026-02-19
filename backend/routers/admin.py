@@ -157,7 +157,8 @@ async def revoke_api_key(
 # ============================================================
 
 def _generate_invite_code(length: int = 8) -> str:
-    chars = string.ascii_uppercase + string.digits
+    # Exclude visually ambiguous characters: 0/O, 1/I/L, 2/Z, 5/S, 8/B
+    chars = "ACDEFGHJKMNPQRTUVWXY34679"
     return "".join(secrets.choice(chars) for _ in range(length))
 
 
