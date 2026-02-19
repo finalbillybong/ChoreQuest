@@ -17,6 +17,7 @@ from backend.models import (
 )
 from backend.schemas import UserResponse, AchievementResponse, AchievementUpdate
 from backend.dependencies import get_current_user, require_parent
+from backend.routers.calendar import _auto_generate_assignments
 
 router = APIRouter(prefix="/api/stats", tags=["stats"])
 
@@ -108,6 +109,9 @@ async def get_kid_detail(
         raise HTTPException(status_code=404, detail="Kid not found")
 
     today = date.today()
+    # Ensure today's recurring assignments exist (e.g. rotation chores)
+    monday = today - timedelta(days=today.weekday())
+    await _auto_generate_assignments(db, monday)
 
     # Get today's assignments with chore details
     result = await db.execute(
@@ -163,12 +167,15 @@ async def get_family_stats(
     db: AsyncSession = Depends(get_db),
 ):
     """Overview of all kids. Parent+ only."""
+    today = date.today()
+    # Ensure today's recurring assignments exist (e.g. rotation chores)
+    monday = today - timedelta(days=today.weekday())
+    await _auto_generate_assignments(db, monday)
+
     result = await db.execute(
         select(User).where(User.role == UserRole.kid, User.is_active == True)
     )
     kids = result.scalars().all()
-
-    today = date.today()
     family = []
     for kid in kids:
         # Today's assignment counts — only for active chores

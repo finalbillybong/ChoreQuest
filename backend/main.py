@@ -85,7 +85,7 @@ async def daily_reset_task():
                                 continue
 
                             # If rotation exists, only generate for the current kid
-                            if rotation and rule.user_id != rotation.kid_ids[rotation.current_index]:
+                            if rotation and int(rule.user_id) != int(rotation.kid_ids[rotation.current_index]):
                                 continue
 
                             should_generate = False

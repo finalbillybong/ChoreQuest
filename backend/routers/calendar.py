@@ -1,3 +1,4 @@
+import logging
 from datetime import date, timedelta, datetime
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select, func, and_
@@ -137,7 +138,8 @@ async def _auto_generate_assignments(
                         else:
                             # weekly/fortnightly/monthly: same kid for the period
                             idx = rotation.current_index
-                        if rule.user_id != rotation.kid_ids[idx]:
+                        rotation_kid = int(rotation.kid_ids[idx])
+                        if int(rule.user_id) != rotation_kid:
                             continue
 
                     if (chore.id, rule.user_id, day) in exclusion_set:

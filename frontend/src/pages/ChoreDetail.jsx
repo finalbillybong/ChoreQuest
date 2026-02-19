@@ -663,15 +663,6 @@ export default function ChoreDetail() {
         </div>
       )}
 
-      {/* Empty history state */}
-      {recentAssignments.length === 0 && (
-        <div className="game-panel p-8 text-center">
-          <Calendar size={32} className="mx-auto text-cream/20 mb-3" />
-          <p className="text-muted text-sm">
-            No entries in the quest log yet. Adventures await!
-          </p>
-        </div>
-      )}
     </div>
   );
 }

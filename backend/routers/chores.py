@@ -1,4 +1,5 @@
 from datetime import datetime, date, timezone
+import logging
 
 import os
 import uuid
@@ -519,6 +520,13 @@ async def assign_chore(
     if rotation_active and existing_rotation and existing_rotation.kid_ids:
         rotation_kid_id = existing_rotation.kid_ids[existing_rotation.current_index]
 
+    logger = logging.getLogger("chorequest.assign")
+    logger.info(
+        "Assign chore=%d rotation_active=%s rotation_kid_id=%s kid_ids=%s",
+        chore_id, rotation_active, rotation_kid_id,
+        existing_rotation.kid_ids if existing_rotation else None,
+    )
+
     created_rules = []
 
     for item in body.assignments:
@@ -566,8 +574,13 @@ async def assign_chore(
             should_create = today.weekday() in item.custom_days
 
         # If rotation is active, only create today's assignment for the current rotation kid
-        if should_create and rotation_kid_id is not None and item.user_id != rotation_kid_id:
+        if should_create and rotation_kid_id is not None and int(item.user_id) != int(rotation_kid_id):
             should_create = False
+
+        logger.info(
+            "  kid=%d recurrence=%s should_create=%s (rotation_kid=%s)",
+            item.user_id, item.recurrence.value, should_create, rotation_kid_id,
+        )
 
         if should_create:
             existing_assignment = await db.execute(
