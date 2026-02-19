@@ -24,7 +24,7 @@ const emptyForm = {
 
 export default function Rewards() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const isParent = user?.role === 'parent' || user?.role === 'admin';
   const isKid = user?.role === 'kid';
 
@@ -160,6 +160,8 @@ export default function Rewards() {
     setRedeemMessage('');
     try {
       await api(`/api/rewards/${reward.id}/redeem`, { method: 'POST' });
+      const cost = reward.point_cost ?? reward.cost ?? 0;
+      updateUser({ points_balance: (user?.points_balance ?? 0) - cost });
       setRedeemMessage(`You claimed "${reward.title}"! Check your inventory, hero!`);
       await fetchRewards();
     } catch (err) {

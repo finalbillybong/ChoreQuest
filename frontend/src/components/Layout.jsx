@@ -9,7 +9,6 @@ import {
   Gift,
   Package,
   CalendarDays,
-  Trophy,
   Home,
   CheckCheck,
   X,
@@ -22,7 +21,6 @@ const navItems = [
   { label: 'Rewards', icon: Gift, path: '/rewards' },
   { label: 'Inventory', icon: Package, path: '/inventory' },
   { label: 'Calendar', icon: CalendarDays, path: '/calendar' },
-  { label: 'Board', icon: Trophy, path: '/leaderboard' },
 ];
 
 function timeAgo(dateStr) {
