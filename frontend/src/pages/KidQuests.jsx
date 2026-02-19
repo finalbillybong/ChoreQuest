@@ -105,10 +105,10 @@ export default function KidQuests() {
 
   if (error && !data) {
     return (
-      <div className="max-w-2xl mx-auto py-10">
-        <div className="game-panel p-10 text-center">
-          <XCircle size={48} className="mx-auto text-crimson mb-4" />
-          <p className="text-cream text-xl font-extrabold mb-2">Error</p>
+      <div className="max-w-2xl mx-auto py-6">
+        <div className="game-panel p-8 text-center">
+          <XCircle size={36} className="mx-auto text-crimson mb-3" />
+          <p className="text-cream text-lg font-extrabold mb-2">Error</p>
           <p className="text-muted text-sm">{error}</p>
         </div>
       </div>
@@ -123,27 +123,27 @@ export default function KidQuests() {
   ).length;
 
   return (
-    <div className="max-w-3xl mx-auto space-y-5">
+    <div className="max-w-2xl mx-auto space-y-4">
       {/* Kid header */}
-      <div className="game-panel p-4">
-        <div className="flex items-center gap-4">
+      <div className="game-panel p-3 sm:p-4">
+        <div className="flex items-center gap-3">
           <AvatarDisplay
             config={kid.avatar_config}
-            size="lg"
+            size="md"
             name={kid.display_name}
           />
           <div className="min-w-0 flex-1">
-            <h1 className="font-heading text-cream text-xl font-extrabold truncate">
+            <h1 className="font-heading text-cream text-base sm:text-xl font-extrabold truncate">
               {kid.display_name}'s Quests
             </h1>
-            <div className="flex items-center gap-4 mt-1">
-              <span className="inline-flex items-center gap-1 text-gold text-sm font-semibold">
-                <Star size={14} fill="currentColor" />
+            <div className="flex items-center gap-3 mt-1">
+              <span className="inline-flex items-center gap-1 text-gold text-xs sm:text-sm font-semibold">
+                <Star size={13} fill="currentColor" />
                 {kid.points_balance.toLocaleString()} XP
               </span>
               {kid.current_streak > 0 && (
-                <span className="inline-flex items-center gap-1 text-orange-400 text-sm font-semibold">
-                  <Flame size={14} fill="currentColor" />
+                <span className="inline-flex items-center gap-1 text-orange-400 text-xs sm:text-sm font-semibold">
+                  <Flame size={13} fill="currentColor" />
                   {kid.current_streak} day streak
                 </span>
               )}
@@ -171,7 +171,7 @@ export default function KidQuests() {
           </p>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-2.5">
           {assignments.map((a, idx) => {
             const cfg = STATUS_CONFIG[a.status] || STATUS_CONFIG.pending;
             const StatusIcon = cfg.icon;
@@ -186,7 +186,7 @@ export default function KidQuests() {
             return (
               <motion.div
                 key={a.id}
-                className={`game-panel p-4 ${isVerified ? 'opacity-50' : ''}`}
+                className={`game-panel p-3 sm:p-4 ${isVerified ? 'opacity-50' : ''}`}
                 variants={cardVariants}
                 initial="hidden"
                 animate="visible"
