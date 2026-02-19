@@ -37,6 +37,7 @@ from backend.schemas import (
     ChoreAssignRequest,
     AssignmentRuleUpdate,
     QuestTemplateResponse,
+    RotationResponse,
 )
 from backend.config import settings
 from backend.dependencies import get_current_user, require_parent
@@ -424,6 +425,21 @@ async def get_assignment_rules(
     return [AssignmentRuleResponse.model_validate(r) for r in result.scalars().all()]
 
 
+@router.get("/{chore_id}/rotation")
+async def get_chore_rotation(
+    chore_id: int,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_parent),
+):
+    result = await db.execute(
+        select(ChoreRotation).where(ChoreRotation.chore_id == chore_id)
+    )
+    rotation = result.scalar_one_or_none()
+    if rotation is None:
+        return None
+    return RotationResponse.model_validate(rotation)
+
+
 @router.post("/{chore_id}/assign", status_code=201)
 async def assign_chore(
     chore_id: int,
@@ -467,6 +483,40 @@ async def assign_chore(
         )
         for stale in stale_assignments.scalars().all():
             await db.delete(stale)
+
+    # Handle rotation first (needed for assignment creation logic)
+    rotation_active = body.rotation and body.rotation.enabled and len(body.assignments) >= 2
+    rot_result = await db.execute(
+        select(ChoreRotation).where(ChoreRotation.chore_id == chore_id)
+    )
+    existing_rotation = rot_result.scalar_one_or_none()
+
+    if rotation_active:
+        kid_ids = [a.user_id for a in body.assignments]
+        if existing_rotation:
+            existing_rotation.kid_ids = kid_ids
+            existing_rotation.cadence = body.rotation.cadence
+            # Reset index if out of bounds
+            if existing_rotation.current_index >= len(kid_ids):
+                existing_rotation.current_index = 0
+        else:
+            existing_rotation = ChoreRotation(
+                chore_id=chore_id,
+                kid_ids=kid_ids,
+                cadence=body.rotation.cadence,
+                current_index=0,
+            )
+            db.add(existing_rotation)
+            await db.flush()
+    elif existing_rotation:
+        # Rotation disabled - remove existing rotation
+        await db.delete(existing_rotation)
+        existing_rotation = None
+
+    # Determine the rotation kid for today (if rotation is active)
+    rotation_kid_id = None
+    if rotation_active and existing_rotation and existing_rotation.kid_ids:
+        rotation_kid_id = existing_rotation.kid_ids[existing_rotation.current_index]
 
     created_rules = []
 
@@ -514,6 +564,10 @@ async def assign_chore(
         elif item.recurrence.value == "custom" and item.custom_days:
             should_create = today.weekday() in item.custom_days
 
+        # If rotation is active, only create today's assignment for the current rotation kid
+        if should_create and rotation_kid_id is not None and item.user_id != rotation_kid_id:
+            should_create = False
+
         if should_create:
             existing_assignment = await db.execute(
                 select(ChoreAssignment).where(
@@ -540,25 +594,6 @@ async def assign_chore(
             reference_id=chore.id,
         )
         db.add(notif)
-
-    # Handle rotation
-    if body.rotation and body.rotation.enabled and len(body.assignments) >= 2:
-        kid_ids = [a.user_id for a in body.assignments]
-        # Check for existing rotation
-        rot_result = await db.execute(
-            select(ChoreRotation).where(ChoreRotation.chore_id == chore_id)
-        )
-        rotation = rot_result.scalar_one_or_none()
-        if rotation:
-            rotation.kid_ids = kid_ids
-            rotation.cadence = body.rotation.cadence
-        else:
-            db.add(ChoreRotation(
-                chore_id=chore_id,
-                kid_ids=kid_ids,
-                cadence=body.rotation.cadence,
-                current_index=0,
-            ))
 
     await db.commit()
 

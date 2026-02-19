@@ -11,6 +11,7 @@ from backend.models import (
     ChoreAssignmentRule,
     ChoreExclusion,
     ChoreRotation,
+    RotationCadence,
     User,
     UserRole,
     AssignmentStatus,
@@ -101,6 +102,12 @@ async def _auto_generate_assignments(
         rules = rules_result.scalars().all()
 
         if rules:
+            # Check if a rotation exists for this chore
+            rot_result = await db.execute(
+                select(ChoreRotation).where(ChoreRotation.chore_id == chore.id)
+            )
+            rotation = rot_result.scalar_one_or_none()
+
             # Use per-kid assignment rules (new flow)
             for rule in rules:
                 if rule.recurrence == Recurrence.once:
@@ -119,6 +126,20 @@ async def _auto_generate_assignments(
 
                     if not should_create:
                         continue
+
+                    # If rotation exists, only create for the rotation's
+                    # current kid (offset by day for daily cadence)
+                    if rotation and rotation.kid_ids:
+                        today_date = date.today()
+                        days_offset = (day - today_date).days
+                        if rotation.cadence == RotationCadence.daily:
+                            idx = (rotation.current_index + days_offset) % len(rotation.kid_ids)
+                        else:
+                            # weekly/fortnightly/monthly: same kid for the period
+                            idx = rotation.current_index
+                        if rule.user_id != rotation.kid_ids[idx]:
+                            continue
+
                     if (chore.id, rule.user_id, day) in exclusion_set:
                         continue
 

@@ -101,8 +101,22 @@ export default function QuestAssignModal({
         setHadExistingAssignments(false);
       });
 
-    setRotationEnabled(false);
-    setRotationCadence('weekly');
+    // Fetch existing rotation for this chore
+    api(`/api/chores/${chore.id}/rotation`)
+      .then((rot) => {
+        if (rot && rot.kid_ids && rot.kid_ids.length >= 2) {
+          setRotationEnabled(true);
+          setRotationCadence(rot.cadence || 'weekly');
+        } else {
+          setRotationEnabled(false);
+          setRotationCadence('weekly');
+        }
+      })
+      .catch(() => {
+        setRotationEnabled(false);
+        setRotationCadence('weekly');
+      });
+
     setError('');
   }, [isOpen, chore, kids]);
 
