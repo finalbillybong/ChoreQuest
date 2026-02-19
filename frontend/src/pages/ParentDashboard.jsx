@@ -7,7 +7,6 @@ import {
   CheckCircle2,
   XCircle,
   Plus,
-  Gift,
   Loader2,
   AlertTriangle,
   Users,
@@ -43,7 +42,6 @@ export default function ParentDashboard() {
 
   // data state
   const [familyStats, setFamilyStats] = useState([]);
-  const [pendingRedemptions, setPendingRedemptions] = useState([]);
   const [pendingVerifications, setPendingVerifications] = useState([]);
 
   // ui state
@@ -65,14 +63,12 @@ export default function ParentDashboard() {
     try {
       setError(null);
 
-      const [familyRes, redemptionsRes, calendarRes] = await Promise.all([
+      const [familyRes, calendarRes] = await Promise.all([
         api('/api/stats/family'),
-        api('/api/rewards/redemptions?status=pending'),
         api('/api/calendar'),
       ]);
 
       setFamilyStats(familyRes);
-      setPendingRedemptions(redemptionsRes);
 
       // Find ALL assignments needing parent approval (status === 'completed')
       const today = new Date().toISOString().slice(0, 10);
@@ -131,34 +127,6 @@ export default function ParentDashboard() {
       await fetchData();
     } catch (err) {
       setError(err.message || 'Failed to reject chore');
-    } finally {
-      setActionBusy(key, false);
-    }
-  };
-
-  // Approve a reward redemption
-  const handleApproveRedemption = async (redemptionId) => {
-    const key = `approve-${redemptionId}`;
-    setActionBusy(key, true);
-    try {
-      await api(`/api/rewards/redemptions/${redemptionId}/approve`, { method: 'POST' });
-      await fetchData();
-    } catch (err) {
-      setError(err.message || 'Failed to approve redemption');
-    } finally {
-      setActionBusy(key, false);
-    }
-  };
-
-  // Deny a reward redemption
-  const handleDenyRedemption = async (redemptionId) => {
-    const key = `deny-${redemptionId}`;
-    setActionBusy(key, true);
-    try {
-      await api(`/api/rewards/redemptions/${redemptionId}/deny`, { method: 'POST' });
-      await fetchData();
-    } catch (err) {
-      setError(err.message || 'Failed to deny redemption');
     } finally {
       setActionBusy(key, false);
     }
@@ -226,7 +194,7 @@ export default function ParentDashboard() {
     );
   }
 
-  const hasPendingItems = pendingRedemptions.length > 0 || pendingVerifications.length > 0;
+  const hasPendingItems = pendingVerifications.length > 0;
 
   return (
     <div className="max-w-3xl mx-auto space-y-5">
@@ -312,7 +280,7 @@ export default function ParentDashboard() {
         </div>
       )}
 
-      {/* ── Pending Verifications & Redemptions ── */}
+      {/* ── Pending Quest Verifications ── */}
       {hasPendingItems && (
         <motion.section
           variants={sectionVariants}
@@ -320,11 +288,10 @@ export default function ParentDashboard() {
           animate="visible"
         >
           <h2 className="text-cream text-base font-bold mb-3">
-            Pending Approvals
+            Pending Quest Verifications
           </h2>
 
           <div className="space-y-3">
-            {/* Chore verifications */}
             {pendingVerifications.map((assignment) => {
               const verifyKey = `verify-${assignment.chore_id}`;
               const rejectKey = `reject-${assignment.chore_id}`;
@@ -389,57 +356,6 @@ export default function ParentDashboard() {
                       />
                     </div>
                   )}
-                </div>
-              );
-            })}
-
-            {/* Reward redemptions */}
-            {pendingRedemptions.map((redemption) => {
-              const approveKey = `approve-${redemption.id}`;
-              const denyKey = `deny-${redemption.id}`;
-              const isApproving = actionLoading[approveKey];
-              const isDenying = actionLoading[denyKey];
-
-              return (
-                <div
-                  key={`redemption-${redemption.id}`}
-                  className="game-panel p-4 flex items-center justify-between gap-3"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="text-cream text-sm font-medium truncate">
-                      {redemption.reward?.title || 'Reward'}
-                    </p>
-                    <p className="text-muted text-xs mt-0.5">
-                      by {redemption.user?.display_name || 'Kid'} &middot;{' '}
-                      {redemption.points_spent} XP
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <button
-                      className="game-btn game-btn-blue !px-3 !py-2"
-                      disabled={isApproving || isDenying}
-                      onClick={() => handleApproveRedemption(redemption.id)}
-                      title="Approve"
-                    >
-                      {isApproving ? (
-                        <Loader2 size={14} className="animate-spin" />
-                      ) : (
-                        <CheckCircle2 size={16} />
-                      )}
-                    </button>
-                    <button
-                      className="game-btn game-btn-red !px-3 !py-2"
-                      disabled={isApproving || isDenying}
-                      onClick={() => handleDenyRedemption(redemption.id)}
-                      title="Deny"
-                    >
-                      {isDenying ? (
-                        <Loader2 size={14} className="animate-spin" />
-                      ) : (
-                        <XCircle size={16} />
-                      )}
-                    </button>
-                  </div>
                 </div>
               );
             })}

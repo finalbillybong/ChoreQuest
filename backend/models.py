@@ -39,6 +39,7 @@ class RedemptionStatus(str, enum.Enum):
     pending = "pending"
     approved = "approved"
     denied = "denied"
+    fulfilled = "fulfilled"
 
 
 class PointType(str, enum.Enum):
@@ -197,11 +198,14 @@ class RewardRedemption(Base):
     status: Mapped[RedemptionStatus] = mapped_column(Enum(RedemptionStatus), default=RedemptionStatus.pending)
     approved_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     approved_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    fulfilled_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    fulfilled_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     reward = relationship("Reward")
     user = relationship("User", foreign_keys=[user_id])
     approver = relationship("User", foreign_keys=[approved_by])
+    fulfiller = relationship("User", foreign_keys=[fulfilled_by])
 
 
 class PointTransaction(Base):
