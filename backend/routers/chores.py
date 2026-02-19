@@ -26,6 +26,7 @@ from backend.models import (
     NotificationType,
     Difficulty,
     Recurrence,
+    RotationCadence,
 )
 from backend.schemas import (
     ChoreCreate,
@@ -497,9 +498,10 @@ async def assign_chore(
         if existing_rotation:
             existing_rotation.kid_ids = kid_ids
             existing_rotation.cadence = body.rotation.cadence
-            # Reset index if out of bounds
-            if existing_rotation.current_index >= len(kid_ids):
-                existing_rotation.current_index = 0
+            # Always reset to 0 — frontend puts the chosen "starts with"
+            # kid at index 0.
+            existing_rotation.current_index = 0
+            existing_rotation.last_rotated = datetime.now(timezone.utc)
         else:
             existing_rotation = ChoreRotation(
                 chore_id=chore_id,
@@ -510,6 +512,31 @@ async def assign_chore(
             )
             db.add(existing_rotation)
             await db.flush()
+
+        # Remove stale pending assignments for this week that no longer
+        # match the new rotation pattern (prevents ghost entries from
+        # a previous rotation order/cadence).
+        week_start = today - timedelta(days=today.weekday())
+        week_end = week_start + timedelta(days=6)
+        stale_result = await db.execute(
+            select(ChoreAssignment).where(
+                ChoreAssignment.chore_id == chore_id,
+                ChoreAssignment.date >= week_start,
+                ChoreAssignment.date <= week_end,
+                ChoreAssignment.status == AssignmentStatus.pending,
+            )
+        )
+        for sa in stale_result.scalars().all():
+            days_offset = (sa.date - today).days
+            if body.rotation.cadence == RotationCadence.daily:
+                idx = (0 + days_offset) % len(kid_ids)
+            else:
+                idx = 0
+            expected_kid = int(kid_ids[idx])
+            if int(sa.user_id) != expected_kid:
+                await db.delete(sa)
+                print(f"[ASSIGN] Removed stale assignment id={sa.id} kid={sa.user_id} date={sa.date}", flush=True)
+
     elif existing_rotation:
         # Rotation disabled - remove existing rotation
         await db.delete(existing_rotation)
