@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
 import { useAuth } from '../hooks/useAuth';
 import Modal from '../components/Modal';
@@ -14,6 +15,7 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
+  ArrowLeft,
   Loader2,
   Eye,
   EyeOff,
@@ -100,84 +102,51 @@ function UsersTab() {
           No heroes in the realm yet.
         </p>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="border-b-2 border-border">
-                <th className="text-muted text-xs font-medium tracking-wider py-3 px-2">
-                  Username
-                </th>
-                <th className="text-muted text-xs font-medium tracking-wider py-3 px-2">
-                  Display Name
-                </th>
-                <th className="text-muted text-xs font-medium tracking-wider py-3 px-2">
-                  Role
-                </th>
-                <th className="text-muted text-xs font-medium tracking-wider py-3 px-2">
-                  Status
-                </th>
-                <th className="text-muted text-xs font-medium tracking-wider py-3 px-2">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {users.map((usr) => (
-                <tr key={usr.id} className="hover:bg-surface-raised/20 transition-colors">
-                  <td className="py-3 px-2 text-cream text-sm">
-                    {usr.username}
-                  </td>
-                  <td className="py-3 px-2 text-muted text-sm">
-                    {usr.display_name || '--'}
-                  </td>
-                  <td className="py-3 px-2">
-                    <select
-                      value={usr.role}
-                      onChange={(e) => updateRole(usr.id, e.target.value)}
-                      className="field-input"
-                    >
-                      <option value="kid">kid</option>
-                      <option value="parent">parent</option>
-                      <option value="admin">admin</option>
-                    </select>
-                  </td>
-                  <td className="py-3 px-2">
-                    <span
-                      className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
-                        usr.is_active !== false
-                          ? 'bg-emerald/10 text-emerald border border-emerald/30'
-                          : 'bg-crimson/10 text-crimson border border-crimson/30'
-                      }`}
-                    >
-                      {usr.is_active !== false ? 'Active' : 'Inactive'}
-                    </span>
-                  </td>
-                  <td className="py-3 px-2">
-                    <button
-                      onClick={() => toggleActive(usr)}
-                      className={`game-btn !py-1.5 !px-3 !text-[7px] ${
-                        usr.is_active !== false
-                          ? 'game-btn-red'
-                          : 'game-btn-blue'
-                      }`}
-                    >
-                      {usr.is_active !== false ? (
-                        <>
-                          <EyeOff size={12} className="inline mr-1" />
-                          Deactivate
-                        </>
-                      ) : (
-                        <>
-                          <Eye size={12} className="inline mr-1" />
-                          Activate
-                        </>
-                      )}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="space-y-3">
+          {users.map((usr) => (
+            <div key={usr.id} className="p-3 rounded-lg bg-surface-raised/30 border border-border space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-cream text-sm font-medium truncate">{usr.username}</p>
+                  {usr.display_name && (
+                    <p className="text-muted text-xs truncate">{usr.display_name}</p>
+                  )}
+                </div>
+                <span
+                  className={`inline-block px-2 py-0.5 rounded text-xs font-medium flex-shrink-0 ${
+                    usr.is_active !== false
+                      ? 'bg-emerald/10 text-emerald border border-emerald/30'
+                      : 'bg-crimson/10 text-crimson border border-crimson/30'
+                  }`}
+                >
+                  {usr.is_active !== false ? 'Active' : 'Inactive'}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <select
+                  value={usr.role}
+                  onChange={(e) => updateRole(usr.id, e.target.value)}
+                  className="field-input !py-1.5 !text-xs flex-1"
+                >
+                  <option value="kid">kid</option>
+                  <option value="parent">parent</option>
+                  <option value="admin">admin</option>
+                </select>
+                <button
+                  onClick={() => toggleActive(usr)}
+                  className={`game-btn !py-1.5 !px-3 !text-[10px] flex-shrink-0 ${
+                    usr.is_active !== false ? 'game-btn-red' : 'game-btn-blue'
+                  }`}
+                >
+                  {usr.is_active !== false ? (
+                    <><EyeOff size={12} className="inline mr-1" />Deactivate</>
+                  ) : (
+                    <><Eye size={12} className="inline mr-1" />Activate</>
+                  )}
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>
@@ -616,47 +585,25 @@ function AuditLogTab() {
           The chronicle is empty. No deeds recorded yet.
         </p>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="border-b-2 border-border">
-                <th className="text-muted text-xs font-medium tracking-wider py-3 px-2">
-                  Time
-                </th>
-                <th className="text-muted text-xs font-medium tracking-wider py-3 px-2">
-                  User
-                </th>
-                <th className="text-muted text-xs font-medium tracking-wider py-3 px-2">
-                  Action
-                </th>
-                <th className="text-muted text-xs font-medium tracking-wider py-3 px-2">
-                  Details
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {entries.map((entry, idx) => (
-                <tr key={entry.id || idx} className="hover:bg-surface-raised/20 transition-colors">
-                  <td className="py-2.5 px-2 text-muted text-xs whitespace-nowrap">
-                    {formatTimestamp(entry.created_at)}
-                  </td>
-                  <td className="py-2.5 px-2 text-cream text-xs">
-                    {entry.user_id != null ? `User #${entry.user_id}` : '--'}
-                  </td>
-                  <td className="py-2.5 px-2">
-                    <span className="text-sky text-xs">
-                      {entry.action}
-                    </span>
-                  </td>
-                  <td className="py-2.5 px-2 text-muted text-xs max-w-xs truncate">
+        <div className="space-y-2">
+          {entries.map((entry, idx) => (
+            <div key={entry.id || idx} className="p-3 rounded-lg bg-surface-raised/30 border border-border">
+              <div className="flex items-center justify-between gap-2 mb-1">
+                <span className="text-sky text-xs font-medium">{entry.action}</span>
+                <span className="text-muted text-[10px] flex-shrink-0">{formatTimestamp(entry.created_at)}</span>
+              </div>
+              <p className="text-muted text-xs">
+                {entry.user_id != null ? `User #${entry.user_id}` : '--'}
+                {(entry.details && entry.details !== '--') && (
+                  <span className="ml-2 text-muted/70">
                     {typeof entry.details === 'object'
                       ? JSON.stringify(entry.details)
-                      : entry.details || '--'}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                      : entry.details}
+                  </span>
+                )}
+              </p>
+            </div>
+          ))}
         </div>
       )}
 
@@ -695,6 +642,7 @@ function AuditLogTab() {
 // ─── Main AdminDashboard ─────────────────────────────────────────────
 export default function AdminDashboard() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('users');
 
   if (user?.role !== 'admin') {
@@ -712,12 +660,19 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto">
-      {/* Header */}
+    <div className="max-w-2xl mx-auto">
+      {/* Back + Header */}
+      <button
+        onClick={() => navigate('/profile')}
+        className="flex items-center gap-1.5 text-muted hover:text-cream transition-colors mb-4 text-sm"
+      >
+        <ArrowLeft size={16} />
+        Profile
+      </button>
       <div className="flex items-center gap-3 mb-6">
-        <Shield size={28} className="text-sky" />
-        <h1 className="text-cream text-xl font-extrabold leading-relaxed">
-          Admin Sanctum
+        <Shield size={24} className="text-sky" />
+        <h1 className="text-cream text-lg font-extrabold">
+          Admin Dashboard
         </h1>
       </div>
 

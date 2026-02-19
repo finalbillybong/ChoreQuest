@@ -8,6 +8,7 @@ import {
   Shield,
   Loader2,
   Award,
+  ArrowLeft,
 } from 'lucide-react';
 
 export default function Settings() {
@@ -124,11 +125,18 @@ export default function Settings() {
 
   return (
     <div className="max-w-2xl mx-auto">
-      {/* Header */}
+      {/* Back + Header */}
+      <button
+        onClick={() => navigate('/profile')}
+        className="flex items-center gap-1.5 text-muted hover:text-cream transition-colors mb-4 text-sm"
+      >
+        <ArrowLeft size={16} />
+        Profile
+      </button>
       <div className="flex items-center gap-3 mb-6">
-        <CogIcon size={28} className="text-cream" />
+        <CogIcon size={24} className="text-cream" />
         <h1 className="text-cream text-lg font-bold">
-          Settings
+          Family Settings
         </h1>
       </div>
 

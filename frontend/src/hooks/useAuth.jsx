@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import { api, setAccessToken, clearAccessToken, ensureToken } from '../api/client';
+import { api, setAccessToken, clearAccessToken, getAccessToken } from '../api/client';
 
 const AuthContext = createContext(null);
 
@@ -9,15 +9,28 @@ export function AuthProvider({ children }) {
   const refreshPromiseRef = useRef(null);
 
   const refreshSession = useCallback(async () => {
-    // Deduplicate concurrent refresh calls (prevents token-reuse revocation
-    // when React StrictMode double-fires the mount effect)
+    // Deduplicate concurrent refresh calls (React StrictMode double-fires)
     if (refreshPromiseRef.current) return refreshPromiseRef.current;
 
     refreshPromiseRef.current = (async () => {
       try {
-        // Use ensureToken (shared with 401-retry path) so there is exactly
-        // one in-flight refresh at a time across the whole app.
-        const data = await ensureToken();
+        // If we have a stored token (from localStorage), try using it
+        // directly via /me.  The api() 401-retry will automatically
+        // attempt a cookie-based refresh if the token has expired.
+        if (getAccessToken()) {
+          const userData = await api('/api/auth/me');
+          setUser(userData);
+          return true;
+        }
+
+        // No stored token — try cookie-based refresh
+        const res = await fetch('/api/auth/refresh', {
+          method: 'POST',
+          credentials: 'include',
+        });
+        if (!res.ok) throw new Error('No session');
+        const data = await res.json();
+        setAccessToken(data.access_token);
         setUser(data.user);
         return true;
       } catch {

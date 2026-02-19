@@ -1,8 +1,18 @@
+const TOKEN_KEY = 'questos_access_token';
+
 let accessToken = null;
-let refreshPromise = null;
+
+// Restore token from localStorage on module load
+try {
+  accessToken = localStorage.getItem(TOKEN_KEY);
+} catch { /* SSR / private browsing */ }
 
 export function setAccessToken(token) {
   accessToken = token;
+  try {
+    if (token) localStorage.setItem(TOKEN_KEY, token);
+    else localStorage.removeItem(TOKEN_KEY);
+  } catch { /* ignore */ }
 }
 
 export function getAccessToken() {
@@ -11,6 +21,7 @@ export function getAccessToken() {
 
 export function clearAccessToken() {
   accessToken = null;
+  try { localStorage.removeItem(TOKEN_KEY); } catch { /* ignore */ }
 }
 
 async function refreshToken() {
@@ -20,7 +31,7 @@ async function refreshToken() {
     throw new Error('Session expired');
   }
   const data = await res.json();
-  accessToken = data.access_token;
+  setAccessToken(data.access_token);
   return data;
 }
 
@@ -30,6 +41,8 @@ export async function ensureToken() {
   }
   return refreshPromise;
 }
+
+let refreshPromise = null;
 
 export async function api(path, options = {}) {
   const { body, method = 'GET', headers = {}, raw = false } = options;
