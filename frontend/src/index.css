@@ -377,3 +377,25 @@ h1, h2, h3, h4, h5, h6 {
   --color-border: #a5f3fc;
   --color-border-light: #67e8f9;
 }
+
+/* Fairy Dust — soft lavender/purple theme */
+.theme-fairy {
+  --color-sky: #c084fc;
+  --color-accent: #c084fc;
+  --color-accent-light: #d8b4fe;
+  --color-navy: #140a1a;
+  --color-navy-light: #1d1127;
+  --color-surface: #1d1127;
+  --color-surface-raised: #2a1a38;
+  --color-border: #2a1a38;
+  --color-border-light: #3d2752;
+}
+
+.theme-fairy.light-mode {
+  --color-navy: #faf5ff;
+  --color-navy-light: #f3e8ff;
+  --color-surface: #ffffff;
+  --color-surface-raised: #faf5ff;
+  --color-border: #e9d5ff;
+  --color-border-light: #d8b4fe;
+}

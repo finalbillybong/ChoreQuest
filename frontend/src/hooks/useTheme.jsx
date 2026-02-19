@@ -4,13 +4,16 @@ import { api } from '../api/client';
 const ThemeContext = createContext(null);
 
 export const COLOR_THEMES = [
-  { id: 'default',  label: 'Quest Blue',        accent: '#3b82f6', bg: '#0a0e1a', surface: '#111827' },
-  { id: 'dragon',   label: 'Dragon Fire',       accent: '#ef4444', bg: '#1a0a0a', surface: '#1f1111' },
-  { id: 'forest',   label: 'Enchanted Forest',  accent: '#10b981', bg: '#061210', surface: '#0d1f1b' },
-  { id: 'galaxy',   label: 'Galaxy',            accent: '#a855f7', bg: '#0f0a1a', surface: '#1a1127' },
-  { id: 'rose',     label: 'Rose Gold',         accent: '#ec4899', bg: '#1a0a12', surface: '#1f1118' },
-  { id: 'sunshine', label: 'Sunshine',          accent: '#f59e0b', bg: '#1a140a', surface: '#1f1a0d' },
-  { id: 'arctic',   label: 'Arctic',            accent: '#06b6d4', bg: '#061217', surface: '#0b1d24' },
+  // ── Boy themes ──
+  { id: 'default',  label: 'Quest Blue',        group: 'boy',  accent: '#3b82f6', bg: '#0a0e1a', surface: '#111827' },
+  { id: 'dragon',   label: 'Dragon Fire',       group: 'boy',  accent: '#ef4444', bg: '#1a0a0a', surface: '#1f1111' },
+  { id: 'forest',   label: 'Enchanted Forest',  group: 'boy',  accent: '#10b981', bg: '#061210', surface: '#0d1f1b' },
+  { id: 'arctic',   label: 'Arctic',            group: 'boy',  accent: '#06b6d4', bg: '#061217', surface: '#0b1d24' },
+  // ── Girl themes ──
+  { id: 'rose',     label: 'Rose Gold',         group: 'girl', accent: '#ec4899', bg: '#1a0a12', surface: '#1f1118' },
+  { id: 'galaxy',   label: 'Galaxy',            group: 'girl', accent: '#a855f7', bg: '#0f0a1a', surface: '#1a1127' },
+  { id: 'sunshine', label: 'Sunshine',          group: 'girl', accent: '#f59e0b', bg: '#1a140a', surface: '#1f1a0d' },
+  { id: 'fairy',    label: 'Fairy Dust',        group: 'girl', accent: '#c084fc', bg: '#140a1a', surface: '#1d1127' },
 ];
 
 export function ThemeProvider({ children }) {

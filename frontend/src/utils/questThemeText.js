@@ -3,7 +3,12 @@
  * titles and descriptions, used when a "girl" colour theme is active.
  */
 
-const ENCHANTED_THEMES = ['rose', 'galaxy', 'sunshine'];
+import { COLOR_THEMES } from '../hooks/useTheme';
+
+/** Girl theme IDs derived from the single source of truth in COLOR_THEMES */
+const GIRL_THEME_IDS = new Set(
+  COLOR_THEMES.filter((t) => t.group === 'girl').map((t) => t.id)
+);
 
 const ENCHANTED_MAP = {
   'The Chamber of Rest': {
@@ -63,7 +68,7 @@ const ENCHANTED_MAP = {
  * Falls back to the original title if no override exists.
  */
 export function themedTitle(originalTitle, colorTheme) {
-  if (!ENCHANTED_THEMES.includes(colorTheme)) return originalTitle;
+  if (!GIRL_THEME_IDS.has(colorTheme)) return originalTitle;
   return ENCHANTED_MAP[originalTitle]?.title || originalTitle;
 }
 
@@ -72,6 +77,6 @@ export function themedTitle(originalTitle, colorTheme) {
  * Falls back to the original description if no override exists.
  */
 export function themedDescription(originalTitle, originalDescription, colorTheme) {
-  if (!ENCHANTED_THEMES.includes(colorTheme)) return originalDescription;
+  if (!GIRL_THEME_IDS.has(colorTheme)) return originalDescription;
   return ENCHANTED_MAP[originalTitle]?.description || originalDescription;
 }
