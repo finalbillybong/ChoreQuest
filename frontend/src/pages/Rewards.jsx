@@ -16,14 +16,6 @@ import {
   Gift,
 } from 'lucide-react';
 
-const inputClass =
-  'w-full bg-navy-light border-2 border-[#2a2a4a] text-cream p-3 rounded font-body text-lg ' +
-  'placeholder:text-cream/30 focus:border-gold focus:outline-none transition-colors';
-
-const selectClass =
-  'bg-navy-light border-2 border-[#2a2a4a] text-cream p-3 rounded font-body text-lg w-full ' +
-  'focus:border-gold focus:outline-none transition-colors';
-
 const emptyForm = {
   title: '',
   description: '',
@@ -244,8 +236,8 @@ export default function Rewards() {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-20 gap-4">
-        <ShoppingBag size={48} className="text-gold animate-pulse" />
-        <p className="text-gold font-heading text-xs animate-pulse">
+        <ShoppingBag size={48} className="text-sky animate-pulse" />
+        <p className="text-cream text-lg font-bold animate-pulse">
           The shopkeeper is arranging the treasures...
         </p>
       </div>
@@ -257,15 +249,15 @@ export default function Rewards() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <ShoppingBag size={28} className="text-gold" />
-          <h1 className="font-heading text-gold text-sm sm:text-base leading-relaxed">
+          <ShoppingBag size={28} className="text-sky" />
+          <h1 className="text-cream text-xl font-extrabold leading-relaxed">
             Treasure Shop
           </h1>
         </div>
         {isParent && (
           <button
             onClick={openCreateModal}
-            className="game-btn game-btn-gold flex items-center gap-2"
+            className="game-btn game-btn-blue flex items-center gap-2"
           >
             <Plus size={16} />
             Add Treasure
@@ -281,8 +273,8 @@ export default function Rewards() {
               <Coins size={28} className="text-gold" />
             </div>
             <div className="text-center">
-              <p className="text-cream/50 font-body text-base">Your XP Balance</p>
-              <p className="text-gold font-heading text-lg sm:text-xl">{userXp.toLocaleString()} XP</p>
+              <p className="text-muted text-sm">Your XP Balance</p>
+              <p className="text-gold text-xl font-extrabold">{userXp.toLocaleString()} XP</p>
             </div>
           </div>
         </div>
@@ -290,7 +282,7 @@ export default function Rewards() {
 
       {/* Error */}
       {error && (
-        <div className="p-3 rounded border-2 border-crimson/40 bg-crimson/10 text-crimson text-base text-center">
+        <div className="p-3 rounded border-2 border-crimson/40 bg-crimson/10 text-crimson text-sm text-center">
           {error}
         </div>
       )}
@@ -298,7 +290,7 @@ export default function Rewards() {
       {/* Redeem Message */}
       {redeemMessage && (
         <div
-          className={`p-3 rounded border-2 text-base text-center ${
+          className={`p-3 rounded border-2 text-sm text-center ${
             redeemMessage.toLowerCase().includes('fail') ||
             redeemMessage.toLowerCase().includes('confused') ||
             redeemMessage.toLowerCase().includes('insufficient')
@@ -314,13 +306,13 @@ export default function Rewards() {
       {rewards.length === 0 ? (
         <div className="game-panel p-10 text-center">
           <Gift size={48} className="mx-auto text-cream/20 mb-4" />
-          <p className="text-cream/50 text-xl font-body">
+          <p className="text-muted text-sm">
             The treasure shop is empty. No loot to be found... yet!
           </p>
           {isParent && (
             <button
               onClick={openCreateModal}
-              className="game-btn game-btn-gold mt-4 inline-flex items-center gap-2"
+              className="game-btn game-btn-blue mt-4 inline-flex items-center gap-2"
             >
               <Plus size={16} />
               Stock First Treasure
@@ -343,19 +335,19 @@ export default function Rewards() {
               >
                 {/* Icon & Title */}
                 <div className="flex items-start gap-3">
-                  <div className="w-12 h-12 rounded-lg bg-gold/10 border border-gold/20 flex items-center justify-center flex-shrink-0">
+                  <div className="w-12 h-12 rounded-lg bg-sky/10 border border-sky/20 flex items-center justify-center flex-shrink-0">
                     {reward.icon ? (
                       <span className="text-2xl">{reward.icon}</span>
                     ) : (
-                      <Sparkles size={22} className="text-gold" />
+                      <Sparkles size={22} className="text-sky" />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-heading text-cream text-[10px] leading-relaxed">
+                    <h3 className="text-cream text-lg font-bold leading-relaxed">
                       {reward.title}
                     </h3>
                     {reward.description && (
-                      <p className="text-cream/50 font-body text-base mt-1 line-clamp-2">
+                      <p className="text-muted text-sm mt-1 line-clamp-2">
                         {reward.description}
                       </p>
                     )}
@@ -365,17 +357,17 @@ export default function Rewards() {
                 {/* Cost */}
                 <div className="flex items-center gap-2">
                   <Coins size={16} className="text-gold" />
-                  <span className="text-gold font-heading text-[10px]">{cost} XP</span>
+                  <span className="text-gold text-sm font-bold">{cost} XP</span>
                 </div>
 
                 {/* Stock indicator */}
                 {reward.stock != null && (
                   <div className="flex items-center gap-1.5">
-                    <Package size={14} className={outOfStock ? 'text-crimson' : 'text-cream/40'} />
+                    <Package size={14} className={outOfStock ? 'text-crimson' : 'text-muted'} />
                     {outOfStock ? (
-                      <span className="text-crimson font-heading text-[9px]">Sold Out</span>
+                      <span className="text-crimson text-xs font-bold">Sold Out</span>
                     ) : (
-                      <span className="text-cream/50 font-body text-sm">
+                      <span className="text-muted text-xs">
                         {reward.stock} left
                       </span>
                     )}
@@ -411,14 +403,14 @@ export default function Rewards() {
                     <>
                       <button
                         onClick={() => openEditModal(reward)}
-                        className="p-2 rounded hover:bg-[#2a2a4a] transition-colors text-cream/40 hover:text-sky"
+                        className="p-2 rounded hover:bg-surface-raised transition-colors text-muted hover:text-sky"
                         aria-label="Edit reward"
                       >
                         <Pencil size={16} />
                       </button>
                       <button
                         onClick={() => setDeleteTarget(reward)}
-                        className="p-2 rounded hover:bg-[#2a2a4a] transition-colors text-cream/40 hover:text-crimson"
+                        className="p-2 rounded hover:bg-surface-raised transition-colors text-muted hover:text-crimson"
                         aria-label="Delete reward"
                       >
                         <Trash2 size={16} />
@@ -436,11 +428,11 @@ export default function Rewards() {
       {isParent && pendingRedemptions.length > 0 && (
         <div className="space-y-4">
           <div className="flex items-center gap-2">
-            <Clock size={20} className="text-gold" />
-            <h2 className="font-heading text-gold text-xs">
+            <Clock size={20} className="text-sky" />
+            <h2 className="text-cream text-lg font-bold">
               Pending Redemptions
             </h2>
-            <span className="ml-auto bg-gold/20 text-gold font-heading text-[9px] px-2 py-1 rounded-full">
+            <span className="ml-auto bg-sky/20 text-sky text-xs font-bold px-2 py-1 rounded-full">
               {pendingRedemptions.length}
             </span>
           </div>
@@ -454,11 +446,11 @@ export default function Rewards() {
                   className="game-panel p-4 flex flex-col sm:flex-row items-start sm:items-center gap-4"
                 >
                   <div className="flex-1 min-w-0">
-                    <p className="text-cream font-heading text-[10px] leading-relaxed">
+                    <p className="text-cream text-base font-bold leading-relaxed">
                       {redemption.reward_title || redemption.reward?.title || 'Reward'}
                     </p>
                     <div className="flex items-center gap-3 mt-1 flex-wrap">
-                      <span className="text-cream/50 font-body text-base">
+                      <span className="text-muted text-sm">
                         Requested by{' '}
                         <span className="text-sky">
                           {redemption.kid_name ||
@@ -467,7 +459,7 @@ export default function Rewards() {
                             'Hero'}
                         </span>
                       </span>
-                      <span className="flex items-center gap-1 text-gold text-sm">
+                      <span className="flex items-center gap-1 text-gold text-xs">
                         <Coins size={12} />
                         {redemption.points_spent || redemption.points || redemption.reward?.point_cost || 0} XP
                       </span>
@@ -478,7 +470,7 @@ export default function Rewards() {
                     <button
                       onClick={() => handleApproveRedemption(redemption)}
                       disabled={isProcessing}
-                      className={`game-btn game-btn-gold flex items-center gap-1 ${
+                      className={`game-btn game-btn-blue flex items-center gap-1 ${
                         isProcessing ? 'opacity-60 cursor-wait' : ''
                       }`}
                     >
@@ -528,14 +520,14 @@ export default function Rewards() {
       >
         <div className="space-y-4">
           {formError && (
-            <div className="p-2 rounded border border-crimson/40 bg-crimson/10 text-crimson text-base">
+            <div className="p-2 rounded border border-crimson/40 bg-crimson/10 text-crimson text-sm">
               {formError}
             </div>
           )}
 
           {/* Title */}
           <div>
-            <label className="block text-gold/80 text-sm font-heading mb-1 tracking-wide">
+            <label className="block text-cream text-sm font-medium mb-1 tracking-wide">
               Treasure Name
             </label>
             <input
@@ -543,13 +535,13 @@ export default function Rewards() {
               value={form.title}
               onChange={(e) => updateForm('title', e.target.value)}
               placeholder="Extra Screen Time"
-              className={inputClass}
+              className="field-input"
             />
           </div>
 
           {/* Description */}
           <div>
-            <label className="block text-gold/80 text-sm font-heading mb-1 tracking-wide">
+            <label className="block text-cream text-sm font-medium mb-1 tracking-wide">
               Description
             </label>
             <textarea
@@ -557,13 +549,13 @@ export default function Rewards() {
               onChange={(e) => updateForm('description', e.target.value)}
               placeholder="What does this treasure grant?"
               rows={3}
-              className={`${inputClass} resize-none`}
+              className="field-input resize-none"
             />
           </div>
 
           {/* Cost */}
           <div>
-            <label className="block text-gold/80 text-sm font-heading mb-1 tracking-wide">
+            <label className="block text-cream text-sm font-medium mb-1 tracking-wide">
               Cost (XP)
             </label>
             <input
@@ -571,13 +563,13 @@ export default function Rewards() {
               min={1}
               value={form.point_cost}
               onChange={(e) => updateForm('point_cost', e.target.value)}
-              className={inputClass}
+              className="field-input"
             />
           </div>
 
           {/* Icon */}
           <div>
-            <label className="block text-gold/80 text-sm font-heading mb-1 tracking-wide">
+            <label className="block text-cream text-sm font-medium mb-1 tracking-wide">
               Icon (Emoji)
             </label>
             <input
@@ -585,13 +577,13 @@ export default function Rewards() {
               value={form.icon}
               onChange={(e) => updateForm('icon', e.target.value)}
               placeholder="e.g. trophy, star, gift"
-              className={inputClass}
+              className="field-input"
             />
           </div>
 
           {/* Stock */}
           <div>
-            <label className="block text-gold/80 text-sm font-heading mb-1 tracking-wide">
+            <label className="block text-cream text-sm font-medium mb-1 tracking-wide">
               Stock (Optional)
             </label>
             <input
@@ -600,16 +592,16 @@ export default function Rewards() {
               value={form.stock}
               onChange={(e) => updateForm('stock', e.target.value)}
               placeholder="Leave empty for unlimited"
-              className={inputClass}
+              className="field-input"
             />
-            <p className="text-cream/30 font-body text-sm mt-1">
+            <p className="text-muted text-xs mt-1">
               Leave empty for unlimited supply.
             </p>
           </div>
 
           {/* Auto Approve Threshold */}
           <div>
-            <label className="block text-gold/80 text-sm font-heading mb-1 tracking-wide">
+            <label className="block text-cream text-sm font-medium mb-1 tracking-wide">
               Auto-Approve Threshold (Optional)
             </label>
             <input
@@ -618,9 +610,9 @@ export default function Rewards() {
               value={form.auto_approve_threshold}
               onChange={(e) => updateForm('auto_approve_threshold', e.target.value)}
               placeholder="Max cost to auto-approve"
-              className={inputClass}
+              className="field-input"
             />
-            <p className="text-cream/30 font-body text-sm mt-1">
+            <p className="text-muted text-xs mt-1">
               Redemptions at or below this cost are auto-approved.
             </p>
           </div>
@@ -646,9 +638,9 @@ export default function Rewards() {
           },
         ]}
       >
-        <p className="text-cream/70">
+        <p className="text-muted">
           Are you sure you want to remove{' '}
-          <span className="text-gold font-heading text-[10px]">
+          <span className="text-gold font-bold">
             "{deleteTarget?.title}"
           </span>{' '}
           from the treasure shop? Heroes can no longer redeem this reward.

@@ -47,8 +47,8 @@ export default function PointCounter({ value = 0, prefix = 'XP' }) {
 
   return (
     <div className="inline-flex items-center gap-1.5">
-      <Star size={18} className="text-gold fill-gold" />
-      <span className="font-heading text-gold text-xs tabular-nums">
+      <Star size={16} className="text-gold fill-gold" />
+      <span className="font-heading text-gold text-sm font-bold tabular-nums">
         {displayValue.toLocaleString()} {prefix}
       </span>
     </div>

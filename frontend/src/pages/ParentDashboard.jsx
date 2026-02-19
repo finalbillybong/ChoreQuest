@@ -22,17 +22,17 @@ import Modal from '../components/Modal';
 // ---------- animation variants ----------
 
 const kidCardVariants = {
-  hidden: { opacity: 0, y: 16 },
+  hidden: { opacity: 0, y: 12 },
   visible: (i) => ({
     opacity: 1,
     y: 0,
-    transition: { delay: i * 0.08, type: 'spring', stiffness: 260, damping: 24 },
+    transition: { delay: i * 0.06, type: 'spring', stiffness: 300, damping: 28 },
   }),
 };
 
 const sectionVariants = {
   hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { duration: 0.3 } },
+  visible: { opacity: 1, transition: { duration: 0.25 } },
 };
 
 // ---------- component ----------
@@ -205,12 +205,12 @@ export default function ParentDashboard() {
   function ProgressBar({ completed, total }) {
     const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
     return (
-      <div className="w-full bg-navy rounded-full h-2.5 overflow-hidden">
+      <div className="xp-bar">
         <motion.div
-          className="h-full bg-emerald rounded-full"
+          className="xp-bar-fill"
           initial={{ width: 0 }}
           animate={{ width: `${pct}%` }}
-          transition={{ duration: 0.6, ease: 'easeOut' }}
+          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
         />
       </div>
     );
@@ -221,42 +221,38 @@ export default function ParentDashboard() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="animate-spin text-gold" size={32} />
+        <Loader2 className="animate-spin text-sky" size={28} />
       </div>
     );
   }
 
   const hasPendingItems = pendingRedemptions.length > 0 || pendingVerifications.length > 0;
 
-  const inputClass =
-    'w-full bg-navy border-2 border-[#2a2a4a] text-cream p-3 rounded font-body text-lg ' +
-    'placeholder:text-cream/30 focus:border-gold focus:outline-none transition-colors';
-
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
+    <div className="max-w-3xl mx-auto space-y-5">
       {/* ── Header ── */}
       <div className="flex items-center justify-between gap-4">
-        <h1 className="font-heading text-gold text-base sm:text-lg leading-relaxed">
+        <h1 className="font-heading text-cream text-xl font-extrabold">
           Family Overview
         </h1>
-        <div className="flex items-center gap-1 text-cream/40">
-          <Users size={18} />
-          <span className="font-body text-base">{familyStats.length} kids</span>
+        <div className="flex items-center gap-1.5 text-muted text-sm">
+          <Users size={16} />
+          <span>{familyStats.length} members</span>
         </div>
       </div>
 
       {/* ── Error banner ── */}
       {error && (
-        <div className="game-panel p-3 flex items-center gap-2 border-crimson/40 text-crimson text-base">
-          <AlertTriangle size={18} />
+        <div className="game-panel p-3 flex items-center gap-2 border-crimson/30 text-crimson text-sm">
+          <AlertTriangle size={16} />
           <span>{error}</span>
         </div>
       )}
 
       {/* ── Kid overview cards ── */}
       {familyStats.length === 0 ? (
-        <div className="game-panel p-8 text-center">
-          <p className="font-heading text-cream/50 text-[11px] leading-relaxed">
+        <div className="game-panel p-10 text-center">
+          <p className="text-muted text-sm">
             No kids in your family yet.
           </p>
         </div>
@@ -278,19 +274,19 @@ export default function ParentDashboard() {
                   name={kid.display_name}
                 />
                 <div className="min-w-0 flex-1">
-                  <h3 className="font-heading text-cream text-[11px] leading-relaxed truncate">
+                  <h3 className="text-cream text-sm font-semibold truncate">
                     {kid.display_name}
                   </h3>
                   <div className="flex items-center gap-3 mt-1">
                     {/* XP */}
-                    <span className="flex items-center gap-1 text-gold font-body text-base">
-                      <Star size={14} fill="currentColor" />
+                    <span className="inline-flex items-center gap-1 text-gold text-xs font-semibold">
+                      <Star size={12} fill="currentColor" />
                       {kid.points_balance.toLocaleString()} XP
                     </span>
                     {/* Streak */}
                     {kid.current_streak > 0 && (
-                      <span className="flex items-center gap-1 text-orange-400 font-body text-base">
-                        <Flame size={14} fill="currentColor" />
+                      <span className="inline-flex items-center gap-1 text-orange-400 text-xs font-semibold">
+                        <Flame size={12} fill="currentColor" />
                         {kid.current_streak}
                       </span>
                     )}
@@ -300,9 +296,9 @@ export default function ParentDashboard() {
 
               {/* Today's progress */}
               <div className="space-y-1.5">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-cream/60 font-body text-base">Today</span>
-                  <span className="text-cream font-body text-base">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted">Today</span>
+                  <span className="text-cream font-medium">
                     {kid.today_completed}/{kid.today_total} quests
                   </span>
                 </div>
@@ -323,7 +319,7 @@ export default function ParentDashboard() {
           initial="hidden"
           animate="visible"
         >
-          <h2 className="font-heading text-gold text-xs mb-3">
+          <h2 className="text-cream text-base font-bold mb-3">
             Pending Approvals
           </h2>
 
@@ -343,22 +339,22 @@ export default function ParentDashboard() {
                 >
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0 flex-1">
-                      <p className="text-cream font-body text-lg truncate">
+                      <p className="text-cream text-sm font-medium truncate">
                         {assignment.chore?.title || 'Chore'}
                       </p>
-                      <p className="text-cream/50 font-body text-base">
+                      <p className="text-muted text-xs mt-0.5">
                         by {assignment.user?.display_name || 'Kid'}
                         {assignment.chore?.requires_photo && (
                           <span className="inline-flex items-center gap-1 ml-2 text-sky">
-                            <Camera size={12} /> Photo attached
+                            <Camera size={10} /> Photo
                           </span>
                         )}
-                        <span className="ml-2 text-gold">+{assignment.chore?.points} XP</span>
+                        <span className="ml-2 text-gold font-medium">+{assignment.chore?.points} XP</span>
                       </p>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <button
-                        className="game-btn game-btn-gold !px-3 !py-2"
+                        className="game-btn game-btn-blue !px-3 !py-2"
                         disabled={isBusy}
                         onClick={() => handleVerifyChore(assignment.chore_id)}
                         title="Approve"
@@ -389,7 +385,7 @@ export default function ParentDashboard() {
                       <img
                         src={`/api/uploads/${assignment.photo_proof_path}`}
                         alt="Photo proof"
-                        className="rounded-lg max-h-48 object-cover border border-[#2a2a4a]"
+                        className="rounded-lg max-h-48 object-cover border border-border"
                       />
                     </div>
                   )}
@@ -410,17 +406,17 @@ export default function ParentDashboard() {
                   className="game-panel p-4 flex items-center justify-between gap-3"
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="text-cream font-body text-lg truncate">
+                    <p className="text-cream text-sm font-medium truncate">
                       {redemption.reward?.title || 'Reward'}
                     </p>
-                    <p className="text-cream/50 font-body text-base">
+                    <p className="text-muted text-xs mt-0.5">
                       by {redemption.user?.display_name || 'Kid'} &middot;{' '}
                       {redemption.points_spent} XP
                     </p>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <button
-                      className="game-btn game-btn-gold !px-3 !py-2"
+                      className="game-btn game-btn-blue !px-3 !py-2"
                       disabled={isApproving || isDenying}
                       onClick={() => handleApproveRedemption(redemption.id)}
                       title="Approve"
@@ -493,20 +489,20 @@ export default function ParentDashboard() {
       >
         <div className="space-y-4">
           {bonusError && (
-            <div className="p-2 rounded border border-crimson/40 bg-crimson/10 text-crimson text-base text-center">
+            <div className="p-2 rounded-lg border border-crimson/30 bg-crimson/10 text-crimson text-sm text-center">
               {bonusError}
             </div>
           )}
 
           {/* Kid selector */}
           <div>
-            <label className="block text-gold/80 text-sm font-heading mb-2 tracking-wide">
+            <label className="block text-cream/80 text-sm font-medium mb-1.5">
               Select Kid
             </label>
             <select
               value={bonusKidId}
               onChange={(e) => setBonusKidId(e.target.value)}
-              className={inputClass}
+              className="field-input"
             >
               <option value="">-- Choose --</option>
               {familyStats.map((kid) => (
@@ -519,7 +515,7 @@ export default function ParentDashboard() {
 
           {/* Amount */}
           <div>
-            <label className="block text-gold/80 text-sm font-heading mb-2 tracking-wide">
+            <label className="block text-cream/80 text-sm font-medium mb-1.5">
               XP Amount
             </label>
             <input
@@ -528,13 +524,13 @@ export default function ParentDashboard() {
               value={bonusAmount}
               onChange={(e) => setBonusAmount(e.target.value)}
               placeholder="50"
-              className={inputClass}
+              className="field-input"
             />
           </div>
 
           {/* Description */}
           <div>
-            <label className="block text-gold/80 text-sm font-heading mb-2 tracking-wide">
+            <label className="block text-cream/80 text-sm font-medium mb-1.5">
               Reason
             </label>
             <input
@@ -542,7 +538,7 @@ export default function ParentDashboard() {
               value={bonusDescription}
               onChange={(e) => setBonusDescription(e.target.value)}
               placeholder="Great job helping out!"
-              className={inputClass}
+              className="field-input"
             />
           </div>
         </div>

@@ -82,7 +82,7 @@ function UsersTab() {
   if (loading) {
     return (
       <div className="flex justify-center py-12">
-        <Loader2 size={28} className="text-gold animate-spin" />
+        <Loader2 size={28} className="text-sky animate-spin" />
       </div>
     );
   }
@@ -96,45 +96,45 @@ function UsersTab() {
       )}
 
       {users.length === 0 ? (
-        <p className="text-cream/30 text-center py-8 font-body">
+        <p className="text-muted text-center py-8 text-sm">
           No heroes in the realm yet.
         </p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
-              <tr className="border-b-2 border-[#2a2a4a]">
-                <th className="font-heading text-gold/60 text-[8px] tracking-wider py-3 px-2">
+              <tr className="border-b-2 border-border">
+                <th className="text-muted text-xs font-medium tracking-wider py-3 px-2">
                   Username
                 </th>
-                <th className="font-heading text-gold/60 text-[8px] tracking-wider py-3 px-2">
+                <th className="text-muted text-xs font-medium tracking-wider py-3 px-2">
                   Display Name
                 </th>
-                <th className="font-heading text-gold/60 text-[8px] tracking-wider py-3 px-2">
+                <th className="text-muted text-xs font-medium tracking-wider py-3 px-2">
                   Role
                 </th>
-                <th className="font-heading text-gold/60 text-[8px] tracking-wider py-3 px-2">
+                <th className="text-muted text-xs font-medium tracking-wider py-3 px-2">
                   Status
                 </th>
-                <th className="font-heading text-gold/60 text-[8px] tracking-wider py-3 px-2">
+                <th className="text-muted text-xs font-medium tracking-wider py-3 px-2">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#2a2a4a]/50">
+            <tbody className="divide-y divide-border">
               {users.map((usr) => (
-                <tr key={usr.id} className="hover:bg-[#2a2a4a]/20 transition-colors">
-                  <td className="py-3 px-2 text-cream font-body text-lg">
+                <tr key={usr.id} className="hover:bg-surface-raised/20 transition-colors">
+                  <td className="py-3 px-2 text-cream text-sm">
                     {usr.username}
                   </td>
-                  <td className="py-3 px-2 text-cream/70 font-body text-lg">
+                  <td className="py-3 px-2 text-muted text-sm">
                     {usr.display_name || '--'}
                   </td>
                   <td className="py-3 px-2">
                     <select
                       value={usr.role}
                       onChange={(e) => updateRole(usr.id, e.target.value)}
-                      className="bg-navy-light border border-[#2a2a4a] text-cream rounded p-1 font-body text-base focus:border-gold focus:outline-none"
+                      className="field-input"
                     >
                       <option value="kid">kid</option>
                       <option value="parent">parent</option>
@@ -143,7 +143,7 @@ function UsersTab() {
                   </td>
                   <td className="py-3 px-2">
                     <span
-                      className={`inline-block px-2 py-0.5 rounded text-[10px] font-heading ${
+                      className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
                         usr.is_active !== false
                           ? 'bg-emerald/10 text-emerald border border-emerald/30'
                           : 'bg-crimson/10 text-crimson border border-crimson/30'
@@ -261,14 +261,10 @@ function ApiKeysTab() {
   if (loading) {
     return (
       <div className="flex justify-center py-12">
-        <Loader2 size={28} className="text-gold animate-spin" />
+        <Loader2 size={28} className="text-sky animate-spin" />
       </div>
     );
   }
-
-  const inputClass =
-    'w-full bg-navy-light border-2 border-[#2a2a4a] text-cream p-3 rounded font-body text-lg ' +
-    'placeholder:text-cream/30 focus:border-gold focus:outline-none transition-colors';
 
   return (
     <div>
@@ -281,7 +277,7 @@ function ApiKeysTab() {
       <div className="flex justify-end mb-4">
         <button
           onClick={() => setCreateModal(true)}
-          className="game-btn game-btn-gold flex items-center gap-2"
+          className="game-btn game-btn-blue flex items-center gap-2"
         >
           <Plus size={14} />
           Create Key
@@ -289,7 +285,7 @@ function ApiKeysTab() {
       </div>
 
       {keys.length === 0 ? (
-        <p className="text-cream/30 text-center py-8 font-body">
+        <p className="text-muted text-center py-8 text-sm">
           No API keys forged yet.
         </p>
       ) : (
@@ -297,10 +293,10 @@ function ApiKeysTab() {
           {keys.map((k) => (
             <div key={k.id} className="game-panel p-4 flex items-center gap-4">
               <div className="flex-1 min-w-0">
-                <p className="text-cream font-body text-lg truncate">
+                <p className="text-cream text-sm truncate">
                   {k.name}
                 </p>
-                <p className="text-cream/40 text-sm font-body">
+                <p className="text-muted text-xs">
                   Prefix: <span className="text-sky">{k.prefix || k.key_prefix || '***'}</span>
                   {k.scopes && (
                     <span className="ml-3">
@@ -332,7 +328,7 @@ function ApiKeysTab() {
                 {
                   label: 'Done',
                   onClick: closeCreateModal,
-                  className: 'game-btn game-btn-gold',
+                  className: 'game-btn game-btn-blue',
                 },
               ]
             : [
@@ -344,7 +340,7 @@ function ApiKeysTab() {
                 {
                   label: createSubmitting ? 'Creating...' : 'Create',
                   onClick: createKey,
-                  className: 'game-btn game-btn-gold',
+                  className: 'game-btn game-btn-blue',
                   disabled: createSubmitting || !newKeyName.trim(),
                 },
               ]
@@ -352,29 +348,29 @@ function ApiKeysTab() {
       >
         {newKeyValue ? (
           <div className="space-y-3">
-            <p className="text-cream/80 text-base">
+            <p className="text-muted text-sm">
               Copy this key now. It will not be shown again!
             </p>
             <div className="flex gap-2">
-              <code className="flex-1 bg-navy p-3 rounded border border-gold/30 text-gold text-sm font-body break-all">
+              <code className="flex-1 bg-navy p-3 rounded border border-sky/30 text-sky text-sm break-all">
                 {newKeyValue}
               </code>
               <button
                 onClick={() => copyToClipboard(newKeyValue)}
-                className="flex-shrink-0 p-2 rounded hover:bg-[#2a2a4a] transition-colors"
+                className="flex-shrink-0 p-2 rounded hover:bg-surface-raised transition-colors"
                 title="Copy"
               >
                 {copied ? (
                   <Check size={18} className="text-emerald" />
                 ) : (
-                  <Copy size={18} className="text-cream/50" />
+                  <Copy size={18} className="text-muted" />
                 )}
               </button>
             </div>
           </div>
         ) : (
           <div>
-            <label className="block text-gold/80 text-sm font-heading mb-2 tracking-wide">
+            <label className="block text-cream text-sm font-medium mb-2">
               Key Name
             </label>
             <input
@@ -382,7 +378,7 @@ function ApiKeysTab() {
               value={newKeyName}
               onChange={(e) => setNewKeyName(e.target.value)}
               placeholder="e.g. Mobile App"
-              className={inputClass}
+              className="field-input"
             />
           </div>
         )}
@@ -446,14 +442,10 @@ function InviteCodesTab() {
     }
   };
 
-  const inputClass =
-    'w-full bg-navy-light border-2 border-[#2a2a4a] text-cream p-3 rounded font-body text-lg ' +
-    'placeholder:text-cream/30 focus:border-gold focus:outline-none transition-colors';
-
   if (loading) {
     return (
       <div className="flex justify-center py-12">
-        <Loader2 size={28} className="text-gold animate-spin" />
+        <Loader2 size={28} className="text-sky animate-spin" />
       </div>
     );
   }
@@ -469,7 +461,7 @@ function InviteCodesTab() {
       <div className="flex justify-end mb-4">
         <button
           onClick={() => setCreateModal(true)}
-          className="game-btn game-btn-gold flex items-center gap-2"
+          className="game-btn game-btn-blue flex items-center gap-2"
         >
           <Plus size={14} />
           Create Code
@@ -477,7 +469,7 @@ function InviteCodesTab() {
       </div>
 
       {codes.length === 0 ? (
-        <p className="text-cream/30 text-center py-8 font-body">
+        <p className="text-muted text-center py-8 text-sm">
           No invite scrolls crafted yet.
         </p>
       ) : (
@@ -485,15 +477,15 @@ function InviteCodesTab() {
           {codes.map((c) => (
             <div key={c.id} className="game-panel p-4 flex items-center gap-4">
               <div className="flex-1 min-w-0">
-                <p className="text-gold font-body text-lg tracking-wider">
+                <p className="text-cream text-sm font-bold tracking-wider">
                   {c.code}
                 </p>
                 <div className="flex gap-4 mt-1">
-                  <span className="text-cream/40 text-sm font-body">
+                  <span className="text-muted text-xs">
                     Role:{' '}
                     <span className="text-purple">{c.role}</span>
                   </span>
-                  <span className="text-cream/40 text-sm font-body">
+                  <span className="text-muted text-xs">
                     Uses:{' '}
                     <span className="text-sky">
                       {c.use_count ?? c.uses ?? 0}
@@ -528,20 +520,20 @@ function InviteCodesTab() {
           {
             label: createSubmitting ? 'Creating...' : 'Create',
             onClick: createCode,
-            className: 'game-btn game-btn-gold',
+            className: 'game-btn game-btn-blue',
             disabled: createSubmitting,
           },
         ]}
       >
         <div className="space-y-4">
           <div>
-            <label className="block text-gold/80 text-sm font-heading mb-2 tracking-wide">
+            <label className="block text-cream text-sm font-medium mb-2">
               Role
             </label>
             <select
               value={newRole}
               onChange={(e) => setNewRole(e.target.value)}
-              className={inputClass}
+              className="field-input"
             >
               <option value="kid">kid</option>
               <option value="parent">parent</option>
@@ -549,7 +541,7 @@ function InviteCodesTab() {
             </select>
           </div>
           <div>
-            <label className="block text-gold/80 text-sm font-heading mb-2 tracking-wide">
+            <label className="block text-cream text-sm font-medium mb-2">
               Max Uses (optional)
             </label>
             <input
@@ -558,7 +550,7 @@ function InviteCodesTab() {
               value={newMaxUses}
               onChange={(e) => setNewMaxUses(e.target.value)}
               placeholder="Unlimited"
-              className={inputClass}
+              className="field-input"
             />
           </div>
         </div>
@@ -606,7 +598,7 @@ function AuditLogTab() {
   if (loading) {
     return (
       <div className="flex justify-center py-12">
-        <Loader2 size={28} className="text-gold animate-spin" />
+        <Loader2 size={28} className="text-sky animate-spin" />
       </div>
     );
   }
@@ -620,43 +612,43 @@ function AuditLogTab() {
       )}
 
       {entries.length === 0 ? (
-        <p className="text-cream/30 text-center py-8 font-body">
+        <p className="text-muted text-center py-8 text-sm">
           The chronicle is empty. No deeds recorded yet.
         </p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
-              <tr className="border-b-2 border-[#2a2a4a]">
-                <th className="font-heading text-gold/60 text-[8px] tracking-wider py-3 px-2">
+              <tr className="border-b-2 border-border">
+                <th className="text-muted text-xs font-medium tracking-wider py-3 px-2">
                   Time
                 </th>
-                <th className="font-heading text-gold/60 text-[8px] tracking-wider py-3 px-2">
+                <th className="text-muted text-xs font-medium tracking-wider py-3 px-2">
                   User
                 </th>
-                <th className="font-heading text-gold/60 text-[8px] tracking-wider py-3 px-2">
+                <th className="text-muted text-xs font-medium tracking-wider py-3 px-2">
                   Action
                 </th>
-                <th className="font-heading text-gold/60 text-[8px] tracking-wider py-3 px-2">
+                <th className="text-muted text-xs font-medium tracking-wider py-3 px-2">
                   Details
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#2a2a4a]/50">
+            <tbody className="divide-y divide-border">
               {entries.map((entry, idx) => (
-                <tr key={entry.id || idx} className="hover:bg-[#2a2a4a]/20 transition-colors">
-                  <td className="py-2.5 px-2 text-cream/50 font-body text-base whitespace-nowrap">
+                <tr key={entry.id || idx} className="hover:bg-surface-raised/20 transition-colors">
+                  <td className="py-2.5 px-2 text-muted text-xs whitespace-nowrap">
                     {formatTimestamp(entry.created_at)}
                   </td>
-                  <td className="py-2.5 px-2 text-cream font-body text-base">
+                  <td className="py-2.5 px-2 text-cream text-xs">
                     {entry.user_id != null ? `User #${entry.user_id}` : '--'}
                   </td>
                   <td className="py-2.5 px-2">
-                    <span className="text-sky font-body text-base">
+                    <span className="text-sky text-xs">
                       {entry.action}
                     </span>
                   </td>
-                  <td className="py-2.5 px-2 text-cream/40 font-body text-sm max-w-xs truncate">
+                  <td className="py-2.5 px-2 text-muted text-xs max-w-xs truncate">
                     {typeof entry.details === 'object'
                       ? JSON.stringify(entry.details)
                       : entry.details || '--'}
@@ -669,7 +661,7 @@ function AuditLogTab() {
       )}
 
       {/* Pagination */}
-      <div className="flex items-center justify-between mt-4 pt-4 border-t border-[#2a2a4a]">
+      <div className="flex items-center justify-between mt-4 pt-4 border-t border-border">
         <button
           onClick={() => setOffset(Math.max(0, offset - limit))}
           disabled={offset === 0}
@@ -681,7 +673,7 @@ function AuditLogTab() {
           Prev
         </button>
 
-        <span className="text-cream/40 font-body text-sm">
+        <span className="text-muted text-xs">
           Showing {offset + 1} - {offset + entries.length}
         </span>
 
@@ -709,10 +701,10 @@ export default function AdminDashboard() {
     return (
       <div className="max-w-xl mx-auto text-center py-20">
         <Shield size={48} className="text-crimson/30 mx-auto mb-4" />
-        <h1 className="font-heading text-crimson text-xs mb-2">
+        <h1 className="text-cream text-xl font-extrabold mb-2">
           Access Denied
         </h1>
-        <p className="text-cream/40 font-body text-lg">
+        <p className="text-muted text-sm">
           Only realm administrators may enter this sanctum.
         </p>
       </div>
@@ -723,8 +715,8 @@ export default function AdminDashboard() {
     <div className="max-w-5xl mx-auto">
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
-        <Shield size={28} className="text-gold" />
-        <h1 className="font-heading text-gold text-xs sm:text-sm leading-relaxed">
+        <Shield size={28} className="text-sky" />
+        <h1 className="text-cream text-xl font-extrabold leading-relaxed">
           Admin Sanctum
         </h1>
       </div>
@@ -738,10 +730,10 @@ export default function AdminDashboard() {
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`flex items-center gap-2 px-4 py-3 rounded-t-md border-b-3 transition-colors font-heading text-[8px] tracking-wider whitespace-nowrap ${
+              className={`flex items-center gap-2 px-4 py-3 rounded-t-md border-b-3 transition-colors text-sm font-medium whitespace-nowrap ${
                 isActive
-                  ? 'bg-[#2a2a4a]/50 border-gold text-gold'
-                  : 'border-transparent text-cream/40 hover:text-cream/70 hover:bg-[#2a2a4a]/20'
+                  ? 'bg-surface-raised/50 border-sky text-sky'
+                  : 'border-transparent text-muted hover:text-cream'
               }`}
             >
               <Icon size={16} />

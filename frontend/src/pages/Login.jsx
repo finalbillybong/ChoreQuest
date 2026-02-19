@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { Swords } from 'lucide-react';
 
 export default function Login() {
   const { login, pinLogin } = useAuth();
@@ -90,64 +91,51 @@ export default function Login() {
     }
   };
 
-  const inputClass =
-    'w-full bg-navy-light border-2 border-[#2a2a4a] text-cream p-3 rounded font-body text-lg ' +
-    'placeholder:text-cream/30 focus:border-gold focus:outline-none transition-colors';
-
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-10 bg-navy">
-      {/* Decorative scanlines overlay */}
-      <div
-        className="pointer-events-none fixed inset-0 opacity-[0.03]"
-        style={{
-          backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.1) 2px, rgba(255,255,255,0.1) 4px)',
-        }}
-      />
+      {/* Subtle gradient background */}
+      <div className="pointer-events-none fixed inset-0 bg-gradient-to-br from-sky/5 via-transparent to-purple/5" />
 
       <form
         onSubmit={handleSubmit}
         className="game-panel w-full max-w-md p-8 relative z-10"
       >
-        {/* Decorative pixel corners */}
-        <div className="absolute top-0 left-0 w-3 h-3 bg-gold" />
-        <div className="absolute top-0 right-0 w-3 h-3 bg-gold" />
-        <div className="absolute bottom-0 left-0 w-3 h-3 bg-gold" />
-        <div className="absolute bottom-0 right-0 w-3 h-3 bg-gold" />
-
-        {/* Title area */}
+        {/* Logo + Title */}
         <div className="text-center mb-8">
-          <h1 className="font-heading text-gold text-lg sm:text-xl leading-relaxed mb-3">
-            Enter the Realm
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-sky to-accent-light flex items-center justify-center mx-auto mb-4">
+            <Swords size={28} className="text-white" />
+          </div>
+          <h1 className="font-heading text-cream text-2xl font-extrabold tracking-tight mb-1">
+            Welcome back
           </h1>
-          <p className="text-cream/60 text-2xl tracking-widest">QuestOS</p>
-          <div className="mt-3 mx-auto w-32 h-[2px] bg-gradient-to-r from-transparent via-gold/50 to-transparent" />
+          <p className="text-muted text-sm">Sign in to QuestOS</p>
         </div>
 
         {/* Error display */}
         {error && (
-          <div className="mb-5 p-3 rounded border-2 border-crimson/40 bg-crimson/10 text-crimson text-base text-center">
+          <div className="mb-5 p-3 rounded-lg border border-crimson/30 bg-crimson/10 text-crimson text-sm text-center">
             {error}
           </div>
         )}
 
         {/* Username */}
         <div className="mb-4">
-          <label className="block text-gold/80 text-sm font-heading mb-2 tracking-wide">
+          <label className="block text-cream/80 text-sm font-medium mb-1.5">
             Username
           </label>
           <input
             type="text"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            placeholder="hero_name"
+            placeholder="Enter your username"
             autoComplete="username"
-            className={inputClass}
+            className="field-input"
           />
         </div>
 
         {/* Mode toggle */}
         <div className="flex items-center justify-between mb-4">
-          <span className="text-cream/50 text-base">Login with:</span>
+          <span className="text-muted text-sm">Login with:</span>
           <button
             type="button"
             onClick={() => {
@@ -157,21 +145,21 @@ export default function Login() {
             className="flex items-center gap-2 text-sm"
           >
             <div
-              className={`relative w-12 h-6 rounded-full border-2 transition-colors ${
+              className={`relative w-10 h-5 rounded-full transition-colors ${
                 usePinMode
-                  ? 'bg-gold/20 border-gold'
-                  : 'bg-navy-light border-[#2a2a4a]'
+                  ? 'bg-sky/30 border border-sky/40'
+                  : 'bg-navy border border-border'
               }`}
             >
               <div
                 className={`absolute top-0.5 w-4 h-4 rounded-full transition-all ${
                   usePinMode
-                    ? 'left-6 bg-gold'
-                    : 'left-0.5 bg-cream/40'
+                    ? 'left-5 bg-sky'
+                    : 'left-0.5 bg-muted/60'
                 }`}
               />
             </div>
-            <span className={usePinMode ? 'text-gold' : 'text-cream/50'}>
+            <span className={`font-medium ${usePinMode ? 'text-sky' : 'text-muted'}`}>
               {usePinMode ? 'PIN' : 'Password'}
             </span>
           </button>
@@ -180,16 +168,16 @@ export default function Login() {
         {/* Password field */}
         {!usePinMode && (
           <div className="mb-6">
-            <label className="block text-gold/80 text-sm font-heading mb-2 tracking-wide">
+            <label className="block text-cream/80 text-sm font-medium mb-1.5">
               Password
             </label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="********"
+              placeholder="Enter your password"
               autoComplete="current-password"
-              className={inputClass}
+              className="field-input"
             />
           </div>
         )}
@@ -197,7 +185,7 @@ export default function Login() {
         {/* PIN entry */}
         {usePinMode && (
           <div className="mb-6">
-            <label className="block text-gold/80 text-sm font-heading mb-2 tracking-wide">
+            <label className="block text-cream/80 text-sm font-medium mb-1.5">
               PIN Code
             </label>
             <div className="flex gap-2 justify-center" onPaste={handlePinPaste}>
@@ -211,10 +199,7 @@ export default function Login() {
                   value={digit}
                   onChange={(e) => handlePinChange(i, e.target.value)}
                   onKeyDown={(e) => handlePinKeyDown(i, e)}
-                  className={
-                    'w-12 h-14 text-center text-2xl bg-navy-light border-2 border-[#2a2a4a] ' +
-                    'text-gold rounded font-body focus:border-gold focus:outline-none transition-colors'
-                  }
+                  className="w-11 h-13 text-center text-xl bg-navy border border-border text-sky rounded-lg font-bold focus:border-sky focus:outline-none focus:ring-2 focus:ring-sky/20 transition-all"
                 />
               ))}
             </div>
@@ -225,16 +210,16 @@ export default function Login() {
         <button
           type="submit"
           disabled={submitting}
-          className={`game-btn game-btn-gold w-full ${submitting ? 'opacity-60 cursor-wait' : ''}`}
+          className={`game-btn game-btn-blue w-full text-base ${submitting ? 'opacity-60 cursor-wait' : ''}`}
         >
-          {submitting ? 'Entering...' : 'Start Quest'}
+          {submitting ? 'Signing in...' : 'Sign In'}
         </button>
 
         {/* Register link */}
-        <p className="text-center mt-6 text-cream/50 text-base">
+        <p className="text-center mt-6 text-muted text-sm">
           New here?{' '}
-          <Link to="/register" className="text-gold hover:text-gold/80 underline underline-offset-4">
-            Register
+          <Link to="/register" className="text-sky hover:text-accent-light font-medium transition-colors">
+            Create an account
           </Link>
         </p>
       </form>

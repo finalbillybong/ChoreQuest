@@ -39,15 +39,15 @@ export default function Leaderboard() {
     <div className="max-w-2xl mx-auto">
       {/* Header */}
       <div className="flex items-center gap-3 mb-8">
-        <Trophy size={28} className="text-gold" />
-        <h1 className="font-heading text-gold text-xs sm:text-sm leading-relaxed">
+        <Trophy size={28} className="text-sky" />
+        <h1 className="text-cream text-xl font-extrabold">
           Hall of Fame
         </h1>
       </div>
 
       {/* Error */}
       {error && (
-        <div className="mb-4 p-3 rounded border-2 border-crimson/40 bg-crimson/10 text-crimson text-base text-center">
+        <div className="mb-4 p-3 rounded border-2 border-crimson/40 bg-crimson/10 text-crimson text-sm text-center">
           {error}
         </div>
       )}
@@ -55,7 +55,7 @@ export default function Leaderboard() {
       {/* Loading */}
       {loading && (
         <div className="flex items-center justify-center py-20">
-          <Loader2 size={32} className="text-gold animate-spin" />
+          <Loader2 size={32} className="text-sky animate-spin" />
         </div>
       )}
 
@@ -63,10 +63,10 @@ export default function Leaderboard() {
       {!loading && !error && entries.length === 0 && (
         <div className="text-center py-16">
           <Trophy size={48} className="text-cream/10 mx-auto mb-4" />
-          <p className="font-heading text-cream/30 text-[10px]">
+          <p className="text-cream text-lg font-bold">
             No XP earned this week yet
           </p>
-          <p className="text-cream/20 font-body text-base mt-2">
+          <p className="text-muted text-sm mt-2">
             Start questing!
           </p>
         </div>
@@ -84,7 +84,7 @@ export default function Leaderboard() {
               <div
                 key={entry.user_id || entry.id || idx}
                 className={`game-panel p-4 flex items-center gap-4 ${
-                  isCurrentUser ? '!border-gold' : ''
+                  isCurrentUser ? '!border-sky' : ''
                 }`}
               >
                 {/* Medal / Rank */}
@@ -103,19 +103,19 @@ export default function Leaderboard() {
 
                 {/* Info + XP bar */}
                 <div className="flex-1 min-w-0">
-                  <p className="font-heading text-cream text-[10px] truncate mb-2">
+                  <p className="text-cream text-sm font-bold truncate mb-2">
                     {entry.display_name || entry.username}
                   </p>
 
                   {/* Animated XP bar */}
-                  <div className="relative h-5 bg-[#2a2a4a] rounded-full overflow-hidden">
+                  <div className="xp-bar !h-5">
                     <motion.div
-                      className="absolute inset-y-0 left-0 bg-gradient-to-r from-gold to-gold/70 rounded-full"
+                      className="xp-bar-fill"
                       initial={{ width: 0 }}
                       animate={{ width: `${pct}%` }}
                       transition={{ duration: 1, delay: idx * 0.15, ease: 'easeOut' }}
                     />
-                    <span className="absolute inset-0 flex items-center justify-center text-navy font-heading text-[8px] z-10">
+                    <span className="absolute inset-0 flex items-center justify-center text-navy font-medium text-xs z-10">
                       {xp} XP
                     </span>
                   </div>
@@ -137,12 +137,12 @@ export default function Leaderboard() {
                   <div
                     key={entry.user_id || entry.id || rank}
                     className={`game-panel p-3 flex items-center gap-3 ${
-                      isCurrentUser ? '!border-gold' : ''
+                      isCurrentUser ? '!border-sky' : ''
                     }`}
                   >
                     {/* Rank number */}
                     <div className="flex-shrink-0 w-8 text-center">
-                      <span className="font-heading text-cream/50 text-[10px]">
+                      <span className="text-muted text-sm font-bold">
                         #{rank}
                       </span>
                     </div>
@@ -157,15 +157,15 @@ export default function Leaderboard() {
                     </div>
 
                     {/* Name */}
-                    <p className="font-body text-cream text-lg truncate flex-shrink min-w-0">
+                    <p className="text-cream text-sm truncate flex-shrink min-w-0">
                       {entry.display_name || entry.username}
                     </p>
 
                     {/* XP bar */}
                     <div className="flex-1 min-w-0 ml-auto max-w-[200px]">
-                      <div className="relative h-4 bg-[#2a2a4a] rounded-full overflow-hidden">
+                      <div className="xp-bar !h-4">
                         <motion.div
-                          className="absolute inset-y-0 left-0 bg-gradient-to-r from-gold/80 to-gold/50 rounded-full"
+                          className="xp-bar-fill"
                           initial={{ width: 0 }}
                           animate={{ width: `${pct}%` }}
                           transition={{ duration: 0.8, delay: (idx + 3) * 0.1, ease: 'easeOut' }}
@@ -174,7 +174,7 @@ export default function Leaderboard() {
                     </div>
 
                     {/* XP label */}
-                    <span className="flex-shrink-0 font-heading text-gold text-[9px] min-w-[60px] text-right">
+                    <span className="flex-shrink-0 font-medium text-gold text-xs min-w-[60px] text-right">
                       {xp} XP
                     </span>
                   </div>

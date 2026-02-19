@@ -101,23 +101,25 @@ export default function Settings() {
     }
   };
 
-  const inputClass =
-    'w-full bg-navy-light border-2 border-[#2a2a4a] text-cream p-3 rounded font-body text-lg ' +
-    'placeholder:text-cream/30 focus:border-gold focus:outline-none transition-colors';
-
   const ToggleSwitch = ({ enabled, onChange, label }) => (
     <div className="flex items-center justify-between py-3">
-      <span className="text-cream font-body text-lg">{label}</span>
+      <span className="text-cream text-sm">{label}</span>
       <button
         onClick={() => onChange(!enabled)}
-        className="flex-shrink-0"
+        className={`relative inline-flex h-6 w-11 items-center rounded-full border transition-colors flex-shrink-0 ${
+          enabled
+            ? 'bg-sky/30 border-sky/40'
+            : 'bg-navy border-border'
+        }`}
         aria-label={`Toggle ${label}`}
       >
-        {enabled ? (
-          <ToggleRight size={32} className="text-emerald" />
-        ) : (
-          <ToggleLeft size={32} className="text-cream/30" />
-        )}
+        <span
+          className={`inline-block h-4 w-4 rounded-full transition-transform ${
+            enabled
+              ? 'translate-x-6 bg-sky'
+              : 'translate-x-1 bg-muted/60'
+          }`}
+        />
       </button>
     </div>
   );
@@ -126,8 +128,8 @@ export default function Settings() {
     <div className="max-w-2xl mx-auto">
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
-        <CogIcon size={28} className="text-gold" />
-        <h1 className="font-heading text-gold text-xs sm:text-sm leading-relaxed">
+        <CogIcon size={28} className="text-cream" />
+        <h1 className="text-cream text-lg font-bold">
           Settings
         </h1>
       </div>
@@ -136,8 +138,8 @@ export default function Settings() {
       {error && (
         <div className="game-panel p-8 text-center">
           <Shield size={48} className="text-crimson/30 mx-auto mb-4" />
-          <p className="text-crimson font-body text-lg">{error}</p>
-          <p className="text-cream/30 text-sm mt-2 font-body">
+          <p className="text-crimson text-sm">{error}</p>
+          <p className="text-muted text-xs mt-2">
             Only guild leaders may alter the realm's configuration.
           </p>
         </div>
@@ -146,7 +148,7 @@ export default function Settings() {
       {/* Loading */}
       {loading && !error && (
         <div className="flex items-center justify-center py-20">
-          <Loader2 size={32} className="text-gold animate-spin" />
+          <Loader2 size={32} className="text-sky animate-spin" />
         </div>
       )}
 
@@ -155,11 +157,11 @@ export default function Settings() {
         <div className="space-y-6">
           {/* Toggle settings */}
           <div className="game-panel p-5">
-            <h2 className="font-heading text-gold/80 text-[10px] mb-3 tracking-wide">
+            <h2 className="text-cream text-base font-bold mb-3">
               Feature Toggles
             </h2>
 
-            <div className="divide-y divide-[#2a2a4a]">
+            <div className="divide-y divide-border">
               <ToggleSwitch
                 enabled={settings.leaderboard_enabled ?? true}
                 onChange={(v) => updateSetting('leaderboard_enabled', v)}
@@ -180,10 +182,10 @@ export default function Settings() {
 
           {/* Daily reset hour */}
           <div className="game-panel p-5">
-            <h2 className="font-heading text-gold/80 text-[10px] mb-3 tracking-wide">
+            <h2 className="text-cream text-base font-bold mb-3">
               Daily Reset Hour
             </h2>
-            <p className="text-cream/40 text-sm font-body mb-3">
+            <p className="text-muted text-xs mb-3">
               Hour of day (0-23) when daily quests reset.
             </p>
             <input
@@ -195,7 +197,7 @@ export default function Settings() {
                 const val = Math.min(23, Math.max(0, parseInt(e.target.value, 10) || 0));
                 updateSetting('daily_reset_hour', val);
               }}
-              className={inputClass + ' max-w-[120px]'}
+              className="field-input max-w-[120px]"
             />
           </div>
 
@@ -203,7 +205,7 @@ export default function Settings() {
           <button
             onClick={saveSettings}
             disabled={saving}
-            className="game-btn game-btn-gold flex items-center gap-2"
+            className="game-btn game-btn-blue flex items-center gap-2"
           >
             {saving ? (
               <Loader2 size={14} className="animate-spin" />
@@ -220,17 +222,17 @@ export default function Settings() {
 
           {/* Achievement point values */}
           <div className="game-panel p-5">
-            <h2 className="font-heading text-gold/80 text-[10px] mb-3 tracking-wide flex items-center gap-2">
-              <Award size={16} className="text-gold/60" />
+            <h2 className="text-cream text-base font-bold mb-3 flex items-center gap-2">
+              <Award size={16} className="text-muted" />
               Achievement Point Values
             </h2>
 
             {achievementsLoading ? (
               <div className="flex justify-center py-4">
-                <Loader2 size={20} className="text-gold animate-spin" />
+                <Loader2 size={20} className="text-sky animate-spin" />
               </div>
             ) : achievements.length === 0 ? (
-              <p className="text-cream/30 text-sm font-body">
+              <p className="text-muted text-xs">
                 No achievements configured yet.
               </p>
             ) : (
@@ -238,14 +240,14 @@ export default function Settings() {
                 {achievements.map((ach) => (
                   <div
                     key={ach.id}
-                    className="flex items-center gap-3 py-2 border-b border-[#2a2a4a] last:border-0"
+                    className="flex items-center gap-3 py-2 border-b border-border last:border-0"
                   >
                     <div className="flex-1 min-w-0">
-                      <p className="text-cream font-body text-lg truncate">
+                      <p className="text-cream text-sm truncate">
                         {ach.title || ach.name}
                       </p>
                       {ach.description && (
-                        <p className="text-cream/30 text-sm font-body truncate">
+                        <p className="text-muted text-xs truncate">
                           {ach.description}
                         </p>
                       )}
@@ -265,7 +267,7 @@ export default function Settings() {
                             )
                           );
                         }}
-                        className={inputClass + ' !w-24 !p-2 text-center'}
+                        className="field-input !w-24 !p-2 text-center"
                       />
                       <button
                         onClick={() => updateAchievementPoints(ach)}
@@ -289,7 +291,7 @@ export default function Settings() {
           {/* Admin link */}
           {user?.role === 'admin' && (
             <div className="game-panel p-5 text-center">
-              <p className="text-cream/40 text-sm font-body mb-3">
+              <p className="text-muted text-xs mb-3">
                 Need advanced controls?
               </p>
               <button

@@ -139,23 +139,19 @@ export default function Profile() {
     }
   };
 
-  const inputClass =
-    'w-full bg-navy-light border-2 border-[#2a2a4a] text-cream p-3 rounded font-body text-lg ' +
-    'placeholder:text-cream/30 focus:border-gold focus:outline-none transition-colors';
-
   const roleBadgeColors = {
-    admin: 'bg-crimson/20 border-crimson text-crimson',
-    parent: 'bg-purple/20 border-purple text-purple',
-    kid: 'bg-sky/20 border-sky text-sky',
+    admin: 'bg-crimson/10 border-crimson/30 text-crimson',
+    parent: 'bg-purple/10 border-purple/30 text-purple',
+    kid: 'bg-sky/10 border-sky/30 text-sky',
   };
 
   return (
-    <div className="max-w-xl mx-auto space-y-6">
+    <div className="max-w-xl mx-auto space-y-5">
       {/* Header */}
       <div className="flex items-center gap-3 mb-2">
-        <UserCircle size={28} className="text-gold" />
-        <h1 className="font-heading text-gold text-xs sm:text-sm leading-relaxed">
-          Hero Profile
+        <UserCircle size={24} className="text-sky" />
+        <h1 className="font-heading text-cream text-xl font-extrabold">
+          Profile
         </h1>
       </div>
 
@@ -172,14 +168,14 @@ export default function Profile() {
             name={user?.display_name || user?.username}
           />
           <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-            <Paintbrush size={24} className="text-gold" />
+            <Paintbrush size={24} className="text-sky" />
           </div>
         </button>
 
         {/* Role badge */}
         <span
-          className={`inline-block px-3 py-1 rounded-full border text-[10px] font-heading uppercase tracking-wider ${
-            roleBadgeColors[user?.role] || 'border-cream/30 text-cream/50'
+          className={`inline-block px-3 py-1 rounded-full border text-[10px] font-semibold uppercase tracking-wider ${
+            roleBadgeColors[user?.role] || 'border-border text-muted'
           }`}
         >
           {user?.role}
@@ -187,7 +183,7 @@ export default function Profile() {
 
         {/* Editable display name */}
         <div className="w-full max-w-xs">
-          <label className="block text-gold/80 text-sm font-heading mb-2 tracking-wide text-center">
+          <label className="block text-cream/80 text-sm font-medium mb-1.5 text-center">
             Display Name
           </label>
           <div className="flex gap-2">
@@ -195,19 +191,19 @@ export default function Profile() {
               type="text"
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
-              placeholder="Your hero name"
-              className={inputClass}
+              placeholder="Your display name"
+              className="field-input"
             />
             <button
               onClick={saveDisplayName}
               disabled={nameSaving}
-              className="game-btn game-btn-gold flex-shrink-0"
+              className="game-btn game-btn-blue flex-shrink-0"
             >
               {nameSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
             </button>
           </div>
           {nameMsg && (
-            <p className={`text-sm mt-1 text-center ${nameMsg.includes('!') ? 'text-emerald' : 'text-crimson'}`}>
+            <p className={`text-xs mt-1 text-center ${nameMsg.includes('!') ? 'text-emerald' : 'text-crimson'}`}>
               {nameMsg}
             </p>
           )}
@@ -219,55 +215,55 @@ export default function Profile() {
 
       {/* Stats Summary */}
       <div className="game-panel p-5">
-        <h2 className="font-heading text-gold/80 text-[10px] mb-4 tracking-wide">
-          Hero Stats
+        <h2 className="text-cream text-sm font-bold mb-4">
+          Stats
         </h2>
         {statsLoading ? (
           <div className="flex justify-center py-4">
-            <Loader2 size={20} className="text-gold animate-spin" />
+            <Loader2 size={20} className="text-sky animate-spin" />
           </div>
         ) : stats ? (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div className="text-center">
-              <Star size={20} className="text-gold mx-auto mb-1" />
-              <p className="font-heading text-gold text-[11px]">
+              <Star size={18} className="text-gold mx-auto mb-1" />
+              <p className="text-gold text-sm font-bold">
                 {stats.xp_balance ?? stats.xp ?? 0}
               </p>
-              <p className="text-cream/40 text-sm font-body">XP Balance</p>
+              <p className="text-muted text-xs">XP Balance</p>
             </div>
             <div className="text-center">
-              <Award size={20} className="text-emerald mx-auto mb-1" />
-              <p className="font-heading text-emerald text-[11px]">
+              <Award size={18} className="text-emerald mx-auto mb-1" />
+              <p className="text-emerald text-sm font-bold">
                 {stats.total_xp_earned ?? stats.total_earned ?? 0}
               </p>
-              <p className="text-cream/40 text-sm font-body">Total Earned</p>
+              <p className="text-muted text-xs">Total Earned</p>
             </div>
             <div className="text-center">
-              <Flame size={20} className="text-crimson mx-auto mb-1" />
-              <p className="font-heading text-crimson text-[11px]">
+              <Flame size={18} className="text-orange-400 mx-auto mb-1" />
+              <p className="text-orange-400 text-sm font-bold">
                 {stats.streak ?? 0}
               </p>
-              <p className="text-cream/40 text-sm font-body">Streak</p>
+              <p className="text-muted text-xs">Streak</p>
             </div>
             <div className="text-center">
-              <Award size={20} className="text-purple mx-auto mb-1" />
-              <p className="font-heading text-purple text-[11px]">
+              <Award size={18} className="text-purple mx-auto mb-1" />
+              <p className="text-purple text-sm font-bold">
                 {stats.achievements_count ?? stats.achievements ?? 0}
               </p>
-              <p className="text-cream/40 text-sm font-body">Achievements</p>
+              <p className="text-muted text-xs">Achievements</p>
             </div>
           </div>
         ) : (
-          <p className="text-cream/30 text-center text-sm font-body">
-            Stats not available yet. Complete quests to build your legend!
+          <p className="text-muted text-center text-sm">
+            Stats not available yet. Complete quests to build your record!
           </p>
         )}
       </div>
 
       {/* PIN Setup */}
       <div className="game-panel p-5">
-        <h2 className="font-heading text-gold/80 text-[10px] mb-4 tracking-wide flex items-center gap-2">
-          <KeyRound size={16} className="text-gold/60" />
+        <h2 className="text-cream text-sm font-bold mb-4 flex items-center gap-2">
+          <KeyRound size={16} className="text-muted" />
           Quick PIN Login
         </h2>
         <div className="flex gap-2">
@@ -278,7 +274,7 @@ export default function Profile() {
             value={pin}
             onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
             placeholder="6-digit PIN"
-            className={inputClass}
+            className="field-input"
           />
           <button
             onClick={savePin}
@@ -289,7 +285,7 @@ export default function Profile() {
           </button>
         </div>
         {pinMsg && (
-          <p className={`text-sm mt-2 ${pinMsg.includes('!') ? 'text-emerald' : 'text-crimson'}`}>
+          <p className={`text-xs mt-2 ${pinMsg.includes('!') ? 'text-emerald' : 'text-crimson'}`}>
             {pinMsg}
           </p>
         )}
@@ -297,8 +293,8 @@ export default function Profile() {
 
       {/* Password Change */}
       <div className="game-panel p-5">
-        <h2 className="font-heading text-gold/80 text-[10px] mb-4 tracking-wide flex items-center gap-2">
-          <Lock size={16} className="text-gold/60" />
+        <h2 className="text-cream text-sm font-bold mb-4 flex items-center gap-2">
+          <Lock size={16} className="text-muted" />
           Change Password
         </h2>
         <div className="space-y-3">
@@ -308,7 +304,7 @@ export default function Profile() {
             onChange={(e) => setCurrentPassword(e.target.value)}
             placeholder="Current password"
             autoComplete="current-password"
-            className={inputClass}
+            className="field-input"
           />
           <input
             type="password"
@@ -316,7 +312,7 @@ export default function Profile() {
             onChange={(e) => setNewPassword(e.target.value)}
             placeholder="New password"
             autoComplete="new-password"
-            className={inputClass}
+            className="field-input"
           />
           <input
             type="password"
@@ -324,18 +320,18 @@ export default function Profile() {
             onChange={(e) => setConfirmPassword(e.target.value)}
             placeholder="Confirm new password"
             autoComplete="new-password"
-            className={inputClass}
+            className="field-input"
           />
           <button
             onClick={changePassword}
             disabled={pwSaving}
-            className="game-btn game-btn-gold"
+            className="game-btn game-btn-blue"
           >
             {pwSaving ? 'Changing...' : 'Change Password'}
           </button>
         </div>
         {pwMsg && (
-          <p className={`text-sm mt-2 ${pwMsg.includes('!') ? 'text-emerald' : 'text-crimson'}`}>
+          <p className={`text-xs mt-2 ${pwMsg.includes('!') ? 'text-emerald' : 'text-crimson'}`}>
             {pwMsg}
           </p>
         )}
@@ -343,27 +339,27 @@ export default function Profile() {
 
       {/* Theme Toggle */}
       <div className="game-panel p-5">
-        <h2 className="font-heading text-gold/80 text-[10px] mb-4 tracking-wide">
+        <h2 className="text-cream text-sm font-bold mb-4">
           Appearance
         </h2>
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-cream font-body text-lg">
-            {theme === 'dark' ? <Moon size={18} className="text-purple" /> : <Sun size={18} className="text-gold" />}
-            <span>{theme === 'dark' ? 'Dark Realm' : 'Light Realm'}</span>
+          <div className="flex items-center gap-2 text-cream text-sm">
+            {theme === 'dark' ? <Moon size={16} className="text-purple" /> : <Sun size={16} className="text-gold" />}
+            <span>{theme === 'dark' ? 'Dark Mode' : 'Light Mode'}</span>
           </div>
           <button
             onClick={toggleTheme}
-            className={`relative w-14 h-7 rounded-full border-2 transition-colors ${
+            className={`relative w-12 h-6 rounded-full transition-colors ${
               theme === 'light'
-                ? 'bg-gold/20 border-gold'
-                : 'bg-navy-light border-[#2a2a4a]'
+                ? 'bg-sky/30 border border-sky/40'
+                : 'bg-navy border border-border'
             }`}
           >
             <div
               className={`absolute top-0.5 w-5 h-5 rounded-full transition-all ${
                 theme === 'light'
-                  ? 'left-7 bg-gold'
-                  : 'left-0.5 bg-cream/40'
+                  ? 'left-6 bg-sky'
+                  : 'left-0.5 bg-muted/60'
               }`}
             />
           </button>
@@ -377,7 +373,7 @@ export default function Profile() {
           className="game-btn game-btn-red w-full flex items-center justify-center gap-2"
         >
           <LogOut size={14} />
-          Leave the Realm
+          Sign Out
         </button>
       </div>
     </div>

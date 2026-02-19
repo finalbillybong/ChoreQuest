@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { Swords } from 'lucide-react';
 
 export default function Register() {
   const { register } = useAuth();
@@ -52,107 +53,93 @@ export default function Register() {
     }
   };
 
-  const inputClass =
-    'w-full bg-navy-light border-2 border-[#2a2a4a] text-cream p-3 rounded font-body text-lg ' +
-    'placeholder:text-cream/30 focus:border-gold focus:outline-none transition-colors';
-
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-10 bg-navy">
-      {/* Decorative scanlines overlay */}
-      <div
-        className="pointer-events-none fixed inset-0 opacity-[0.03]"
-        style={{
-          backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.1) 2px, rgba(255,255,255,0.1) 4px)',
-        }}
-      />
+      {/* Subtle gradient background */}
+      <div className="pointer-events-none fixed inset-0 bg-gradient-to-br from-sky/5 via-transparent to-purple/5" />
 
       <form
         onSubmit={handleSubmit}
         className="game-panel w-full max-w-md p-8 relative z-10"
       >
-        {/* Decorative pixel corners */}
-        <div className="absolute top-0 left-0 w-3 h-3 bg-gold" />
-        <div className="absolute top-0 right-0 w-3 h-3 bg-gold" />
-        <div className="absolute bottom-0 left-0 w-3 h-3 bg-gold" />
-        <div className="absolute bottom-0 right-0 w-3 h-3 bg-gold" />
-
-        {/* Title area */}
+        {/* Logo + Title */}
         <div className="text-center mb-8">
-          <h1 className="font-heading text-gold text-lg sm:text-xl leading-relaxed mb-3">
-            Join the Guild
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-sky to-accent-light flex items-center justify-center mx-auto mb-4">
+            <Swords size={28} className="text-white" />
+          </div>
+          <h1 className="font-heading text-cream text-2xl font-extrabold tracking-tight mb-1">
+            Create Account
           </h1>
-          <div className="mt-2 mx-auto w-32 h-[2px] bg-gradient-to-r from-transparent via-gold/50 to-transparent" />
+          <p className="text-muted text-sm">Join QuestOS and start your journey</p>
         </div>
 
         {/* Error display */}
         {error && (
-          <div className="mb-5 p-3 rounded border-2 border-crimson/40 bg-crimson/10 text-crimson text-base text-center">
+          <div className="mb-5 p-3 rounded-lg border border-crimson/30 bg-crimson/10 text-crimson text-sm text-center">
             {error}
           </div>
         )}
 
         {/* Username */}
         <div className="mb-4">
-          <label className="block text-gold/80 text-sm font-heading mb-2 tracking-wide">
+          <label className="block text-cream/80 text-sm font-medium mb-1.5">
             Username
           </label>
           <input
             type="text"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            placeholder="hero_name"
+            placeholder="Choose a username"
             autoComplete="username"
-            className={inputClass}
+            className="field-input"
           />
         </div>
 
         {/* Password */}
         <div className="mb-4">
-          <label className="block text-gold/80 text-sm font-heading mb-2 tracking-wide">
+          <label className="block text-cream/80 text-sm font-medium mb-1.5">
             Password
           </label>
           <input
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="min 6 characters"
+            placeholder="Min 6 characters"
             autoComplete="new-password"
-            className={inputClass}
+            className="field-input"
           />
         </div>
 
         {/* Display Name */}
         <div className="mb-4">
-          <label className="block text-gold/80 text-sm font-heading mb-2 tracking-wide">
+          <label className="block text-cream/80 text-sm font-medium mb-1.5">
             Display Name
           </label>
           <input
             type="text"
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
-            placeholder="Sir Lancelot"
+            placeholder="What others will see"
             autoComplete="off"
-            className={inputClass}
+            className="field-input"
           />
-          <p className="text-cream/30 text-sm mt-1">What other guild members will see</p>
         </div>
 
         {/* Role */}
         <div className="mb-4">
-          <label className="block text-gold/80 text-sm font-heading mb-2 tracking-wide">
+          <label className="block text-cream/80 text-sm font-medium mb-1.5">
             Role
           </label>
           <div className="relative">
             <select
               value={role}
               onChange={(e) => setRole(e.target.value)}
-              className={`${inputClass} appearance-none cursor-pointer pr-10`}
+              className="field-input appearance-none cursor-pointer pr-10"
             >
               <option value="kid">Adventurer (Kid)</option>
-              <option value="parent">Guild Leader (Parent)</option>
+              <option value="parent">Leader (Parent)</option>
             </select>
-            {/* Custom dropdown arrow */}
-            <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-gold/60">
+            <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-muted">
               <svg className="w-4 h-4 fill-current" viewBox="0 0 16 16">
                 <path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" strokeWidth="2" />
               </svg>
@@ -162,19 +149,19 @@ export default function Register() {
 
         {/* Invite Code */}
         <div className="mb-6">
-          <label className="block text-gold/80 text-sm font-heading mb-2 tracking-wide">
+          <label className="block text-cream/80 text-sm font-medium mb-1.5">
             Invite Code
           </label>
           <input
             type="text"
             value={inviteCode}
             onChange={(e) => setInviteCode(e.target.value)}
-            placeholder="GUILD-XXXX"
+            placeholder="Enter invite code"
             autoComplete="off"
-            className={inputClass}
+            className="field-input"
           />
-          <p className="text-cream/30 text-sm mt-1">
-            Required unless you're the first adventurer
+          <p className="text-muted text-xs mt-1.5">
+            Required unless you're the first user
           </p>
         </div>
 
@@ -182,16 +169,16 @@ export default function Register() {
         <button
           type="submit"
           disabled={submitting}
-          className={`game-btn game-btn-gold w-full ${submitting ? 'opacity-60 cursor-wait' : ''}`}
+          className={`game-btn game-btn-blue w-full text-base ${submitting ? 'opacity-60 cursor-wait' : ''}`}
         >
-          {submitting ? 'Creating...' : 'Join Guild'}
+          {submitting ? 'Creating account...' : 'Create Account'}
         </button>
 
         {/* Login link */}
-        <p className="text-center mt-6 text-cream/50 text-base">
+        <p className="text-center mt-6 text-muted text-sm">
           Already have an account?{' '}
-          <Link to="/login" className="text-gold hover:text-gold/80 underline underline-offset-4">
-            Login
+          <Link to="/login" className="text-sky hover:text-accent-light font-medium transition-colors">
+            Sign in
           </Link>
         </p>
       </form>

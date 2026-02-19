@@ -76,15 +76,18 @@ export default function Layout({ children }) {
   return (
     <div className="min-h-screen bg-navy flex">
       {/* ─── Desktop Sidebar ─── */}
-      <aside className="hidden md:flex flex-col w-56 bg-navy-light border-r-3 border-[#2a2a4a] min-h-screen fixed left-0 top-0 z-30">
+      <aside className="hidden md:flex flex-col w-60 bg-surface border-r border-border min-h-screen fixed left-0 top-0 z-30">
         <div
-          className="flex items-center gap-2 px-4 py-5 cursor-pointer"
+          className="flex items-center gap-3 px-5 py-5 cursor-pointer"
           onClick={() => navigate('/')}
         >
-          <span className="font-heading text-gold text-sm tracking-wide">QuestOS</span>
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-sky to-accent-light flex items-center justify-center">
+            <Swords size={16} className="text-white" />
+          </div>
+          <span className="font-heading text-cream text-lg font-extrabold tracking-tight">QuestOS</span>
         </div>
 
-        <nav className="flex flex-col gap-1 px-3 mt-2 flex-1">
+        <nav className="flex flex-col gap-0.5 px-3 mt-2 flex-1">
           {navItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.path);
@@ -92,14 +95,14 @@ export default function Layout({ children }) {
               <button
                 key={item.path}
                 onClick={() => navigate(item.path)}
-                className={`flex items-center gap-3 px-3 py-3 rounded-md transition-colors text-left ${
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-left ${
                   active
-                    ? 'bg-[#2a2a4a] text-gold'
-                    : 'text-cream/60 hover:text-cream hover:bg-[#2a2a4a]/50'
+                    ? 'bg-sky/10 text-sky border border-sky/20'
+                    : 'text-muted hover:text-cream hover:bg-surface-raised border border-transparent'
                 }`}
               >
-                <Icon size={20} className={active ? 'text-gold' : ''} />
-                <span className="font-body text-lg">{item.label}</span>
+                <Icon size={18} className={active ? 'text-sky' : ''} />
+                <span className="font-medium text-sm">{item.label}</span>
               </button>
             );
           })}
@@ -107,7 +110,7 @@ export default function Layout({ children }) {
 
         {user && (
           <div
-            className="flex items-center gap-3 px-4 py-4 border-t border-[#2a2a4a] cursor-pointer hover:bg-[#2a2a4a]/50 transition-colors"
+            className="flex items-center gap-3 px-4 py-4 border-t border-border cursor-pointer hover:bg-surface-raised transition-colors mx-2 mb-2 rounded-lg"
             onClick={() => navigate('/profile')}
           >
             <AvatarDisplay
@@ -116,39 +119,42 @@ export default function Layout({ children }) {
               name={user.display_name || user.username}
             />
             <div className="min-w-0">
-              <p className="text-cream text-sm font-body truncate">
+              <p className="text-cream text-sm font-medium truncate">
                 {user.display_name || user.username}
               </p>
-              <p className="text-cream/40 text-xs font-body capitalize">{user.role}</p>
+              <p className="text-muted text-xs capitalize">{user.role}</p>
             </div>
           </div>
         )}
       </aside>
 
       {/* ─── Main Content Area ─── */}
-      <div className="flex-1 flex flex-col md:ml-56 min-h-screen">
+      <div className="flex-1 flex flex-col md:ml-60 min-h-screen">
         {/* Top Bar */}
-        <header className="sticky top-0 z-20 bg-navy-light/95 backdrop-blur-sm border-b border-[#2a2a4a] px-4 py-3 flex items-center justify-between">
+        <header className="sticky top-0 z-20 bg-surface/90 backdrop-blur-md border-b border-border px-4 py-3 flex items-center justify-between">
           <div
             className="flex items-center gap-2 cursor-pointer md:hidden"
             onClick={() => navigate('/')}
           >
-            <span className="font-heading text-gold text-xs tracking-wide">QuestOS</span>
+            <div className="w-7 h-7 rounded-md bg-gradient-to-br from-sky to-accent-light flex items-center justify-center">
+              <Swords size={14} className="text-white" />
+            </div>
+            <span className="font-heading text-cream text-base font-extrabold tracking-tight">QuestOS</span>
           </div>
 
           <div className="hidden md:block" />
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             {/* Notification Bell + Dropdown */}
             <div className="relative" ref={panelRef}>
               <button
                 onClick={() => setShowNotifs((v) => !v)}
-                className="relative p-2 rounded-lg hover:bg-[#2a2a4a]/60 transition-colors"
+                className="relative p-2 rounded-lg hover:bg-surface-raised transition-colors"
                 aria-label="Notifications"
               >
-                <Bell size={22} className="text-cream/70 hover:text-cream transition-colors" />
+                <Bell size={20} className="text-muted hover:text-cream transition-colors" />
                 {unreadCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 bg-crimson text-white text-[10px] font-heading min-w-[18px] h-[18px] flex items-center justify-center rounded-full px-1 leading-none">
+                  <span className="absolute -top-0.5 -right-0.5 bg-crimson text-white text-[10px] font-bold min-w-[18px] h-[18px] flex items-center justify-center rounded-full px-1 leading-none">
                     {unreadCount > 99 ? '99+' : unreadCount}
                   </span>
                 )}
@@ -156,15 +162,15 @@ export default function Layout({ children }) {
 
               {/* Notification Panel */}
               {showNotifs && (
-                <div className="absolute right-0 top-full mt-2 w-80 max-h-96 bg-navy-light border-2 border-[#2a2a4a] rounded-lg shadow-xl overflow-hidden z-50">
+                <div className="absolute right-0 top-full mt-2 w-80 max-h-96 bg-surface border border-border rounded-xl shadow-2xl overflow-hidden z-50">
                   {/* Header */}
-                  <div className="flex items-center justify-between px-4 py-3 border-b border-[#2a2a4a]">
-                    <span className="font-heading text-gold text-[10px]">Notifications</span>
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+                    <span className="font-heading text-cream text-sm font-bold">Notifications</span>
                     <div className="flex items-center gap-2">
                       {unreadCount > 0 && (
                         <button
                           onClick={markAllRead}
-                          className="text-cream/40 hover:text-cream text-xs font-body flex items-center gap-1"
+                          className="text-muted hover:text-cream text-xs flex items-center gap-1 transition-colors"
                           title="Mark all read"
                         >
                           <CheckCheck size={14} />
@@ -172,7 +178,7 @@ export default function Layout({ children }) {
                       )}
                       <button
                         onClick={() => setShowNotifs(false)}
-                        className="text-cream/40 hover:text-cream"
+                        className="text-muted hover:text-cream transition-colors"
                       >
                         <X size={16} />
                       </button>
@@ -182,7 +188,7 @@ export default function Layout({ children }) {
                   {/* Notification List */}
                   <div className="overflow-y-auto max-h-80">
                     {notifications.length === 0 ? (
-                      <div className="p-6 text-center text-cream/30 font-body text-base">
+                      <div className="p-6 text-center text-muted text-sm">
                         No notifications yet.
                       </div>
                     ) : (
@@ -192,22 +198,22 @@ export default function Layout({ children }) {
                           onClick={() => {
                             if (!n.is_read) markRead(n.id);
                           }}
-                          className={`w-full text-left px-4 py-3 border-b border-[#2a2a4a]/50 hover:bg-[#2a2a4a]/30 transition-colors ${
-                            !n.is_read ? 'bg-gold/5' : ''
+                          className={`w-full text-left px-4 py-3 border-b border-border/50 hover:bg-surface-raised transition-colors ${
+                            !n.is_read ? 'bg-sky/5' : ''
                           }`}
                         >
                           <div className="flex items-start gap-2">
                             {!n.is_read && (
-                              <span className="mt-1.5 w-2 h-2 rounded-full bg-gold flex-shrink-0" />
+                              <span className="mt-1.5 w-2 h-2 rounded-full bg-sky flex-shrink-0" />
                             )}
                             <div className="min-w-0 flex-1">
-                              <p className="text-cream font-body text-base truncate">
+                              <p className="text-cream text-sm font-medium truncate">
                                 {n.title}
                               </p>
-                              <p className="text-cream/50 font-body text-sm mt-0.5 line-clamp-2">
+                              <p className="text-muted text-xs mt-0.5 line-clamp-2">
                                 {n.message}
                               </p>
-                              <p className="text-cream/30 font-body text-xs mt-1">
+                              <p className="text-muted/60 text-xs mt-1">
                                 {timeAgo(n.created_at)}
                               </p>
                             </div>
@@ -241,7 +247,7 @@ export default function Layout({ children }) {
       </div>
 
       {/* ─── Mobile Bottom Nav ─── */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-navy-light/95 backdrop-blur-sm border-t border-[#2a2a4a]">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-surface/90 backdrop-blur-md border-t border-border">
         <div className="flex items-center justify-around h-16 px-1">
           {mobileNavItems.map((item) => {
             const Icon = item.icon;
@@ -250,12 +256,12 @@ export default function Layout({ children }) {
               <button
                 key={item.path}
                 onClick={() => navigate(item.path)}
-                className={`flex flex-col items-center gap-1 py-1 px-2 rounded-md transition-colors min-w-0 ${
-                  active ? 'text-gold' : 'text-cream/40'
+                className={`flex flex-col items-center gap-1 py-1.5 px-3 rounded-lg transition-all min-w-0 ${
+                  active ? 'text-sky' : 'text-muted'
                 }`}
               >
                 <Icon size={20} />
-                <span className="font-body text-[11px] leading-none truncate">
+                <span className="text-[10px] font-medium leading-none truncate">
                   {item.label}
                 </span>
               </button>

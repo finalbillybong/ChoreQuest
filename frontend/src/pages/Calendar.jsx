@@ -50,10 +50,10 @@ function statusStyle(assignment, dayStr) {
   }
   if (assignment.status === 'skipped') {
     return {
-      border: 'border-[#2a2a4a]',
+      border: 'border-border',
       bg: 'bg-navy-light/50',
-      icon: <Slash size={16} className="text-cream/30" />,
-      textClass: 'line-through text-cream/30',
+      icon: <Slash size={16} className="text-muted" />,
+      textClass: 'line-through text-muted',
     };
   }
   // pending
@@ -66,9 +66,9 @@ function statusStyle(assignment, dayStr) {
     };
   }
   return {
-    border: 'border-[#2a2a4a]',
+    border: 'border-border',
     bg: '',
-    icon: <Clock size={16} className="text-cream/40" />,
+    icon: <Clock size={16} className="text-muted" />,
   };
 }
 
@@ -184,8 +184,8 @@ export default function Calendar() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6">
         <div className="flex items-center gap-3">
-          <CalendarDays size={28} className="text-gold" />
-          <h1 className="font-heading text-gold text-xs sm:text-sm leading-relaxed">
+          <CalendarDays size={28} className="text-sky" />
+          <h1 className="text-cream text-xl font-extrabold leading-relaxed">
             Quest Calendar
           </h1>
         </div>
@@ -194,19 +194,19 @@ export default function Calendar() {
         <div className="flex items-center gap-2">
           <button
             onClick={prevWeek}
-            className="p-2 rounded hover:bg-[#2a2a4a] transition-colors text-cream/70 hover:text-cream"
+            className="p-2 rounded hover:bg-surface-raised transition-colors text-muted hover:text-cream"
             aria-label="Previous week"
           >
             <ChevronLeft size={20} />
           </button>
 
-          <span className="text-cream font-body text-lg min-w-[180px] text-center">
+          <span className="text-cream text-sm min-w-[180px] text-center">
             {formatShortDate(weekStart)} &ndash; {formatShortDate(weekEnd)}
           </span>
 
           <button
             onClick={nextWeek}
-            className="p-2 rounded hover:bg-[#2a2a4a] transition-colors text-cream/70 hover:text-cream"
+            className="p-2 rounded hover:bg-surface-raised transition-colors text-muted hover:text-cream"
             aria-label="Next week"
           >
             <ChevronRight size={20} />
@@ -220,7 +220,7 @@ export default function Calendar() {
 
       {/* Error */}
       {error && (
-        <div className="mb-4 p-3 rounded border-2 border-crimson/40 bg-crimson/10 text-crimson text-base text-center">
+        <div className="mb-4 p-3 rounded border-2 border-crimson/40 bg-crimson/10 text-crimson text-sm text-center">
           {error}
         </div>
       )}
@@ -228,7 +228,7 @@ export default function Calendar() {
       {/* Loading */}
       {loading && (
         <div className="flex items-center justify-center py-20">
-          <Loader2 size={32} className="text-gold animate-spin" />
+          <Loader2 size={32} className="text-sky animate-spin" />
         </div>
       )}
 
@@ -247,14 +247,14 @@ export default function Calendar() {
                 <div
                   className={`text-center py-2 px-1 rounded-t-md border-b-2 ${
                     isToday
-                      ? 'bg-gold/10 border-gold text-gold'
-                      : 'bg-[#2a2a4a]/30 border-[#2a2a4a] text-cream/60'
+                      ? 'bg-sky/10 border-sky text-sky'
+                      : 'bg-surface-raised/30 border-border text-muted'
                   }`}
                 >
-                  <div className="font-heading text-[9px] tracking-wider">
+                  <div className="text-xs font-bold tracking-wider">
                     {label}
                   </div>
-                  <div className="font-body text-base mt-1">
+                  <div className="text-sm mt-1">
                     {new Date(dayStr + 'T00:00:00').getDate()}
                   </div>
                 </div>
@@ -262,7 +262,7 @@ export default function Calendar() {
                 {/* Assignments */}
                 <div className="space-y-2 mt-2 min-h-[80px]">
                   {dayAssignments.length === 0 && (
-                    <p className="text-cream/20 text-sm text-center font-body py-4">
+                    <p className="text-muted text-xs text-center py-4">
                       No quests
                     </p>
                   )}
@@ -280,7 +280,7 @@ export default function Calendar() {
                           {style.icon}
                           <div className="min-w-0 flex-1">
                             <p
-                              className={`text-sm font-body leading-tight truncate ${
+                              className={`text-sm leading-tight truncate ${
                                 style.textClass || 'text-cream'
                               }`}
                             >
@@ -288,7 +288,7 @@ export default function Calendar() {
                             </p>
                             {/* Show assigned kid for parents */}
                             {!isKid && (a.user?.display_name || a.assigned_to_name) && (
-                              <p className="text-[11px] text-purple font-body mt-0.5 truncate">
+                              <p className="text-xs text-purple font-medium mt-0.5 truncate">
                                 {a.user?.display_name || a.assigned_to_name}
                               </p>
                             )}
@@ -302,7 +302,7 @@ export default function Calendar() {
                               e.stopPropagation();
                               openTrade(a);
                             }}
-                            className="mt-1.5 flex items-center gap-1 text-[10px] font-heading text-sky hover:text-sky/80 transition-colors"
+                            className="mt-1.5 flex items-center gap-1 text-xs font-medium text-sky hover:text-sky/80 transition-colors"
                           >
                             <ArrowRightLeft size={12} />
                             Trade
@@ -323,11 +323,11 @@ export default function Calendar() {
         !error &&
         Object.values(assignments).every((arr) => arr.length === 0) && (
           <div className="text-center py-16">
-            <CalendarDays size={48} className="text-cream/10 mx-auto mb-4" />
-            <p className="font-heading text-cream/30 text-[10px]">
+            <CalendarDays size={48} className="text-muted mx-auto mb-4" />
+            <p className="text-cream text-lg font-bold">
               No quests scheduled this week
             </p>
-            <p className="text-cream/20 font-body text-base mt-2">
+            <p className="text-muted text-sm mt-2">
               The quest board is empty. Time to plan new adventures!
             </p>
           </div>
@@ -347,15 +347,15 @@ export default function Calendar() {
           {
             label: tradeSubmitting ? 'Sending...' : 'Send Trade',
             onClick: submitTrade,
-            className: 'game-btn game-btn-gold',
+            className: 'game-btn game-btn-blue',
             disabled: tradeSubmitting || !selectedKid,
           },
         ]}
       >
         <div className="space-y-4">
-          <p className="text-cream/80 text-base">
+          <p className="text-muted text-sm">
             Trade{' '}
-            <span className="text-gold font-heading text-[10px]">
+            <span className="text-cream font-bold">
               {tradeAssignment?.chore?.title || tradeAssignment?.chore_title || 'Quest'}
             </span>{' '}
             with another hero:
@@ -368,7 +368,7 @@ export default function Calendar() {
           )}
 
           {familyKids.length === 0 ? (
-            <p className="text-cream/40 text-sm">
+            <p className="text-muted text-sm">
               No other heroes found in your party.
             </p>
           ) : (
@@ -379,11 +379,11 @@ export default function Calendar() {
                   onClick={() => setSelectedKid(kid.id)}
                   className={`w-full text-left p-3 rounded border-2 transition-colors ${
                     selectedKid === kid.id
-                      ? 'border-gold bg-gold/10 text-gold'
-                      : 'border-[#2a2a4a] text-cream/70 hover:border-cream/30'
+                      ? 'border-sky bg-sky/10 text-sky'
+                      : 'border-border text-muted hover:border-cream/30'
                   }`}
                 >
-                  <span className="font-body text-lg">
+                  <span className="text-sm">
                     {kid.display_name || kid.username}
                   </span>
                 </button>

@@ -32,35 +32,35 @@ function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
 
-function difficultyStars(difficulty) {
+function difficultyLabel(difficulty) {
   switch (difficulty) {
     case 'easy':
-      return [1];
+      return { text: 'Easy', color: 'text-emerald bg-emerald/10 border-emerald/20' };
     case 'medium':
-      return [1, 2];
+      return { text: 'Medium', color: 'text-gold bg-gold/10 border-gold/20' };
     case 'hard':
-      return [1, 2, 3];
+      return { text: 'Hard', color: 'text-orange-400 bg-orange-400/10 border-orange-400/20' };
     case 'expert':
-      return null; // render skull instead
+      return { text: 'Expert', color: 'text-crimson bg-crimson/10 border-crimson/20' };
     default:
-      return [1];
+      return { text: 'Easy', color: 'text-emerald bg-emerald/10 border-emerald/20' };
   }
 }
 
 // ---------- card animation variants ----------
 
 const cardVariants = {
-  hidden: { opacity: 0, y: 20 },
+  hidden: { opacity: 0, y: 12 },
   visible: (i) => ({
     opacity: 1,
     y: 0,
-    transition: { delay: i * 0.06, type: 'spring', stiffness: 260, damping: 24 },
+    transition: { delay: i * 0.05, type: 'spring', stiffness: 300, damping: 28 },
   }),
 };
 
 const completeButtonVariants = {
   idle: { scale: 1 },
-  tap: { scale: 0.92 },
+  tap: { scale: 0.96 },
 };
 
 // ---------- component ----------
@@ -182,15 +182,15 @@ export default function KidDashboard() {
   function statusBadge(status) {
     if (status === 'verified') {
       return (
-        <span className="flex items-center gap-1 text-emerald font-heading text-[10px]">
-          <CheckCheck size={16} /> Verified
+        <span className="inline-flex items-center gap-1 text-emerald text-xs font-medium bg-emerald/10 px-2 py-0.5 rounded-full">
+          <CheckCheck size={12} /> Verified
         </span>
       );
     }
     if (status === 'completed') {
       return (
-        <span className="flex items-center gap-1 text-yellow-400 font-heading text-[10px]">
-          <CheckCircle2 size={16} /> Awaiting Approval
+        <span className="inline-flex items-center gap-1 text-gold text-xs font-medium bg-gold/10 px-2 py-0.5 rounded-full">
+          <CheckCircle2 size={12} /> Pending
         </span>
       );
     }
@@ -202,13 +202,17 @@ export default function KidDashboard() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="animate-spin text-gold" size={32} />
+        <Loader2 className="animate-spin text-sky" size={28} />
       </div>
     );
   }
 
+  const completedCount = assignments.filter(a => a.status === 'verified' || a.status === 'completed').length;
+  const totalCount = assignments.length;
+  const progressPct = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-2xl mx-auto space-y-5">
       {/* ── Confetti overlay ── */}
       <AnimatePresence>
         {showConfetti && (
@@ -216,28 +220,41 @@ export default function KidDashboard() {
         )}
       </AnimatePresence>
 
-      {/* ── Header ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h1 className="font-heading text-gold text-base sm:text-lg leading-relaxed">
-          Quest Board
-        </h1>
-
-        <div className="flex items-center gap-5">
-          {/* XP Balance */}
-          <div className="flex items-center gap-2">
-            <Star className="text-gold" size={22} fill="currentColor" />
+      {/* ── Header with stats ── */}
+      <div className="game-panel p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="font-heading text-cream text-xl font-extrabold">
+            Quest Board
+          </h1>
+          <div className="flex items-center gap-4">
             <PointCounter value={user?.points_balance ?? 0} />
+            <StreakDisplay streak={user?.current_streak ?? 0} />
           </div>
-
-          {/* Streak */}
-          <StreakDisplay streak={user?.current_streak ?? 0} />
         </div>
+
+        {/* Progress bar */}
+        {totalCount > 0 && (
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-muted text-xs font-medium">Today's Progress</span>
+              <span className="text-cream text-xs font-bold">{completedCount}/{totalCount}</span>
+            </div>
+            <div className="xp-bar">
+              <motion.div
+                className="xp-bar-fill"
+                initial={{ width: 0 }}
+                animate={{ width: `${progressPct}%` }}
+                transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── Error banner ── */}
       {error && (
-        <div className="game-panel p-3 flex items-center gap-2 border-crimson/40 text-crimson text-base">
-          <AlertTriangle size={18} />
+        <div className="game-panel p-3 flex items-center gap-2 border-crimson/30 text-crimson text-sm">
+          <AlertTriangle size={16} />
           <span>{error}</span>
         </div>
       )}
@@ -245,15 +262,13 @@ export default function KidDashboard() {
       {/* ── Quest cards ── */}
       {assignments.length === 0 && !loading ? (
         <motion.div
-          className="game-panel p-8 flex flex-col items-center gap-4 text-center"
+          className="game-panel p-10 flex flex-col items-center gap-3 text-center"
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
         >
-          <Sword size={40} className="text-cream/30" />
-          <p className="font-heading text-cream/50 text-[11px] leading-relaxed">
-            No quests for today!
-            <br />
-            Take a break, adventurer.
+          <Sword size={36} className="text-muted" />
+          <p className="text-muted text-sm">
+            No quests for today. Take a break!
           </p>
         </motion.div>
       ) : (
@@ -264,65 +279,61 @@ export default function KidDashboard() {
 
             const isPending = assignment.status === 'pending';
             const isCompleting = completingId === chore.id;
-            const stars = difficultyStars(chore.difficulty);
-            const categoryColor = chore.category?.colour || '#64dfdf';
+            const diff = difficultyLabel(chore.difficulty);
+            const categoryColor = chore.category?.colour || '#3b82f6';
 
             return (
               <motion.div
                 key={assignment.id}
-                className="game-panel p-4"
+                className="game-panel p-4 transition-all"
                 variants={cardVariants}
                 initial="hidden"
                 animate="visible"
                 custom={idx}
               >
                 <div className="flex items-start gap-3">
-                  {/* Category dot */}
+                  {/* Category indicator */}
                   <div
-                    className="mt-1 w-3 h-3 rounded-full flex-shrink-0"
+                    className="mt-0.5 w-1 h-12 rounded-full flex-shrink-0"
                     style={{ backgroundColor: categoryColor }}
                   />
 
                   {/* Content */}
                   <div className="flex-1 min-w-0">
                     {/* Title row */}
-                    <div className="flex items-center justify-between gap-2 mb-1">
-                      <h3 className="font-heading text-cream text-[11px] leading-relaxed truncate">
+                    <div className="flex items-center justify-between gap-2 mb-1.5">
+                      <h3 className="text-cream text-sm font-semibold truncate">
                         {chore.title}
                       </h3>
                       {statusBadge(assignment.status)}
                     </div>
 
                     {/* Meta row */}
-                    <div className="flex items-center gap-3 text-sm text-cream/50">
+                    <div className="flex items-center gap-2 flex-wrap">
                       {/* XP */}
-                      <span className="flex items-center gap-1 text-gold font-body text-base">
-                        <Star size={14} fill="currentColor" />
+                      <span className="inline-flex items-center gap-1 text-gold text-xs font-semibold">
+                        <Star size={12} fill="currentColor" />
                         {chore.points} XP
                       </span>
 
                       {/* Difficulty */}
-                      <span className="flex items-center gap-0.5">
-                        {stars ? (
-                          stars.map((s) => (
-                            <Star
-                              key={s}
-                              size={12}
-                              className="text-purple"
-                              fill="currentColor"
-                            />
-                          ))
-                        ) : (
-                          <Skull size={14} className="text-crimson" />
-                        )}
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${diff.color}`}>
+                        {diff.text}
                       </span>
+
+                      {/* Category */}
+                      {chore.category?.name && (
+                        <span className="text-muted text-xs">
+                          {chore.category.name}
+                        </span>
+                      )}
                     </div>
 
                     {/* Photo upload (if required and still pending) */}
                     {chore.requires_photo && isPending && (
                       <div className="mt-2">
-                        <label className="flex items-center gap-2 text-sm text-cream/60 cursor-pointer hover:text-cream transition-colors">
-                          <Camera size={16} />
+                        <label className="inline-flex items-center gap-1.5 text-xs text-muted cursor-pointer hover:text-cream transition-colors bg-surface-raised px-3 py-1.5 rounded-lg border border-border">
+                          <Camera size={14} />
                           <span>
                             {photoFiles[chore.id]
                               ? photoFiles[chore.id].name
@@ -343,7 +354,7 @@ export default function KidDashboard() {
                     {/* Complete button */}
                     {isPending && (
                       <motion.button
-                        className={`game-btn game-btn-gold mt-3 w-full sm:w-auto ${
+                        className={`game-btn game-btn-blue mt-3 w-full sm:w-auto ${
                           isCompleting ? 'opacity-60 cursor-wait' : ''
                         } ${
                           chore.requires_photo && !photoFiles[chore.id]
@@ -377,7 +388,7 @@ export default function KidDashboard() {
       )}
 
       {/* ── Spin Wheel Section ── */}
-      <div className="pt-4">
+      <div className="pt-2">
         <SpinWheel
           availability={spinAvailability}
           onSpinComplete={() => {

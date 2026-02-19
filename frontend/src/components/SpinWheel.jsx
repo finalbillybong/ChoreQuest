@@ -4,18 +4,18 @@ import { api } from '../api/client';
 import ConfettiAnimation from './ConfettiAnimation';
 
 const SEGMENTS = [
-  { value: 1, color: '#ff4444' },
-  { value: 5, color: '#f9d71c' },
-  { value: 2, color: '#2de2a6' },
-  { value: 10, color: '#b388ff' },
-  { value: 3, color: '#64dfdf' },
-  { value: 15, color: '#ff8c42' },
-  { value: 1, color: '#ff6b9d' },
-  { value: 25, color: '#f9d71c' },
-  { value: 2, color: '#45b7d1' },
-  { value: 5, color: '#2de2a6' },
-  { value: 3, color: '#b388ff' },
-  { value: 10, color: '#ff4444' },
+  { value: 1, color: '#ef4444' },
+  { value: 5, color: '#f59e0b' },
+  { value: 2, color: '#10b981' },
+  { value: 10, color: '#a855f7' },
+  { value: 3, color: '#3b82f6' },
+  { value: 15, color: '#f97316' },
+  { value: 1, color: '#ec4899' },
+  { value: 25, color: '#f59e0b' },
+  { value: 2, color: '#06b6d4' },
+  { value: 5, color: '#10b981' },
+  { value: 3, color: '#a855f7' },
+  { value: 10, color: '#ef4444' },
 ];
 
 const SEGMENT_ANGLE = 360 / SEGMENTS.length;
@@ -64,13 +64,9 @@ export default function SpinWheel({ onResult, disabled = false }) {
       let targetIdx = SEGMENTS.findIndex((s) => s.value === wonPoints);
       if (targetIdx === -1) targetIdx = Math.floor(Math.random() * SEGMENTS.length);
 
-      // Calculate target rotation:
-      // We want the pointer (at top) to point to the target segment
-      // Each segment spans SEGMENT_ANGLE degrees, center of segment is at (idx * SEGMENT_ANGLE + SEGMENT_ANGLE/2)
+      // Calculate target rotation
       const segmentCenter = targetIdx * SEGMENT_ANGLE + SEGMENT_ANGLE / 2;
-      // Rotate wheel so this segment is at the top (0/360 degrees)
-      // Add multiple full rotations for dramatic effect
-      const fullSpins = 5 + Math.floor(Math.random() * 3); // 5-7 full spins
+      const fullSpins = 5 + Math.floor(Math.random() * 3);
       const targetRotation = rotation + fullSpins * 360 + (360 - segmentCenter);
 
       setRotation(targetRotation);
@@ -93,7 +89,7 @@ export default function SpinWheel({ onResult, disabled = false }) {
   const r = 140;
 
   return (
-    <div className="flex flex-col items-center gap-6">
+    <div className="flex flex-col items-center gap-5">
       {/* Confetti */}
       {showConfetti && (
         <ConfettiAnimation onComplete={() => setShowConfetti(false)} />
@@ -101,11 +97,11 @@ export default function SpinWheel({ onResult, disabled = false }) {
 
       {/* Wheel Container */}
       <div className="relative">
-        {/* Pointer / Triangle at top */}
+        {/* Pointer at top */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1 z-10">
           <div
-            className="w-0 h-0 border-l-[12px] border-l-transparent border-r-[12px] border-r-transparent border-t-[20px] border-t-gold"
-            style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.4))' }}
+            className="w-0 h-0 border-l-[12px] border-l-transparent border-r-[12px] border-r-transparent border-t-[20px] border-t-sky"
+            style={{ filter: 'drop-shadow(0 2px 6px rgba(59,130,246,0.4))' }}
           />
         </div>
 
@@ -130,7 +126,7 @@ export default function SpinWheel({ onResult, disabled = false }) {
               cy={cy}
               r={r + 4}
               fill="none"
-              stroke="#2a2a4a"
+              stroke="#1e293b"
               strokeWidth="4"
             />
 
@@ -146,7 +142,7 @@ export default function SpinWheel({ onResult, disabled = false }) {
                   <path
                     d={describeArc(cx, cy, r, startAngle, endAngle)}
                     fill={seg.color}
-                    stroke="#0f0e17"
+                    stroke="#0a0e1a"
                     strokeWidth="2"
                     opacity={0.9}
                   />
@@ -155,10 +151,10 @@ export default function SpinWheel({ onResult, disabled = false }) {
                     y={labelPos.y}
                     textAnchor="middle"
                     dominantBaseline="central"
-                    fill="#0f0e17"
-                    fontFamily="'Press Start 2P', monospace"
-                    fontSize="10"
-                    fontWeight="bold"
+                    fill="white"
+                    fontFamily="Inter, system-ui, sans-serif"
+                    fontSize="12"
+                    fontWeight="800"
                     transform={`rotate(${labelAngle}, ${labelPos.x}, ${labelPos.y})`}
                   >
                     {seg.value}
@@ -168,8 +164,8 @@ export default function SpinWheel({ onResult, disabled = false }) {
             })}
 
             {/* Center circle */}
-            <circle cx={cx} cy={cy} r={22} fill="#1a1a2e" stroke="#2a2a4a" strokeWidth="3" />
-            <circle cx={cx} cy={cy} r={10} fill="#f9d71c" />
+            <circle cx={cx} cy={cy} r={22} fill="#111827" stroke="#1e293b" strokeWidth="3" />
+            <circle cx={cx} cy={cy} r={10} fill="#3b82f6" />
           </svg>
         </motion.div>
       </div>
@@ -177,8 +173,8 @@ export default function SpinWheel({ onResult, disabled = false }) {
       {/* Result Display */}
       {result !== null && (
         <div className="game-panel px-6 py-3 text-center">
-          <p className="font-body text-cream/60 text-sm">You won</p>
-          <p className="font-heading text-gold text-lg mt-1">
+          <p className="text-muted text-xs">You won</p>
+          <p className="text-gold text-lg font-bold mt-1">
             {result} XP
           </p>
         </div>
@@ -186,14 +182,14 @@ export default function SpinWheel({ onResult, disabled = false }) {
 
       {/* Error */}
       {error && (
-        <p className="font-body text-crimson text-sm text-center">{error}</p>
+        <p className="text-crimson text-sm text-center">{error}</p>
       )}
 
       {/* Spin Button */}
       <button
         onClick={handleSpin}
         disabled={spinning || disabled}
-        className={`game-btn game-btn-gold text-base px-10 py-3 ${
+        className={`game-btn game-btn-blue text-base px-10 py-3 ${
           spinning || disabled ? 'opacity-50 cursor-not-allowed' : ''
         }`}
       >

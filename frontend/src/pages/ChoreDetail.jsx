@@ -19,7 +19,7 @@ import {
 
 const DIFFICULTY_LABELS = ['Trivial', 'Easy', 'Medium', 'Hard', 'Legendary'];
 const DIFFICULTY_COLORS = [
-  'text-cream/60',
+  'text-muted',
   'text-emerald',
   'text-sky',
   'text-purple',
@@ -35,7 +35,7 @@ const CATEGORY_COLORS = {
   pet_care: 'bg-crimson/20 text-crimson border-crimson/40',
   laundry: 'bg-sky/20 text-sky border-sky/40',
   errands: 'bg-gold/20 text-gold border-gold/40',
-  default: 'bg-cream/10 text-cream/70 border-cream/20',
+  default: 'bg-cream/10 text-muted border-border',
 };
 
 function DifficultyStars({ level }) {
@@ -48,7 +48,7 @@ function DifficultyStars({ level }) {
           className={i <= level ? 'text-gold fill-gold' : 'text-cream/20'}
         />
       ))}
-      <span className={`ml-2 font-body text-lg ${DIFFICULTY_COLORS[level - 1] || 'text-cream/60'}`}>
+      <span className={`ml-2 text-sm ${DIFFICULTY_COLORS[level - 1] || 'text-muted'}`}>
         {DIFFICULTY_LABELS[level - 1] || 'Unknown'}
       </span>
     </div>
@@ -60,7 +60,7 @@ function StatusBadge({ status }) {
     pending: 'bg-gold/20 text-gold border-gold/40',
     completed: 'bg-emerald/20 text-emerald border-emerald/40',
     verified: 'bg-sky/20 text-sky border-sky/40',
-    skipped: 'bg-cream/10 text-cream/50 border-cream/20',
+    skipped: 'bg-cream/10 text-muted border-border',
     missed: 'bg-crimson/20 text-crimson border-crimson/40',
   };
   return (
@@ -172,8 +172,8 @@ export default function ChoreDetail() {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-20 gap-4">
-        <ScrollText size={48} className="text-gold animate-pulse" />
-        <p className="text-gold font-heading text-xs animate-pulse">
+        <ScrollText size={48} className="text-sky animate-pulse" />
+        <p className="text-cream text-lg font-bold animate-pulse">
           Unrolling the quest scroll...
         </p>
       </div>
@@ -186,15 +186,15 @@ export default function ChoreDetail() {
       <div className="max-w-2xl mx-auto py-10">
         <button
           onClick={() => navigate('/chores')}
-          className="flex items-center gap-2 text-cream/50 hover:text-cream transition-colors mb-6"
+          className="flex items-center gap-2 text-muted hover:text-cream transition-colors mb-6"
         >
           <ArrowLeft size={18} />
-          <span className="font-body text-lg">Back to Quest Board</span>
+          <span className="text-sm">Back to Quest Board</span>
         </button>
         <div className="game-panel p-10 text-center">
           <XCircle size={48} className="mx-auto text-crimson mb-4" />
-          <p className="text-crimson font-heading text-xs mb-2">Quest Not Found</p>
-          <p className="text-cream/50 font-body text-lg">{error}</p>
+          <p className="text-cream text-xl font-extrabold mb-2">Quest Not Found</p>
+          <p className="text-muted text-sm">{error}</p>
         </div>
       </div>
     );
@@ -221,19 +221,19 @@ export default function ChoreDetail() {
       {/* Back button */}
       <button
         onClick={() => navigate('/chores')}
-        className="flex items-center gap-2 text-cream/50 hover:text-cream transition-colors"
+        className="flex items-center gap-2 text-muted hover:text-cream transition-colors"
       >
         <ArrowLeft size={18} />
-        <span className="font-body text-lg">Back to Quest Board</span>
+        <span className="text-sm">Back to Quest Board</span>
       </button>
 
       {/* Main chore panel */}
       <div className="game-panel p-6 space-y-5">
         {/* Title */}
         <div className="flex items-start gap-3">
-          <Swords size={28} className="text-gold flex-shrink-0 mt-1" />
+          <Swords size={28} className="text-sky flex-shrink-0 mt-1" />
           <div className="flex-1">
-            <h1 className="font-heading text-gold text-sm sm:text-base leading-relaxed">
+            <h1 className="text-cream text-xl font-extrabold leading-relaxed">
               {chore.title}
             </h1>
           </div>
@@ -242,14 +242,14 @@ export default function ChoreDetail() {
         {/* Description */}
         {chore.description && (
           <div className="pl-10">
-            <p className="text-cream/70 font-body text-xl leading-relaxed">
+            <p className="text-muted text-sm leading-relaxed">
               {chore.description}
             </p>
           </div>
         )}
 
         {/* Divider */}
-        <div className="mx-auto w-full h-[1px] bg-gradient-to-r from-transparent via-[#2a2a4a] to-transparent" />
+        <div className="mx-auto w-full h-[1px] bg-gradient-to-r from-transparent via-border to-transparent" />
 
         {/* Stats grid */}
         <div className="grid grid-cols-2 gap-4">
@@ -259,24 +259,24 @@ export default function ChoreDetail() {
               <span className="text-gold text-xl">&#9733;</span>
             </div>
             <div>
-              <p className="text-cream/40 text-sm font-body">XP Reward</p>
-              <p className="text-gold font-heading text-xs">{chore.points} XP</p>
+              <p className="text-muted text-xs font-medium">XP Reward</p>
+              <p className="text-gold text-lg font-bold">{chore.points} XP</p>
             </div>
           </div>
 
           {/* Difficulty */}
           <div>
-            <p className="text-cream/40 text-sm font-body mb-1">Difficulty</p>
+            <p className="text-muted text-xs font-medium mb-1">Difficulty</p>
             <DifficultyStars level={chore.difficulty || 1} />
           </div>
 
           {/* Category */}
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-[#2a2a4a] flex items-center justify-center">
-              <Shield size={18} className="text-cream/50" />
+            <div className="w-10 h-10 rounded-lg bg-surface-raised flex items-center justify-center">
+              <Shield size={18} className="text-muted" />
             </div>
             <div>
-              <p className="text-cream/40 text-sm font-body">Category</p>
+              <p className="text-muted text-xs font-medium">Category</p>
               <span
                 className={`inline-block px-2 py-0.5 rounded-full text-sm border capitalize ${categoryColorClass}`}
               >
@@ -287,16 +287,16 @@ export default function ChoreDetail() {
 
           {/* Recurrence */}
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-[#2a2a4a] flex items-center justify-center">
-              <RefreshCw size={18} className="text-cream/50" />
+            <div className="w-10 h-10 rounded-lg bg-surface-raised flex items-center justify-center">
+              <RefreshCw size={18} className="text-muted" />
             </div>
             <div>
-              <p className="text-cream/40 text-sm font-body">Recurrence</p>
-              <p className="text-cream font-body text-lg capitalize">
+              <p className="text-muted text-xs font-medium">Recurrence</p>
+              <p className="text-cream text-sm capitalize">
                 {chore.recurrence || 'Once'}
                 {chore.recurrence === 'custom' &&
                   chore.custom_days?.length > 0 && (
-                    <span className="text-cream/40 text-base ml-1">
+                    <span className="text-muted text-xs ml-1">
                       ({chore.custom_days.map((d) => DAY_NAMES[d] || d).join(', ')})
                     </span>
                   )}
@@ -309,7 +309,7 @@ export default function ChoreDetail() {
         {chore.requires_photo && (
           <div className="flex items-center gap-2 px-3 py-2 rounded bg-purple/10 border border-purple/30">
             <Camera size={16} className="text-purple" />
-            <span className="text-purple font-body text-base">
+            <span className="text-purple text-xs">
               Photo proof required upon completion
             </span>
           </div>
@@ -319,7 +319,7 @@ export default function ChoreDetail() {
       {/* Action Message */}
       {actionMessage && (
         <div
-          className={`p-3 rounded border-2 text-base text-center ${
+          className={`p-3 rounded border-2 text-sm text-center ${
             actionMessage.toLowerCase().includes('fail') || actionMessage.toLowerCase().includes('could not')
               ? 'border-crimson/40 bg-crimson/10 text-crimson'
               : 'border-emerald/40 bg-emerald/10 text-emerald'
@@ -334,15 +334,15 @@ export default function ChoreDetail() {
         <div className="game-panel p-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-gold font-heading text-[10px] mb-1">Today's Quest</p>
-              <p className="text-cream/60 font-body text-base">
+              <p className="text-cream text-lg font-bold mb-1">Today's Quest</p>
+              <p className="text-muted text-xs">
                 This quest awaits your courage, adventurer!
               </p>
             </div>
             <button
               onClick={handleComplete}
               disabled={!!actionLoading}
-              className={`game-btn game-btn-gold flex items-center gap-2 ${
+              className={`game-btn game-btn-blue flex items-center gap-2 ${
                 actionLoading === 'complete' ? 'opacity-60 cursor-wait' : ''
               }`}
             >
@@ -356,12 +356,12 @@ export default function ChoreDetail() {
       {/* Actions for parents */}
       {isParent && (
         <div className="game-panel p-5">
-          <p className="text-gold font-heading text-[10px] mb-3">Guild Master Actions</p>
+          <p className="text-cream text-lg font-bold mb-3">Guild Master Actions</p>
           <div className="flex flex-wrap gap-3">
             <button
               onClick={() => handleVerify(todayAssignment?.id)}
               disabled={!!actionLoading}
-              className={`game-btn game-btn-gold flex items-center gap-2 ${
+              className={`game-btn game-btn-blue flex items-center gap-2 ${
                 actionLoading === 'verify' ? 'opacity-60 cursor-wait' : ''
               }`}
             >
@@ -396,23 +396,23 @@ export default function ChoreDetail() {
       {recentAssignments.length > 0 && (
         <div className="game-panel p-5 space-y-4">
           <div className="flex items-center gap-2">
-            <Calendar size={18} className="text-gold" />
-            <h2 className="font-heading text-gold text-[10px]">Quest Log</h2>
+            <Calendar size={18} className="text-sky" />
+            <h2 className="text-cream text-lg font-bold">Quest Log</h2>
           </div>
 
           <div className="space-y-2">
             {recentAssignments.map((assignment, idx) => (
               <div
                 key={assignment.id || idx}
-                className="flex items-center justify-between p-3 rounded bg-[#2a2a4a]/30 border border-[#2a2a4a]"
+                className="flex items-center justify-between p-3 rounded bg-surface-raised/30 border border-border"
               >
                 <div className="flex items-center gap-3">
                   <Clock size={14} className="text-cream/30" />
-                  <span className="text-cream/60 font-body text-base">
+                  <span className="text-muted text-xs">
                     {assignment.date || assignment.assigned_date || assignment.due_date || 'N/A'}
                   </span>
                   {assignment.assigned_to_name && (
-                    <span className="text-cream/40 font-body text-sm">
+                    <span className="text-muted text-xs">
                       - {assignment.assigned_to_name}
                     </span>
                   )}
@@ -428,7 +428,7 @@ export default function ChoreDetail() {
       {recentAssignments.length === 0 && (
         <div className="game-panel p-8 text-center">
           <Calendar size={32} className="mx-auto text-cream/20 mb-3" />
-          <p className="text-cream/40 font-body text-lg">
+          <p className="text-muted text-sm">
             No entries in the quest log yet. Adventures await!
           </p>
         </div>

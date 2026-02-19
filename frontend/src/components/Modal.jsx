@@ -8,14 +8,14 @@ const overlayVariants = {
 };
 
 const panelVariants = {
-  hidden: { opacity: 0, scale: 0.85, y: 20 },
+  hidden: { opacity: 0, scale: 0.95, y: 10 },
   visible: {
     opacity: 1,
     scale: 1,
     y: 0,
-    transition: { type: 'spring', damping: 25, stiffness: 350 },
+    transition: { type: 'spring', damping: 30, stiffness: 400 },
   },
-  exit: { opacity: 0, scale: 0.85, y: 20, transition: { duration: 0.15 } },
+  exit: { opacity: 0, scale: 0.95, y: 10, transition: { duration: 0.12 } },
 };
 
 export default function Modal({ isOpen, onClose, title, children, actions }) {
@@ -46,17 +46,17 @@ export default function Modal({ isOpen, onClose, title, children, actions }) {
           initial="hidden"
           animate="visible"
           exit="hidden"
-          transition={{ duration: 0.2 }}
+          transition={{ duration: 0.15 }}
         >
           {/* Backdrop */}
           <motion.div
-            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             onClick={onClose}
           />
 
           {/* Panel */}
           <motion.div
-            className="game-panel relative z-10 w-full max-w-md max-h-[85vh] overflow-y-auto p-5"
+            className="game-panel relative z-10 w-full max-w-md max-h-[85vh] overflow-y-auto p-6"
             variants={panelVariants}
             initial="hidden"
             animate="visible"
@@ -64,15 +64,15 @@ export default function Modal({ isOpen, onClose, title, children, actions }) {
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="flex items-start justify-between gap-3 mb-4">
+            <div className="flex items-start justify-between gap-3 mb-5">
               {title && (
-                <h2 className="font-heading text-gold text-xs leading-relaxed">
+                <h2 className="font-heading text-cream text-lg font-bold">
                   {title}
                 </h2>
               )}
               <button
                 onClick={onClose}
-                className="p-1 rounded hover:bg-[#2a2a4a] transition-colors text-cream/50 hover:text-cream flex-shrink-0"
+                className="p-1.5 rounded-lg hover:bg-surface-raised transition-colors text-muted hover:text-cream flex-shrink-0"
                 aria-label="Close"
               >
                 <X size={18} />
@@ -80,16 +80,16 @@ export default function Modal({ isOpen, onClose, title, children, actions }) {
             </div>
 
             {/* Content */}
-            <div className="text-cream font-body text-lg">{children}</div>
+            <div className="text-cream text-sm">{children}</div>
 
             {/* Actions */}
             {actions && actions.length > 0 && (
-              <div className="flex items-center justify-end gap-3 mt-5 pt-4 border-t border-[#2a2a4a]">
+              <div className="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-border">
                 {actions.map((action, idx) => (
                   <button
                     key={idx}
                     onClick={action.onClick}
-                    className={action.className || 'game-btn game-btn-gold'}
+                    className={action.className || 'game-btn game-btn-blue'}
                     disabled={action.disabled}
                   >
                     {action.label}

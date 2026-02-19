@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const COLORS = ['#f9d71c', '#2de2a6', '#b388ff', '#64dfdf', '#ff4444'];
+const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#a855f7', '#ef4444', '#60a5fa'];
 const PARTICLE_COUNT = 30;
 const DURATION = 3;
 

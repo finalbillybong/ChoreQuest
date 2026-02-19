@@ -119,10 +119,6 @@ export default function Wishlist() {
     });
   }
 
-  const inputClass =
-    'w-full bg-navy-light border-2 border-[#2a2a4a] text-cream p-3 rounded font-body text-lg ' +
-    'placeholder:text-cream/30 focus:border-gold focus:outline-none transition-colors';
-
   const renderItem = (item, canDelete = false, canConvert = false) => {
     const isConverted = item.converted || item.reward_id;
 
@@ -138,13 +134,13 @@ export default function Wishlist() {
           {isConverted ? (
             <Check size={18} className="text-emerald" />
           ) : (
-            <Star size={18} className="text-gold/60" />
+            <Star size={18} className="text-sky" />
           )}
         </div>
 
         {/* Content */}
         <div className="flex-1 min-w-0">
-          <p className="text-cream font-body text-lg leading-tight">
+          <p className="text-cream text-sm leading-tight">
             {item.title}
           </p>
           {item.url && (
@@ -152,17 +148,17 @@ export default function Wishlist() {
               href={item.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sky text-sm font-body flex items-center gap-1 mt-1 hover:text-sky/80 transition-colors"
+              className="text-sky text-xs flex items-center gap-1 mt-1 hover:text-sky/80 transition-colors"
             >
               <ExternalLink size={12} />
               <span className="truncate">{item.url}</span>
             </a>
           )}
           {item.notes && (
-            <p className="text-cream/40 text-sm font-body mt-1">{item.notes}</p>
+            <p className="text-muted text-xs mt-1">{item.notes}</p>
           )}
           {isConverted && (
-            <span className="inline-block mt-1 text-emerald text-[10px] font-heading">
+            <span className="inline-block mt-1 text-emerald text-xs font-medium">
               Converted to Reward
             </span>
           )}
@@ -198,8 +194,8 @@ export default function Wishlist() {
       {/* Header */}
       <div className="flex items-center justify-between gap-3 mb-6">
         <div className="flex items-center gap-3">
-          <Star size={28} className="text-gold" />
-          <h1 className="font-heading text-gold text-xs sm:text-sm leading-relaxed">
+          <Star size={28} className="text-sky" />
+          <h1 className="text-cream text-xl font-extrabold leading-relaxed">
             Wish List
           </h1>
         </div>
@@ -208,7 +204,7 @@ export default function Wishlist() {
         {isKid && (
           <button
             onClick={() => setShowAddForm(!showAddForm)}
-            className="game-btn game-btn-gold flex items-center gap-2"
+            className="game-btn game-btn-blue flex items-center gap-2"
           >
             <Plus size={14} />
             Add Wish
@@ -218,7 +214,7 @@ export default function Wishlist() {
 
       {/* Error */}
       {error && (
-        <div className="mb-4 p-3 rounded border-2 border-crimson/40 bg-crimson/10 text-crimson text-base text-center">
+        <div className="mb-4 p-3 rounded border-2 border-crimson/40 bg-crimson/10 text-crimson text-sm text-center">
           {error}
         </div>
       )}
@@ -226,7 +222,7 @@ export default function Wishlist() {
       {/* Add form (kid) */}
       {isKid && showAddForm && (
         <div className="game-panel p-5 mb-6 space-y-3">
-          <h3 className="font-heading text-gold/80 text-[10px] tracking-wide mb-3">
+          <h3 className="text-cream text-lg font-bold tracking-wide mb-3">
             New Wish
           </h3>
           <input
@@ -234,21 +230,21 @@ export default function Wishlist() {
             value={newTitle}
             onChange={(e) => setNewTitle(e.target.value)}
             placeholder="What do you wish for?"
-            className={inputClass}
+            className="field-input"
           />
           <input
             type="url"
             value={newUrl}
             onChange={(e) => setNewUrl(e.target.value)}
             placeholder="Link (optional)"
-            className={inputClass}
+            className="field-input"
           />
           <textarea
             value={newNotes}
             onChange={(e) => setNewNotes(e.target.value)}
             placeholder="Notes (optional)"
             rows={2}
-            className={inputClass + ' resize-none'}
+            className="field-input resize-none"
           />
           <div className="flex gap-2 justify-end">
             <button
@@ -260,7 +256,7 @@ export default function Wishlist() {
             <button
               onClick={addItem}
               disabled={addSubmitting || !newTitle.trim()}
-              className="game-btn game-btn-gold"
+              className="game-btn game-btn-blue"
             >
               {addSubmitting ? 'Adding...' : 'Add Wish'}
             </button>
@@ -271,7 +267,7 @@ export default function Wishlist() {
       {/* Loading */}
       {loading && (
         <div className="flex items-center justify-center py-20">
-          <Loader2 size={32} className="text-gold animate-spin" />
+          <Loader2 size={32} className="text-sky animate-spin" />
         </div>
       )}
 
@@ -280,11 +276,11 @@ export default function Wishlist() {
         <div className="space-y-3">
           {items.length === 0 ? (
             <div className="text-center py-16">
-              <Star size={48} className="text-cream/10 mx-auto mb-4" />
-              <p className="font-heading text-cream/30 text-[10px]">
+              <Star size={48} className="text-muted mx-auto mb-4" />
+              <p className="text-cream text-lg font-bold">
                 Your wish list is empty
               </p>
-              <p className="text-cream/20 font-body text-base mt-2">
+              <p className="text-muted text-sm mt-2">
                 Every hero has dreams. Add your first wish!
               </p>
             </div>
@@ -299,19 +295,19 @@ export default function Wishlist() {
         <div className="space-y-8">
           {Object.keys(groupedByKid).length === 0 ? (
             <div className="text-center py-16">
-              <Star size={48} className="text-cream/10 mx-auto mb-4" />
-              <p className="font-heading text-cream/30 text-[10px]">
+              <Star size={48} className="text-muted mx-auto mb-4" />
+              <p className="text-cream text-lg font-bold">
                 No wishes yet
               </p>
-              <p className="text-cream/20 font-body text-base mt-2">
+              <p className="text-muted text-sm mt-2">
                 Your heroes haven't made any wishes yet. Encourage them to dream!
               </p>
             </div>
           ) : (
             Object.entries(groupedByKid).map(([kidName, kidItems]) => (
               <div key={kidName}>
-                <h2 className="font-heading text-purple text-[10px] mb-3 tracking-wide flex items-center gap-2">
-                  <Star size={14} className="text-purple/60" />
+                <h2 className="text-cream text-lg font-bold mb-3 tracking-wide flex items-center gap-2">
+                  <Star size={14} className="text-sky" />
                   {kidName}'s Wishes
                 </h2>
                 <div className="space-y-3">
@@ -343,9 +339,9 @@ export default function Wishlist() {
         ]}
       >
         <div className="space-y-4">
-          <p className="text-cream/80 text-base">
+          <p className="text-muted text-sm">
             Convert{' '}
-            <span className="text-gold font-heading text-[10px]">
+            <span className="text-cream font-bold">
               {convertItem?.title}
             </span>{' '}
             into a redeemable reward:
@@ -358,7 +354,7 @@ export default function Wishlist() {
           )}
 
           <div>
-            <label className="block text-gold/80 text-sm font-heading mb-2 tracking-wide">
+            <label className="block text-gold text-sm font-medium mb-2 tracking-wide">
               Point Cost (XP)
             </label>
             <input
@@ -367,7 +363,7 @@ export default function Wishlist() {
               value={pointCost}
               onChange={(e) => setPointCost(e.target.value)}
               placeholder="e.g. 500"
-              className={inputClass}
+              className="field-input"
             />
           </div>
         </div>

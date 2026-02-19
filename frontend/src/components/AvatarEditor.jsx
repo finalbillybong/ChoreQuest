@@ -80,7 +80,7 @@ function ColorSwatch({ colors, selected, onSelect }) {
           key={c}
           onClick={() => onSelect(c)}
           className={`w-7 h-7 rounded-full border-2 transition-all ${
-            selected === c ? 'border-gold scale-110' : 'border-transparent hover:border-cream/40'
+            selected === c ? 'border-sky scale-110' : 'border-transparent hover:border-border-light'
           }`}
           style={{ backgroundColor: c }}
           aria-label={c}
@@ -97,10 +97,10 @@ function ShapeSelector({ options, selected, onSelect }) {
         <button
           key={opt.id}
           onClick={() => onSelect(opt.id)}
-          className={`px-3 py-1.5 rounded border-2 font-body text-sm transition-all ${
+          className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-all ${
             selected === opt.id
-              ? 'border-gold bg-gold/10 text-gold'
-              : 'border-[#2a2a4a] text-cream/60 hover:border-cream/40 hover:text-cream'
+              ? 'border-sky bg-sky/10 text-sky'
+              : 'border-border text-muted hover:border-border-light hover:text-cream'
           }`}
         >
           {opt.label}
@@ -147,7 +147,7 @@ export default function AvatarEditor() {
 
   return (
     <div className="game-panel p-5 space-y-5">
-      <h2 className="font-heading text-gold/80 text-[10px] tracking-wide">
+      <h2 className="text-cream text-sm font-bold">
         Customise Avatar
       </h2>
 
@@ -189,14 +189,14 @@ export default function AvatarEditor() {
       <button
         onClick={save}
         disabled={saving}
-        className="game-btn game-btn-gold w-full flex items-center justify-center gap-2"
+        className="game-btn game-btn-blue w-full flex items-center justify-center gap-2"
       >
         {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
         {saving ? 'Saving...' : 'Save Avatar'}
       </button>
 
       {msg && (
-        <p className={`text-sm text-center ${msg.includes('!') ? 'text-emerald' : 'text-crimson'}`}>
+        <p className={`text-xs text-center ${msg.includes('!') ? 'text-emerald' : 'text-crimson'}`}>
           {msg}
         </p>
       )}
@@ -207,7 +207,7 @@ export default function AvatarEditor() {
 function Section({ title, children }) {
   return (
     <div className="space-y-2">
-      <p className="text-cream/50 text-sm font-body">{title}</p>
+      <p className="text-muted text-xs font-medium">{title}</p>
       {children}
     </div>
   );

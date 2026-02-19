@@ -21,7 +21,7 @@ const Settings = lazy(() => import('./pages/Settings'));
 function Loading() {
   return (
     <div className="flex items-center justify-center min-h-screen">
-      <div className="text-gold font-heading text-sm animate-pulse">Loading...</div>
+      <div className="text-sky font-medium text-sm animate-pulse">Loading...</div>
     </div>
   );
 }

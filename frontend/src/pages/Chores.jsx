@@ -39,16 +39,12 @@ const CATEGORY_COLORS = {
   pet_care: 'bg-crimson/20 text-crimson border-crimson/40',
   laundry: 'bg-sky/20 text-sky border-sky/40',
   errands: 'bg-gold/20 text-gold border-gold/40',
-  default: 'bg-cream/10 text-cream/70 border-cream/20',
+  default: 'bg-cream/10 text-muted border-border',
 };
 
-const inputClass =
-  'w-full bg-navy-light border-2 border-[#2a2a4a] text-cream p-3 rounded font-body text-lg ' +
-  'placeholder:text-cream/30 focus:border-gold focus:outline-none transition-colors';
-
 const selectClass =
-  'bg-navy-light border-2 border-[#2a2a4a] text-cream p-2 rounded font-body text-lg ' +
-  'focus:border-gold focus:outline-none transition-colors';
+  'bg-navy-light border-2 border-border text-cream p-2 rounded text-sm ' +
+  'focus:border-sky focus:outline-none transition-colors';
 
 function DifficultyStars({ level }) {
   const numLevel = typeof level === 'string' ? (DIFFICULTY_LEVEL[level] || 1) : (level || 1);
@@ -58,7 +54,7 @@ function DifficultyStars({ level }) {
         <Star
           key={i}
           size={14}
-          className={i <= numLevel ? 'text-gold fill-gold' : 'text-cream/20'}
+          className={i <= numLevel ? 'text-gold fill-gold' : 'text-muted'}
         />
       ))}
     </div>
@@ -69,7 +65,7 @@ function CategoryBadge({ category }) {
   const catName = typeof category === 'object' ? category?.name : category;
   const colorClass = CATEGORY_COLORS[catName?.toLowerCase()] || CATEGORY_COLORS.default;
   return (
-    <span className={`inline-block px-2 py-0.5 rounded-full text-sm border ${colorClass} capitalize`}>
+    <span className={`inline-block px-2 py-0.5 rounded-full text-xs border ${colorClass} capitalize`}>
       {catName || 'General'}
     </span>
   );
@@ -78,11 +74,11 @@ function CategoryBadge({ category }) {
 function RecurrenceIndicator({ recurrence, customDays }) {
   if (!recurrence || recurrence === 'once') return null;
   return (
-    <div className="flex items-center gap-1 text-cream/50 text-sm">
+    <div className="flex items-center gap-1 text-muted text-xs">
       <RefreshCw size={12} />
       <span className="capitalize">{recurrence}</span>
       {recurrence === 'custom' && customDays?.length > 0 && (
-        <span className="text-cream/40">
+        <span className="text-muted">
           ({customDays.map((d) => DAY_NAMES[d] || d).join(', ')})
         </span>
       )}
@@ -313,8 +309,8 @@ export default function Chores() {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-20 gap-4">
-        <Swords size={48} className="text-gold animate-pulse" />
-        <p className="text-gold font-heading text-xs animate-pulse">
+        <Swords size={48} className="text-sky animate-pulse" />
+        <p className="text-cream text-lg font-bold animate-pulse">
           Loading quests from the guild board...
         </p>
       </div>
@@ -326,15 +322,15 @@ export default function Chores() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <Swords size={28} className="text-gold" />
-          <h1 className="font-heading text-gold text-sm sm:text-base leading-relaxed">
+          <Swords size={28} className="text-sky" />
+          <h1 className="text-cream text-xl font-extrabold leading-relaxed">
             {isParent ? 'Quest Management' : 'My Quests'}
           </h1>
         </div>
         {isParent && (
           <button
             onClick={openCreateModal}
-            className="game-btn game-btn-gold flex items-center gap-2"
+            className="game-btn game-btn-blue flex items-center gap-2"
           >
             <Plus size={16} />
             Create Quest
@@ -344,7 +340,7 @@ export default function Chores() {
 
       {/* Error */}
       {error && (
-        <div className="p-3 rounded border-2 border-crimson/40 bg-crimson/10 text-crimson text-base text-center">
+        <div className="p-3 rounded border-2 border-crimson/40 bg-crimson/10 text-crimson text-sm text-center">
           {error}
         </div>
       )}
@@ -352,20 +348,20 @@ export default function Chores() {
       {/* Filter Bar */}
       <div className="game-panel p-4">
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-          <div className="flex items-center gap-2 text-cream/50">
+          <div className="flex items-center gap-2 text-muted">
             <Filter size={16} />
-            <span className="font-body text-base">Filters:</span>
+            <span className="text-sm">Filters:</span>
           </div>
 
           {/* Search */}
           <div className="relative flex-1 min-w-0">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-cream/30" />
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
             <input
               type="text"
               placeholder="Search quests..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className={`${inputClass} pl-9 py-2`}
+              className="field-input pl-9 py-2"
             />
           </div>
 
@@ -402,8 +398,8 @@ export default function Chores() {
       {/* Chore List */}
       {filteredChores.length === 0 ? (
         <div className="game-panel p-10 text-center">
-          <Swords size={40} className="mx-auto text-cream/20 mb-4" />
-          <p className="text-cream/50 text-xl font-body">
+          <Swords size={40} className="mx-auto text-muted mb-4" />
+          <p className="text-muted text-sm">
             {chores.length === 0
               ? 'The quest board is empty. No adventures await... yet!'
               : 'No quests match your search. Try adjusting the filters.'}
@@ -411,7 +407,7 @@ export default function Chores() {
           {isParent && chores.length === 0 && (
             <button
               onClick={openCreateModal}
-              className="game-btn game-btn-gold mt-4 inline-flex items-center gap-2"
+              className="game-btn game-btn-blue mt-4 inline-flex items-center gap-2"
             >
               <Plus size={16} />
               Post First Quest
@@ -423,12 +419,12 @@ export default function Chores() {
           {filteredChores.map((chore) => (
             <div
               key={chore.id}
-              className="game-panel p-4 flex flex-col gap-3 cursor-pointer hover:border-gold/40 transition-colors"
+              className="game-panel p-4 flex flex-col gap-3 cursor-pointer hover:border-sky/40 transition-colors"
               onClick={() => navigate(`/chores/${chore.id}`)}
             >
               {/* Title row */}
               <div className="flex items-start justify-between gap-2">
-                <h3 className="font-heading text-cream text-[10px] leading-relaxed flex-1">
+                <h3 className="text-cream text-lg font-bold leading-relaxed flex-1">
                   {chore.title}
                 </h3>
                 {isParent && (
@@ -438,7 +434,7 @@ export default function Chores() {
                         e.stopPropagation();
                         openEditModal(chore);
                       }}
-                      className="p-1.5 rounded hover:bg-[#2a2a4a] transition-colors text-cream/40 hover:text-sky"
+                      className="p-1.5 rounded hover:bg-surface-raised transition-colors text-muted hover:text-sky"
                       aria-label="Edit quest"
                     >
                       <Pencil size={14} />
@@ -448,7 +444,7 @@ export default function Chores() {
                         e.stopPropagation();
                         setDeleteTarget(chore);
                       }}
-                      className="p-1.5 rounded hover:bg-[#2a2a4a] transition-colors text-cream/40 hover:text-crimson"
+                      className="p-1.5 rounded hover:bg-surface-raised transition-colors text-muted hover:text-crimson"
                       aria-label="Delete quest"
                     >
                       <Trash2 size={14} />
@@ -459,7 +455,7 @@ export default function Chores() {
 
               {/* Description */}
               {chore.description && (
-                <p className="text-cream/60 text-base font-body line-clamp-2">
+                <p className="text-muted text-sm line-clamp-2">
                   {chore.description}
                 </p>
               )}
@@ -467,7 +463,7 @@ export default function Chores() {
               {/* Meta row */}
               <div className="flex items-center flex-wrap gap-2 mt-auto">
                 {/* XP */}
-                <span className="flex items-center gap-1 text-gold font-heading text-[10px]">
+                <span className="flex items-center gap-1 text-gold font-bold text-sm">
                   <span className="text-lg">&#9733;</span>
                   {chore.points} XP
                 </span>
@@ -484,7 +480,7 @@ export default function Chores() {
                   customDays={chore.custom_days}
                 />
                 {chore.requires_photo && (
-                  <span className="flex items-center gap-1 text-cream/40 text-sm">
+                  <span className="flex items-center gap-1 text-muted text-xs">
                     <Camera size={12} />
                     Photo
                   </span>
@@ -520,14 +516,14 @@ export default function Chores() {
       >
         <div className="space-y-4">
           {formError && (
-            <div className="p-2 rounded border border-crimson/40 bg-crimson/10 text-crimson text-base">
+            <div className="p-2 rounded border border-crimson/40 bg-crimson/10 text-crimson text-sm">
               {formError}
             </div>
           )}
 
           {/* Title */}
           <div>
-            <label className="block text-gold/80 text-sm font-heading mb-1 tracking-wide">
+            <label className="block text-cream text-sm font-medium mb-1 tracking-wide">
               Quest Name
             </label>
             <input
@@ -535,13 +531,13 @@ export default function Chores() {
               value={form.title}
               onChange={(e) => updateForm('title', e.target.value)}
               placeholder="Defeat the Dust Bunnies"
-              className={inputClass}
+              className="field-input"
             />
           </div>
 
           {/* Description */}
           <div>
-            <label className="block text-gold/80 text-sm font-heading mb-1 tracking-wide">
+            <label className="block text-cream text-sm font-medium mb-1 tracking-wide">
               Description
             </label>
             <textarea
@@ -549,14 +545,14 @@ export default function Chores() {
               onChange={(e) => updateForm('description', e.target.value)}
               placeholder="Describe the quest details..."
               rows={3}
-              className={`${inputClass} resize-none`}
+              className="field-input resize-none"
             />
           </div>
 
           {/* Points & Difficulty */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-gold/80 text-sm font-heading mb-1 tracking-wide">
+              <label className="block text-cream text-sm font-medium mb-1 tracking-wide">
                 XP Reward
               </label>
               <input
@@ -564,11 +560,11 @@ export default function Chores() {
                 min={1}
                 value={form.points}
                 onChange={(e) => updateForm('points', e.target.value)}
-                className={inputClass}
+                className="field-input"
               />
             </div>
             <div>
-              <label className="block text-gold/80 text-sm font-heading mb-1 tracking-wide">
+              <label className="block text-cream text-sm font-medium mb-1 tracking-wide">
                 Difficulty
               </label>
               <select
@@ -587,7 +583,7 @@ export default function Chores() {
 
           {/* Category */}
           <div>
-            <label className="block text-gold/80 text-sm font-heading mb-1 tracking-wide">
+            <label className="block text-cream text-sm font-medium mb-1 tracking-wide">
               Category
             </label>
             <select
@@ -609,7 +605,7 @@ export default function Chores() {
 
           {/* Recurrence */}
           <div>
-            <label className="block text-gold/80 text-sm font-heading mb-1 tracking-wide">
+            <label className="block text-cream text-sm font-medium mb-1 tracking-wide">
               Recurrence
             </label>
             <select
@@ -628,7 +624,7 @@ export default function Chores() {
           {/* Custom Days (only when recurrence === 'custom') */}
           {form.recurrence === 'custom' && (
             <div>
-              <label className="block text-gold/80 text-sm font-heading mb-2 tracking-wide">
+              <label className="block text-cream text-sm font-medium mb-2 tracking-wide">
                 Quest Days
               </label>
               <div className="flex flex-wrap gap-2">
@@ -637,10 +633,10 @@ export default function Chores() {
                     key={day}
                     type="button"
                     onClick={() => toggleCustomDay(idx)}
-                    className={`px-3 py-1.5 rounded border-2 font-body text-base transition-colors ${
+                    className={`px-3 py-1.5 rounded border-2 text-sm transition-colors ${
                       form.custom_days.includes(idx)
-                        ? 'border-gold bg-gold/20 text-gold'
-                        : 'border-[#2a2a4a] text-cream/40 hover:border-cream/30'
+                        ? 'border-sky bg-sky/20 text-sky'
+                        : 'border-border text-muted hover:border-cream/30'
                     }`}
                   >
                     {day}
@@ -652,7 +648,7 @@ export default function Chores() {
 
           {/* Requires Photo */}
           <div className="flex items-center justify-between">
-            <label className="text-gold/80 text-sm font-heading tracking-wide flex items-center gap-2">
+            <label className="text-cream text-sm font-medium tracking-wide flex items-center gap-2">
               <Camera size={14} />
               Requires Photo Proof
             </label>
@@ -661,15 +657,15 @@ export default function Chores() {
               onClick={() => updateForm('requires_photo', !form.requires_photo)}
               className={`relative w-12 h-6 rounded-full border-2 transition-colors ${
                 form.requires_photo
-                  ? 'bg-gold/20 border-gold'
-                  : 'bg-navy-light border-[#2a2a4a]'
+                  ? 'bg-sky/20 border-sky'
+                  : 'bg-navy-light border-border'
               }`}
             >
               <div
                 className={`absolute top-0.5 w-4 h-4 rounded-full transition-all ${
                   form.requires_photo
-                    ? 'left-6 bg-gold'
-                    : 'left-0.5 bg-cream/40'
+                    ? 'left-6 bg-sky'
+                    : 'left-0.5 bg-muted'
                 }`}
               />
             </button>
@@ -678,22 +674,22 @@ export default function Chores() {
           {/* Assigned Kids */}
           {kids.length > 0 && (
             <div>
-              <label className="block text-gold/80 text-sm font-heading mb-2 tracking-wide">
+              <label className="block text-cream text-sm font-medium mb-2 tracking-wide">
                 Assign to Heroes
               </label>
               <div className="space-y-2">
                 {kids.map((kid) => (
                   <label
                     key={kid.id}
-                    className="flex items-center gap-3 cursor-pointer p-2 rounded hover:bg-[#2a2a4a]/50 transition-colors"
+                    className="flex items-center gap-3 cursor-pointer p-2 rounded hover:bg-surface-raised/50 transition-colors"
                   >
                     <input
                       type="checkbox"
                       checked={form.assigned_user_ids.includes(kid.id)}
                       onChange={() => toggleKid(kid.id)}
-                      className="w-4 h-4 accent-gold"
+                      className="w-4 h-4 accent-sky"
                     />
-                    <span className="text-cream font-body text-lg">
+                    <span className="text-cream text-sm">
                       {kid.display_name || kid.username}
                     </span>
                   </label>
@@ -723,9 +719,9 @@ export default function Chores() {
           },
         ]}
       >
-        <p className="text-cream/70">
+        <p className="text-muted">
           Are you sure you want to remove the quest{' '}
-          <span className="text-gold font-heading text-[10px]">
+          <span className="text-cream text-lg font-bold">
             "{deleteTarget?.title}"
           </span>
           ? This action cannot be undone. All associated records will be archived.
