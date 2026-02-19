@@ -230,7 +230,7 @@ export default function KidDashboard() {
                   initial="hidden"
                   animate="visible"
                   custom={idx}
-                  onClick={() => navigate(`/chores/${chore.id}`)}
+                  onClick={() => navigate('/chores')}
                 >
                   <div className="flex items-start gap-3">
                     {/* Category indicator */}
