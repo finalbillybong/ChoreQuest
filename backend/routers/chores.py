@@ -449,9 +449,24 @@ async def assign_chore(
             ChoreAssignmentRule.is_active == True,
         )
     )
+    removed_user_ids = set()
     for existing_rule in existing_rules_result.scalars().all():
         if existing_rule.user_id not in submitted_user_ids:
             existing_rule.is_active = False
+            removed_user_ids.add(existing_rule.user_id)
+
+    # Remove today's pending assignments for unassigned kids
+    if removed_user_ids:
+        stale_assignments = await db.execute(
+            select(ChoreAssignment).where(
+                ChoreAssignment.chore_id == chore_id,
+                ChoreAssignment.date == today,
+                ChoreAssignment.status == AssignmentStatus.pending,
+                ChoreAssignment.user_id.in_(removed_user_ids),
+            )
+        )
+        for stale in stale_assignments.scalars().all():
+            await db.delete(stale)
 
     created_rules = []
 
