@@ -1,120 +1,115 @@
-# ChoresOS
+# QuestOS
 
-A chore management app for families, themed like an RPG. Kids complete "quests" to earn XP, unlock achievements, and spend points in a reward shop. Parents manage everything from their own dashboard.
+A family chore app with RPG-flavoured language. Parents create quests, kids earn XP by completing them, and everyone can track progress through streaks, achievements, and a reward shop.
 
-Built for tablets and phones first — designed so a 7-year-old can use it independently.
+Built mobile-first — the main interface is a bottom tab bar on phones and tablets. There's a sidebar on larger screens.
 
 ## What it does
 
 **For kids:**
-- See today's quests on a dashboard and mark them as done (with optional photo proof)
-- Earn XP for completed chores, build streaks, unlock achievements
-- Spin a daily bonus wheel (available if yesterday's quests were all finished)
-- Browse and buy rewards from the Treasure Shop using earned XP
-- Add items to a wishlist for parents to see
-- Trade chores with siblings via the calendar
-- Customise an RPG-style avatar
+- See today's quests and mark them done (with optional photo proof)
+- Earn XP for completed quests, build daily streaks, unlock achievements
+- Spin a daily bonus wheel for extra XP (if yesterday's quests were all done)
+- Buy rewards from the shop with earned XP
+- Add things to a wishlist that parents can see and convert into rewards
+- Propose quest trades with siblings through the calendar
+- Customise an avatar
+- Log in with a PIN instead of a password (handy for shared tablets)
 
 **For parents:**
-- Create and assign quests with difficulty levels, categories, and recurrence schedules
-- Verify completed chores (with photo proof review where required)
-- Set up a reward shop with XP prices and optional stock limits
+- Create and assign quests with difficulty, categories, and recurrence (daily, weekly, custom days, one-off)
+- Review and verify completed quests, including photo proof
+- Set up rewards with XP costs, stock limits, and auto-approval thresholds
 - Award bonus XP
-- Manage chore rotations between kids (e.g. bins duty rotates weekly)
-- View family stats, streaks, and a leaderboard
+- Set up chore rotations between kids
+- View family stats and streaks
 
 **For admins:**
 - Manage users, API keys, and invite codes
 - View audit logs
-- Configure app-wide settings
+- Configure app settings
 
 ## Tech stack
 
-| Layer | Tech |
-|-------|------|
+| | |
+|---|---|
 | Backend | Python / FastAPI (async) |
-| Database | SQLite with WAL mode |
-| Frontend | React / Vite / Tailwind CSS |
-| Real-time | WebSocket per-user channels |
-| Auth | JWT access tokens + httpOnly refresh cookies, bcrypt passwords, optional PIN login for kids |
-| Deployment | Docker (single container, multi-stage build) |
+| Database | SQLite (WAL mode) |
+| Frontend | React 18, Vite, Tailwind CSS 4 |
+| Fonts | Inter throughout |
+| Icons | Lucide React |
+| Real-time | WebSocket (per-user channels) |
+| Auth | JWT + httpOnly refresh cookies, bcrypt, optional PIN login |
+| Deployment | Docker, single container |
 
 ## Running it
-
-### With Docker (recommended)
 
 ```bash
 docker compose up -d
 ```
 
-The app runs on port **8122** by default.
-
-You'll need to set a `SECRET_KEY` environment variable (minimum 16 characters). Everything else has sensible defaults.
+Runs on port **8122**. Set a `SECRET_KEY` env var (16+ characters) — everything else has defaults.
 
 ### Environment variables
 
-| Variable | Default | What it does |
-|----------|---------|--------------|
-| `SECRET_KEY` | *required* | Signs JWT tokens. Must be at least 16 chars |
-| `REGISTRATION_ENABLED` | `false` | Allow signup without an invite code |
-| `DATABASE_URL` | `sqlite+aiosqlite:////app/data/chores_os.db` | Database connection string |
-| `ACCESS_TOKEN_EXPIRE_MINUTES` | `15` | How long access tokens last |
-| `REFRESH_TOKEN_EXPIRE_DAYS` | `30` | How long refresh tokens last |
-| `COOKIE_SECURE` | `false` | Set to `true` if you're behind HTTPS |
-| `DAILY_RESET_HOUR` | `0` | UTC hour to run the daily reset |
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SECRET_KEY` | *required* | JWT signing key, minimum 16 characters |
+| `REGISTRATION_ENABLED` | `false` | Allow public registration (no invite code needed) |
+| `DATABASE_URL` | `sqlite+aiosqlite:////app/data/chores_os.db` | Database path |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | `15` | Access token lifetime |
+| `REFRESH_TOKEN_EXPIRE_DAYS` | `30` | Refresh token lifetime |
+| `COOKIE_SECURE` | `false` | Set `true` behind HTTPS |
+| `DAILY_RESET_HOUR` | `0` | UTC hour for the daily assignment reset |
 | `TZ` | `Europe/London` | Container timezone |
-| `MAX_UPLOAD_SIZE_MB` | `5` | Max photo upload size |
+| `MAX_UPLOAD_SIZE_MB` | `5` | Photo upload size limit |
 
 ### First run
 
-1. The database and default data (categories, achievements, template quests) are created automatically on startup
-2. The first user to register becomes the admin
-3. After that, registration is invite-only by default — create invite codes from the admin dashboard
+The database, default categories, achievements, and some template quests are created on first startup. The first user to register becomes the admin. After that, registration requires an invite code by default — generate them from the admin dashboard.
 
-## Project structure
+## Project layout
 
 ```
 backend/
-  main.py              # FastAPI app setup, middleware, lifespan
-  models.py            # SQLAlchemy models (18 tables)
-  routers/             # API route modules (auth, chores, rewards, etc.)
-  seed.py              # Default data (categories, achievements, templates)
+  main.py          # FastAPI app, middleware, startup
+  models.py        # SQLAlchemy models
+  routers/         # Route modules (auth, chores, rewards, calendar, etc.)
+  seed.py          # Default categories, achievements, template quests
 frontend/
   src/
-    pages/             # React page components
-    components/        # Shared UI components
-    contexts/          # Auth, theme, WebSocket providers
-    hooks/             # Custom React hooks
-    api/client.js      # API client with token refresh
-data/                  # SQLite database + uploaded photos (Docker volume)
+    pages/         # Page components (dashboards, chores, rewards, calendar, etc.)
+    components/    # Shared components (layout, modals, avatar, spin wheel)
+    contexts/      # Auth, theme, WebSocket providers
+    hooks/         # useAuth, useTheme, useWebSocket, useNotifications
+    api/client.js  # Fetch wrapper with token refresh
+data/              # SQLite DB + uploaded photos (mounted as a Docker volume)
 ```
 
-## Features worth mentioning
+## Features
 
-- **RPG theming throughout** — pixel-art UI, "Press Start 2P" font for headings, quests instead of chores, XP instead of points. Dark mode is the default.
-- **PWA** — installable on phones/tablets with offline support and a service worker.
-- **Streaks** — kids build daily streaks by completing all assigned quests. Milestones at 7, 14, 30, 50, and 100 days.
-- **14 achievements** — from "First Steps" (complete 1 quest) to "Unstoppable" (100-day streak).
-- **Daily spin wheel** — a physics-based animated wheel that awards 1-25 bonus XP, available once per day.
-- **Chore rotations** — automatically rotate chores between kids on a schedule.
-- **Calendar with trading** — weekly view where kids can propose chore swaps with siblings.
-- **Photo verification** — parents can require photo proof for specific chores.
+- **Dark UI with game language** — quests instead of chores, XP instead of points, Treasure Shop instead of reward store. Dark theme by default, light mode available.
+- **PWA** — installable on phones and tablets with a service worker for offline support.
+- **Streaks** — complete all assigned quests in a day to keep a streak going. Milestone notifications at 7, 14, 30, 50, and 100 days.
+- **14 achievements** — things like first quest completed, 7-day streak, all quests done before noon, 1000 lifetime XP.
+- **Daily spin wheel** — animated wheel awarding 1–25 bonus XP once per day.
+- **Chore rotations** — parents can rotate a quest between kids on a set cadence.
+- **Calendar with trading** — weekly calendar view. Kids can propose quest swaps with siblings.
+- **Photo proof** — parents can require a photo when completing specific quests.
+- **Notifications** — in-app notification panel with real-time WebSocket delivery.
 - **Rate limiting** — login, PIN, and registration endpoints are rate-limited.
-- **Audit logging** — sensitive actions (logins, role changes, point adjustments) are logged.
+- **Audit log** — tracks logins, role changes, and point adjustments.
 
 ## API
 
-The backend exposes ~100 endpoints across 13 route modules. Key ones:
+The backend has around 100 endpoints across 13 route modules. Some key ones:
 
-- `POST /api/auth/register` / `login` / `pin-login` / `refresh`
-- `GET/POST /api/chores` — CRUD + `/{id}/complete`, `/{id}/verify`, `/{id}/skip`
-- `GET/POST /api/rewards` — shop + `/{id}/redeem`, `/redemptions/{id}/approve`
-- `GET /api/stats/me` / `/family` / `/leaderboard`
-- `GET /api/calendar` — weekly view with auto-generated assignments
-- `POST /api/calendar/trade` — propose chore trades
+- `POST /api/auth/register`, `/login`, `/pin-login`, `/refresh`
+- `GET/POST /api/chores` + `/{id}/complete`, `/{id}/verify`, `/{id}/skip`
+- `GET/POST /api/rewards` + `/{id}/redeem`, `/redemptions/{id}/approve`
+- `GET /api/stats/me`, `/family`, `/leaderboard`
+- `GET /api/calendar` — weekly assignments (auto-generated)
+- `POST /api/calendar/trade` — quest trade proposals
 - `GET/POST /api/spin` — daily bonus wheel
+- `GET/POST /api/wishlist` — kid wishlists
 - `WS /ws/{user_id}` — real-time updates
-
-## License
-
-Not yet specified.
