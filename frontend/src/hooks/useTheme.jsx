@@ -1,23 +1,85 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { api } from '../api/client';
 
 const ThemeContext = createContext(null);
 
+export const COLOR_THEMES = [
+  { id: 'default',  label: 'Quest Blue',        accent: '#3b82f6', bg: '#0a0e1a', surface: '#111827' },
+  { id: 'dragon',   label: 'Dragon Fire',       accent: '#ef4444', bg: '#1a0a0a', surface: '#1f1111' },
+  { id: 'forest',   label: 'Enchanted Forest',  accent: '#10b981', bg: '#061210', surface: '#0d1f1b' },
+  { id: 'galaxy',   label: 'Galaxy',            accent: '#a855f7', bg: '#0f0a1a', surface: '#1a1127' },
+  { id: 'rose',     label: 'Rose Gold',         accent: '#ec4899', bg: '#1a0a12', surface: '#1f1118' },
+  { id: 'sunshine', label: 'Sunshine',          accent: '#f59e0b', bg: '#1a140a', surface: '#1f1a0d' },
+  { id: 'arctic',   label: 'Arctic',            accent: '#06b6d4', bg: '#061217', surface: '#0b1d24' },
+];
+
 export function ThemeProvider({ children }) {
-  const [theme, setTheme] = useState(() => {
+  const [mode, setMode] = useState(() => {
     const saved = localStorage.getItem('questos-theme');
     if (saved) return saved;
     return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
   });
 
-  useEffect(() => {
-    localStorage.setItem('questos-theme', theme);
-    document.documentElement.classList.toggle('light-mode', theme === 'light');
-  }, [theme]);
+  const [colorTheme, setColorTheme] = useState(() => {
+    return localStorage.getItem('questos-color-theme') || 'default';
+  });
 
-  const toggle = () => setTheme(t => t === 'dark' ? 'light' : 'dark');
+  // Apply mode + color theme to document
+  useEffect(() => {
+    localStorage.setItem('questos-theme', mode);
+    localStorage.setItem('questos-color-theme', colorTheme);
+
+    const el = document.documentElement;
+    el.classList.toggle('light-mode', mode === 'light');
+
+    // Remove all theme-* classes, then add the active one
+    COLOR_THEMES.forEach((t) => {
+      if (t.id !== 'default') el.classList.remove(`theme-${t.id}`);
+    });
+    if (colorTheme !== 'default') {
+      el.classList.add(`theme-${colorTheme}`);
+    }
+  }, [mode, colorTheme]);
+
+  const toggleMode = () => setMode((t) => (t === 'dark' ? 'light' : 'dark'));
+
+  const setColorThemeAndSync = useCallback(async (themeId) => {
+    setColorTheme(themeId);
+    // Persist to server via avatar_config
+    try {
+      // Fetch current user to get existing avatar_config
+      const me = await api('/api/auth/me');
+      const config = { ...(me.avatar_config || {}), color_theme: themeId };
+      await api('/api/auth/me', {
+        method: 'PUT',
+        body: { avatar_config: config },
+      });
+    } catch {
+      // Non-critical — localStorage already has the value
+    }
+  }, []);
+
+  // Sync from server on mount (user's avatar_config.color_theme)
+  const syncFromUser = useCallback((user) => {
+    if (user?.avatar_config?.color_theme) {
+      const serverTheme = user.avatar_config.color_theme;
+      if (COLOR_THEMES.some((t) => t.id === serverTheme)) {
+        setColorTheme(serverTheme);
+        localStorage.setItem('questos-color-theme', serverTheme);
+      }
+    }
+  }, []);
 
   return (
-    <ThemeContext.Provider value={{ theme, toggle }}>
+    <ThemeContext.Provider
+      value={{
+        theme: mode,
+        toggle: toggleMode,
+        colorTheme,
+        setColorTheme: setColorThemeAndSync,
+        syncFromUser,
+      }}
+    >
       {children}
     </ThemeContext.Provider>
   );

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { useTheme } from '../hooks/useTheme';
 import { useNotifications } from '../hooks/useNotifications';
 import {
   Bell,
@@ -37,7 +38,13 @@ export default function Layout({ children }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
+  const { syncFromUser } = useTheme();
   const { notifications, unreadCount, markRead, markAllRead } = useNotifications();
+
+  // Sync color theme from server on login
+  useEffect(() => {
+    if (user) syncFromUser(user);
+  }, [user, syncFromUser]);
   const [showNotifs, setShowNotifs] = useState(false);
   const panelRef = useRef(null);
 
