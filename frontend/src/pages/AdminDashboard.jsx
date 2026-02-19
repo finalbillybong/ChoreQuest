@@ -260,27 +260,29 @@ function ApiKeysTab() {
       ) : (
         <div className="space-y-3">
           {keys.map((k) => (
-            <div key={k.id} className="game-panel p-4 flex items-center gap-4">
-              <div className="flex-1 min-w-0">
-                <p className="text-cream text-sm truncate">
+            <div key={k.id} className="p-3 rounded-lg bg-surface-raised/30 border border-border">
+              <div className="flex items-center justify-between gap-2 mb-1">
+                <p className="text-cream text-sm font-medium truncate min-w-0">
                   {k.name}
                 </p>
-                <p className="text-muted text-xs">
-                  Prefix: <span className="text-sky">{k.prefix || k.key_prefix || '***'}</span>
-                  {k.scopes && (
-                    <span className="ml-3">
-                      Scopes: <span className="text-purple">{Array.isArray(k.scopes) ? k.scopes.join(', ') : k.scopes}</span>
-                    </span>
-                  )}
-                </p>
+                <button
+                  onClick={() => deleteKey(k.id)}
+                  className="p-1.5 rounded hover:bg-crimson/10 text-crimson/60 hover:text-crimson transition-colors flex-shrink-0"
+                  title="Delete key"
+                >
+                  <Trash2 size={14} />
+                </button>
               </div>
-              <button
-                onClick={() => deleteKey(k.id)}
-                className="p-2 rounded hover:bg-crimson/10 text-crimson/60 hover:text-crimson transition-colors flex-shrink-0"
-                title="Delete key"
-              >
-                <Trash2 size={16} />
-              </button>
+              <div className="flex flex-wrap gap-x-3 gap-y-1">
+                <span className="text-muted text-xs">
+                  Prefix: <span className="text-sky">{k.prefix || k.key_prefix || '***'}</span>
+                </span>
+                {k.scopes && (
+                  <span className="text-muted text-xs">
+                    Scopes: <span className="text-purple">{Array.isArray(k.scopes) ? k.scopes.join(', ') : k.scopes}</span>
+                  </span>
+                )}
+              </div>
             </div>
           ))}
         </div>
@@ -444,32 +446,31 @@ function InviteCodesTab() {
       ) : (
         <div className="space-y-3">
           {codes.map((c) => (
-            <div key={c.id} className="game-panel p-4 flex items-center gap-4">
-              <div className="flex-1 min-w-0">
-                <p className="text-cream text-sm font-bold tracking-wider">
+            <div key={c.id} className="p-3 rounded-lg bg-surface-raised/30 border border-border">
+              <div className="flex items-center justify-between gap-2 mb-1">
+                <p className="text-cream text-sm font-bold tracking-wider truncate min-w-0">
                   {c.code}
                 </p>
-                <div className="flex gap-4 mt-1">
-                  <span className="text-muted text-xs">
-                    Role:{' '}
-                    <span className="text-purple">{c.role}</span>
-                  </span>
-                  <span className="text-muted text-xs">
-                    Uses:{' '}
-                    <span className="text-sky">
-                      {c.use_count ?? c.uses ?? 0}
-                      {c.max_uses ? ` / ${c.max_uses}` : ' / unlimited'}
-                    </span>
-                  </span>
-                </div>
+                <button
+                  onClick={() => deleteCode(c.id)}
+                  className="p-1.5 rounded hover:bg-crimson/10 text-crimson/60 hover:text-crimson transition-colors flex-shrink-0"
+                  title="Delete code"
+                >
+                  <Trash2 size={14} />
+                </button>
               </div>
-              <button
-                onClick={() => deleteCode(c.id)}
-                className="p-2 rounded hover:bg-crimson/10 text-crimson/60 hover:text-crimson transition-colors flex-shrink-0"
-                title="Delete code"
-              >
-                <Trash2 size={16} />
-              </button>
+              <div className="flex flex-wrap gap-x-3 gap-y-1">
+                <span className="text-muted text-xs">
+                  Role: <span className="text-purple">{c.role}</span>
+                </span>
+                <span className="text-muted text-xs">
+                  Uses:{' '}
+                  <span className="text-sky">
+                    {c.use_count ?? c.uses ?? 0}
+                    {c.max_uses ? ` / ${c.max_uses}` : ' / ∞'}
+                  </span>
+                </span>
+              </div>
             </div>
           ))}
         </div>
@@ -592,7 +593,7 @@ function AuditLogTab() {
                 <span className="text-sky text-xs font-medium">{entry.action}</span>
                 <span className="text-muted text-[10px] flex-shrink-0">{formatTimestamp(entry.created_at)}</span>
               </div>
-              <p className="text-muted text-xs">
+              <p className="text-muted text-xs break-all">
                 {entry.user_id != null ? `User #${entry.user_id}` : '--'}
                 {(entry.details && entry.details !== '--') && (
                   <span className="ml-2 text-muted/70">
@@ -660,7 +661,7 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="w-full max-w-2xl mx-auto overflow-hidden">
       {/* Back + Header */}
       <button
         onClick={() => navigate('/profile')}
@@ -677,7 +678,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-6 overflow-x-auto pb-1">
+      <div className="grid grid-cols-4 gap-1 mb-6">
         {TABS.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.key;
@@ -685,21 +686,21 @@ export default function AdminDashboard() {
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`flex items-center gap-2 px-4 py-3 rounded-t-md border-b-3 transition-colors text-sm font-medium whitespace-nowrap ${
+              className={`flex flex-col items-center gap-1 px-1 py-2.5 rounded-lg border transition-colors text-[11px] font-medium ${
                 isActive
-                  ? 'bg-surface-raised/50 border-sky text-sky'
-                  : 'border-transparent text-muted hover:text-cream'
+                  ? 'bg-sky/10 border-sky/30 text-sky'
+                  : 'border-border text-muted hover:text-cream hover:border-border-light'
               }`}
             >
               <Icon size={16} />
-              {tab.label}
+              <span className="truncate w-full text-center">{tab.label}</span>
             </button>
           );
         })}
       </div>
 
       {/* Tab content */}
-      <div className="game-panel p-5">
+      <div className="game-panel p-4">
         {activeTab === 'users' && <UsersTab />}
         {activeTab === 'api-keys' && <ApiKeysTab />}
         {activeTab === 'invite-codes' && <InviteCodesTab />}

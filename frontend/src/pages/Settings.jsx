@@ -124,7 +124,7 @@ export default function Settings() {
   );
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="w-full max-w-2xl mx-auto overflow-hidden">
       {/* Back + Header */}
       <button
         onClick={() => navigate('/profile')}
@@ -246,9 +246,9 @@ export default function Settings() {
                 {achievements.map((ach) => (
                   <div
                     key={ach.id}
-                    className="flex items-center gap-3 py-2 border-b border-border last:border-0"
+                    className="p-3 rounded-lg bg-surface-raised/30 border border-border space-y-2"
                   >
-                    <div className="flex-1 min-w-0">
+                    <div className="min-w-0">
                       <p className="text-cream text-sm truncate">
                         {ach.title || ach.name}
                       </p>
@@ -258,7 +258,7 @@ export default function Settings() {
                         </p>
                       )}
                     </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
+                    <div className="flex items-center gap-2">
                       <input
                         type="number"
                         min={0}
@@ -273,12 +273,13 @@ export default function Settings() {
                             )
                           );
                         }}
-                        className="field-input !w-24 !p-2 text-center"
+                        className="field-input !w-20 !p-2 text-center"
                       />
+                      <span className="text-muted text-xs">pts</span>
                       <button
                         onClick={() => updateAchievementPoints(ach)}
                         disabled={achievementsSaving[ach.id]}
-                        className="game-btn game-btn-blue !py-2 !px-3"
+                        className="game-btn game-btn-blue !py-2 !px-3 ml-auto"
                         title="Save"
                       >
                         {achievementsSaving[ach.id] ? (

@@ -176,78 +176,81 @@ export default function AvatarEditor() {
   };
 
   return (
-    <div className="game-panel p-5 space-y-5">
-      <h2 className="text-cream text-sm font-bold">
-        Customise Avatar
-      </h2>
-
-      {/* Live preview */}
-      <div className="flex justify-center">
-        <AvatarDisplay config={config} size="lg" />
+    <div>
+      {/* Sticky live preview — stays visible while scrolling options */}
+      <div className="sticky top-14 z-10 pb-3">
+        <div className="game-panel p-3 flex items-center justify-between gap-3">
+          <AvatarDisplay config={config} size="lg" />
+          <div className="flex-1 min-w-0">
+            <h2 className="text-cream text-sm font-bold mb-2">
+              Customise Avatar
+            </h2>
+            <button
+              onClick={save}
+              disabled={saving}
+              className="game-btn game-btn-blue w-full flex items-center justify-center gap-2 !py-2 !text-xs"
+            >
+              {saving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
+              {saving ? 'Saving...' : 'Save Avatar'}
+            </button>
+            {msg && (
+              <p className={`text-xs text-center mt-1 ${msg.includes('!') ? 'text-emerald' : 'text-crimson'}`}>
+                {msg}
+              </p>
+            )}
+          </div>
+        </div>
       </div>
 
-      {/* Head */}
-      <Section title="Head Shape">
-        <ShapeSelector options={HEAD_OPTIONS} selected={config.head} onSelect={(v) => set('head', v)} />
-      </Section>
+      {/* Options */}
+      <div className="game-panel p-4 space-y-5">
+        {/* Head */}
+        <Section title="Head Shape">
+          <ShapeSelector options={HEAD_OPTIONS} selected={config.head} onSelect={(v) => set('head', v)} />
+        </Section>
 
-      {/* Skin Colour */}
-      <Section title="Skin Colour">
-        <ColorSwatch colors={SKIN_COLORS} selected={config.head_color} onSelect={(v) => set('head_color', v)} />
-      </Section>
+        {/* Skin Colour */}
+        <Section title="Skin Colour">
+          <ColorSwatch colors={SKIN_COLORS} selected={config.head_color} onSelect={(v) => set('head_color', v)} />
+        </Section>
 
-      {/* Hair */}
-      <Section title="Hair Style">
-        <ShapeSelector options={HAIR_OPTIONS} selected={config.hair} onSelect={(v) => set('hair', v)} />
-      </Section>
+        {/* Hair */}
+        <Section title="Hair Style">
+          <ShapeSelector options={HAIR_OPTIONS} selected={config.hair} onSelect={(v) => set('hair', v)} />
+        </Section>
 
-      {/* Hair Colour */}
-      <Section title="Hair Colour">
-        <ColorSwatch colors={HAIR_COLORS} selected={config.hair_color} onSelect={(v) => set('hair_color', v)} />
-      </Section>
+        {/* Hair Colour */}
+        <Section title="Hair Colour">
+          <ColorSwatch colors={HAIR_COLORS} selected={config.hair_color} onSelect={(v) => set('hair_color', v)} />
+        </Section>
 
-      {/* Eyes */}
-      <Section title="Eyes">
-        <ShapeSelector options={EYES_OPTIONS} selected={config.eyes} onSelect={(v) => set('eyes', v)} />
-        <ColorSwatch colors={EYE_COLORS} selected={config.eye_color} onSelect={(v) => set('eye_color', v)} />
-      </Section>
+        {/* Eyes */}
+        <Section title="Eyes">
+          <ShapeSelector options={EYES_OPTIONS} selected={config.eyes} onSelect={(v) => set('eyes', v)} />
+          <ColorSwatch colors={EYE_COLORS} selected={config.eye_color} onSelect={(v) => set('eye_color', v)} />
+        </Section>
 
-      {/* Mouth */}
-      <Section title="Mouth">
-        <ShapeSelector options={MOUTH_OPTIONS} selected={config.mouth} onSelect={(v) => set('mouth', v)} />
-        <ColorSwatch colors={MOUTH_COLORS} selected={config.mouth_color} onSelect={(v) => set('mouth_color', v)} />
-      </Section>
+        {/* Mouth */}
+        <Section title="Mouth">
+          <ShapeSelector options={MOUTH_OPTIONS} selected={config.mouth} onSelect={(v) => set('mouth', v)} />
+          <ColorSwatch colors={MOUTH_COLORS} selected={config.mouth_color} onSelect={(v) => set('mouth_color', v)} />
+        </Section>
 
-      {/* Body */}
-      <Section title="Body Shape">
-        <ShapeSelector options={BODY_OPTIONS} selected={config.body} onSelect={(v) => set('body', v)} />
-      </Section>
+        {/* Body */}
+        <Section title="Body Shape">
+          <ShapeSelector options={BODY_OPTIONS} selected={config.body} onSelect={(v) => set('body', v)} />
+        </Section>
 
-      {/* Body / Outfit Colour */}
-      <Section title="Outfit Colour">
-        <ColorSwatch colors={BODY_COLORS} selected={config.body_color} onSelect={(v) => set('body_color', v)} />
-      </Section>
+        {/* Body / Outfit Colour */}
+        <Section title="Outfit Colour">
+          <ColorSwatch colors={BODY_COLORS} selected={config.body_color} onSelect={(v) => set('body_color', v)} />
+        </Section>
 
-      {/* Background */}
-      <Section title="Background">
-        <ColorSwatch colors={BG_COLORS} selected={config.bg_color} onSelect={(v) => set('bg_color', v)} />
-      </Section>
-
-      {/* Save */}
-      <button
-        onClick={save}
-        disabled={saving}
-        className="game-btn game-btn-blue w-full flex items-center justify-center gap-2"
-      >
-        {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-        {saving ? 'Saving...' : 'Save Avatar'}
-      </button>
-
-      {msg && (
-        <p className={`text-xs text-center ${msg.includes('!') ? 'text-emerald' : 'text-crimson'}`}>
-          {msg}
-        </p>
-      )}
+        {/* Background */}
+        <Section title="Background">
+          <ColorSwatch colors={BG_COLORS} selected={config.bg_color} onSelect={(v) => set('bg_color', v)} />
+        </Section>
+      </div>
     </div>
   );
 }

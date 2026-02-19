@@ -18,7 +18,7 @@ import {
   Award,
   Star,
   Loader2,
-  Paintbrush,
+  Pencil,
   ShieldCheck,
   Settings,
   Trophy,
@@ -188,7 +188,7 @@ export default function Profile() {
       <div className="game-panel p-6 flex flex-col items-center gap-4">
         <button
           onClick={() => setShowEditor((v) => !v)}
-          className="relative group"
+          className="relative"
           aria-label="Customise avatar"
         >
           <AvatarDisplay
@@ -196,8 +196,8 @@ export default function Profile() {
             size="lg"
             name={user?.display_name || user?.username}
           />
-          <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-            <Paintbrush size={24} className="text-sky" />
+          <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-sky flex items-center justify-center border-2 border-surface shadow-lg">
+            <Pencil size={14} className="text-white" />
           </div>
         </button>
 
