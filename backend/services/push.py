@@ -7,8 +7,6 @@ starts even if these packages are not installed.
 import base64
 import json
 import logging
-import tempfile
-import os
 from urllib.parse import urlparse
 from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -153,7 +151,13 @@ async def get_vapid_public_key(db: AsyncSession) -> str:
 # Send push to a single subscription
 # ---------------------------------------------------------------------------
 
-def _send_one(subscription_info: dict, payload: str, vapid_private: str, vapid_claims: dict) -> str:
+def _send_one(
+    subscription_info: dict,
+    payload: str,
+    vapid_private: str,
+    vapid_public: str,
+    vapid_claims: dict,
+) -> str:
     """Synchronously send a single web push.
 
     Returns "ok", "gone" (endpoint dead — safe to delete), or "error".
@@ -161,56 +165,85 @@ def _send_one(subscription_info: dict, payload: str, vapid_private: str, vapid_c
     if not _ensure_pywebpush():
         return "error"
 
-    # Write PEM key to a temp file so pywebpush uses the reliable
-    # Vapid.from_file → from_pem code path (avoids from_string quirks).
-    pem_key = vapid_private
-    if not pem_key.startswith("-----"):
-        # Convert non-PEM format to PEM for the temp file
-        from cryptography.hazmat.primitives import serialization
-        priv = _load_private_key(vapid_private)
-        pem_key = priv.private_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PrivateFormat.PKCS8,
-            encryption_algorithm=serialization.NoEncryption(),
-        ).decode()
-
-    fd, key_path = tempfile.mkstemp(suffix=".pem")
     try:
-        with os.fdopen(fd, "w") as f:
-            f.write(pem_key)
-
-        endpoint = subscription_info.get("endpoint", "")
-        aud = ""
-        try:
-            url = urlparse(endpoint)
-            aud = f"{url.scheme}://{url.netloc}"
-        except Exception:
-            pass
-        logger.info("Push attempt: aud=%s endpoint=%s...", aud, endpoint[:80])
-
-        _webpush(
-            subscription_info=subscription_info,
-            data=payload,
-            vapid_private_key=key_path,
-            vapid_claims=dict(vapid_claims),  # copy — pywebpush mutates it
-            ttl=86400,
-        )
-        return "ok"
-    except _WebPushException as e:
-        resp = getattr(e, "response", None)
-        status_code = getattr(resp, "status_code", None)
-        if status_code in (404, 410):
-            return "gone"
-        logger.warning("Push failed (status=%s): %s", status_code, e)
+        from py_vapid import Vapid
+        from pywebpush import WebPusher
+    except ImportError:
+        logger.exception("Missing py_vapid or pywebpush")
         return "error"
+
+    # --- Load key and build Vapid instance directly ---
+    try:
+        ec_key = _load_private_key(vapid_private)
     except Exception:
-        logger.exception("Unexpected push error")
+        logger.exception("Failed to load VAPID private key")
         return "error"
-    finally:
-        try:
-            os.unlink(key_path)
-        except OSError:
-            pass
+
+    derived_pub = _public_key_b64(ec_key)
+
+    # --- Diagnostic: verify key pair ---
+    endpoint = subscription_info.get("endpoint", "")
+    url = urlparse(endpoint)
+    aud = f"{url.scheme}://{url.netloc}"
+
+    logger.info(
+        "VAPID diagnostics:\n"
+        "  endpoint:    %s\n"
+        "  aud:         %s\n"
+        "  stored pub:  %s\n"
+        "  derived pub: %s\n"
+        "  keys match:  %s\n"
+        "  sub claim:   %s",
+        endpoint,
+        aud,
+        vapid_public,
+        derived_pub,
+        derived_pub == vapid_public,
+        vapid_claims.get("sub"),
+    )
+
+    # --- Build claims ---
+    import time as _time
+    claims = {
+        "aud": aud,
+        "exp": int(_time.time()) + (12 * 60 * 60),
+        "sub": vapid_claims["sub"],
+    }
+
+    # --- Sign with py_vapid directly ---
+    try:
+        vv = Vapid(ec_key)
+        vapid_headers = vv.sign(claims)
+    except Exception:
+        logger.exception("VAPID signing failed")
+        return "error"
+
+    logger.info(
+        "VAPID headers generated:\n%s",
+        json.dumps({k: v[:120] + "..." if len(v) > 120 else v
+                     for k, v in vapid_headers.items()}, indent=2),
+    )
+
+    # --- Send via WebPusher ---
+    try:
+        wp = WebPusher(subscription_info)
+        resp = wp.send(payload, vapid_headers, ttl=86400, content_encoding="aes128gcm")
+    except Exception:
+        logger.exception("WebPusher.send failed")
+        return "error"
+
+    status_code = getattr(resp, "status_code", None)
+    logger.info(
+        "Push response: status=%s body=%s",
+        status_code,
+        getattr(resp, "text", "")[:300],
+    )
+
+    if status_code and status_code <= 202:
+        return "ok"
+    if status_code in (404, 410):
+        return "gone"
+    return "error"
 
 
 # ---------------------------------------------------------------------------
@@ -265,7 +298,7 @@ async def send_push_to_user(
             },
         }
         vapid_claims = {"sub": settings.VAPID_CLAIM_EMAIL}
-        result = _send_one(subscription_info, payload, vapid_private, vapid_claims)
+        result = _send_one(subscription_info, payload, vapid_private, vapid_public, vapid_claims)
         if result == "ok":
             sent += 1
         elif result == "gone":
