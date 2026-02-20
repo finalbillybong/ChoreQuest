@@ -505,12 +505,13 @@ async def assign_chore(
             existing_rule.is_active = False
             removed_user_ids.add(existing_rule.user_id)
 
-    # Remove today's pending assignments for unassigned kids
+    # Remove all pending assignments (today and future) for unassigned kids,
+    # so that calendar entries are cleaned up when a recurring quest is unassigned.
     if removed_user_ids:
         stale_assignments = await db.execute(
             select(ChoreAssignment).where(
                 ChoreAssignment.chore_id == chore_id,
-                ChoreAssignment.date == today,
+                ChoreAssignment.date >= today,
                 ChoreAssignment.status == AssignmentStatus.pending,
                 ChoreAssignment.user_id.in_(removed_user_ids),
             )
@@ -629,20 +630,33 @@ async def assign_chore(
                 create_today = False
 
         if create_today:
-            existing_assignment = await db.execute(
+            existing_assignment_result = await db.execute(
                 select(ChoreAssignment).where(
                     ChoreAssignment.chore_id == chore_id,
                     ChoreAssignment.user_id == item.user_id,
                     ChoreAssignment.date == today,
                 )
             )
-            if existing_assignment.scalar_one_or_none() is None:
+            existing_assignment = existing_assignment_result.scalar_one_or_none()
+            if existing_assignment is None:
                 db.add(ChoreAssignment(
                     chore_id=chore_id,
                     user_id=item.user_id,
                     date=today,
                     status=AssignmentStatus.pending,
                 ))
+            elif existing_assignment.status in (
+                AssignmentStatus.completed,
+                AssignmentStatus.verified,
+                AssignmentStatus.skipped,
+            ):
+                # Re-assigning a quest that was already completed/verified/skipped
+                # today: reset it to pending so the kid sees it again.
+                existing_assignment.status = AssignmentStatus.pending
+                existing_assignment.completed_at = None
+                existing_assignment.verified_at = None
+                existing_assignment.verified_by = None
+                existing_assignment.updated_at = datetime.now(timezone.utc)
 
         db.add(_quest_assigned_notification(item.user_id, chore))
 
@@ -996,6 +1010,20 @@ async def verify_chore(
 
     await db.commit()
     await check_achievements(db, kid)
+
+    # Deactivate assignment rule for one-time quests so they no longer
+    # appear as assigned after completion.
+    if chore.recurrence == Recurrence.once:
+        rule_result = await db.execute(
+            select(ChoreAssignmentRule).where(
+                ChoreAssignmentRule.chore_id == chore_id,
+                ChoreAssignmentRule.user_id == assignment.user_id,
+                ChoreAssignmentRule.is_active == True,
+            )
+        )
+        one_time_rule = rule_result.scalar_one_or_none()
+        if one_time_rule:
+            one_time_rule.is_active = False
 
     db.add(Notification(
         user_id=assignment.user_id,

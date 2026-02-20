@@ -21,6 +21,19 @@ logger = logging.getLogger(__name__)
 _loop = None
 
 
+_NOTIFICATION_URL_MAP = {
+    "chore_assigned": "/chores",
+    "chore_completed": "/",
+    "chore_verified": "/",
+    "achievement_unlocked": "/profile",
+    "trade_proposed": "/calendar",
+    "trade_accepted": "/calendar",
+    "trade_denied": "/calendar",
+    "reward_approved": "/rewards",
+    "reward_denied": "/rewards",
+}
+
+
 def _after_flush(session: Session, flush_context):
     """Capture newly inserted Notification objects."""
     new_notifs = [
@@ -32,11 +45,14 @@ def _after_flush(session: Session, flush_context):
 
     session.info.setdefault("_pending_push", [])
     for n in new_notifs:
+        notif_type = n.type.value if n.type else "chorequest"
+        url = _NOTIFICATION_URL_MAP.get(notif_type, "/")
         session.info["_pending_push"].append({
             "user_id": n.user_id,
             "title": n.title,
             "body": n.message,
-            "tag": n.type.value if n.type else "chorequest",
+            "tag": notif_type,
+            "url": url,
         })
 
 
@@ -54,15 +70,16 @@ def _after_commit(session: Session):
                 title=item["title"],
                 body=item["body"],
                 tag=item["tag"],
+                url=item.get("url", "/"),
             ),
         )
 
 
-async def _send_push_safe(user_id: int, title: str, body: str, tag: str):
+async def _send_push_safe(user_id: int, title: str, body: str, tag: str, url: str = "/"):
     """Send push in a fresh DB session so we don't interfere with the caller."""
     try:
         async with async_session() as db:
-            sent = await send_push_to_user(db, user_id, title, body, url="/", tag=tag)
+            sent = await send_push_to_user(db, user_id, title, body, url=url, tag=tag)
             logger.info("Push sent to user %s: %d device(s)", user_id, sent)
     except Exception:
         logger.warning("Push notification failed for user %s", user_id, exc_info=True)
