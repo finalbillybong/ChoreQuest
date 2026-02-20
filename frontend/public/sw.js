@@ -1,4 +1,4 @@
-const CACHE_NAME = 'chorequest-v6';
+const CACHE_NAME = 'chorequest-v7';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',

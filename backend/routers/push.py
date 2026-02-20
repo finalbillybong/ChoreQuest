@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.database import get_db
 from backend.dependencies import get_current_user
 from backend.models import PushSubscription
-from backend.services.push import get_vapid_public_key
+from backend.services.push import get_vapid_public_key, send_push_to_user
 
 router = APIRouter(prefix="/api/push", tags=["push"])
 
