@@ -1,5 +1,6 @@
 import asyncio
 import logging
+logging.basicConfig(level=logging.INFO, format="%(levelname)s:%(name)s: %(message)s")
 from contextlib import asynccontextmanager
 from datetime import datetime, date, timedelta, timezone
 from pathlib import Path
