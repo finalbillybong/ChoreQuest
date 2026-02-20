@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from contextlib import asynccontextmanager
 from datetime import datetime, date, timedelta, timezone
 from pathlib import Path
@@ -7,22 +8,28 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-from sqlalchemy import select
+from sqlalchemy import delete
 
 from backend.config import settings
 from backend.database import init_db, async_session
 from backend.seed import seed_database
 from backend.auth import decode_access_token
 from backend.websocket_manager import ws_manager
-from backend.models import (
-    Chore, ChoreAssignment, ChoreAssignmentRule, ChoreRotation, User, UserRole,
-    AssignmentStatus, Recurrence, RefreshToken,
-)
+from backend.models import RefreshToken
+from backend.services.assignment_generator import generate_daily_assignments
+
+logger = logging.getLogger(__name__)
 
 STATIC_DIR = Path(__file__).parent.parent / "static"
 
 
 async def daily_reset_task():
+    """Background task that runs once per day at the configured hour.
+
+    Responsibilities:
+    - Generate today's recurring chore assignments (with rotation advancement)
+    - Clean up expired refresh tokens
+    """
     while True:
         now = datetime.now(timezone.utc)
         target_hour = settings.DAILY_RESET_HOUR
@@ -36,151 +43,18 @@ async def daily_reset_task():
             async with async_session() as db:
                 today = date.today()
 
-                # Generate assignments for recurring chores
-                result = await db.execute(
-                    select(Chore).where(Chore.is_active == True)
-                )
-                chores = result.scalars().all()
+                await generate_daily_assignments(db, today)
 
-                for chore in chores:
-                    # Check for per-kid assignment rules first
-                    rules_result = await db.execute(
-                        select(ChoreAssignmentRule).where(
-                            ChoreAssignmentRule.chore_id == chore.id,
-                            ChoreAssignmentRule.is_active == True,
-                        )
-                    )
-                    rules = rules_result.scalars().all()
-
-                    if rules:
-                        # Handle rotation
-                        rotation_result = await db.execute(
-                            select(ChoreRotation).where(ChoreRotation.chore_id == chore.id)
-                        )
-                        rotation = rotation_result.scalar_one_or_none()
-
-                        if rotation:
-                            should_advance = False
-                            if rotation.last_rotated is None:
-                                should_advance = True
-                            elif rotation.cadence.value == "daily":
-                                should_advance = True
-                            elif rotation.cadence.value == "weekly":
-                                days_since = (datetime.now(timezone.utc) - rotation.last_rotated).days
-                                should_advance = days_since >= 7
-                            elif rotation.cadence.value == "fortnightly":
-                                days_since = (datetime.now(timezone.utc) - rotation.last_rotated).days
-                                should_advance = days_since >= 14
-                            elif rotation.cadence.value == "monthly":
-                                days_since = (datetime.now(timezone.utc) - rotation.last_rotated).days
-                                should_advance = days_since >= 30
-
-                            if should_advance:
-                                rotation.current_index = (rotation.current_index + 1) % len(rotation.kid_ids)
-                                rotation.last_rotated = datetime.now(timezone.utc)
-
-                        # Use per-kid rules for recurrence
-                        for rule in rules:
-                            if rule.recurrence == Recurrence.once:
-                                continue
-
-                            # If rotation exists, only generate for the current kid
-                            if rotation and int(rule.user_id) != int(rotation.kid_ids[rotation.current_index]):
-                                continue
-
-                            should_generate = False
-                            if rule.recurrence == Recurrence.daily:
-                                should_generate = True
-                            elif rule.recurrence == Recurrence.weekly:
-                                should_generate = today.weekday() == chore.created_at.weekday()
-                            elif rule.recurrence == Recurrence.custom and rule.custom_days:
-                                should_generate = today.weekday() in rule.custom_days
-
-                            if should_generate:
-                                existing = await db.execute(
-                                    select(ChoreAssignment).where(
-                                        ChoreAssignment.chore_id == chore.id,
-                                        ChoreAssignment.user_id == rule.user_id,
-                                        ChoreAssignment.date == today,
-                                    )
-                                )
-                                if existing.scalar_one_or_none() is None:
-                                    db.add(ChoreAssignment(
-                                        chore_id=chore.id, user_id=rule.user_id,
-                                        date=today, status=AssignmentStatus.pending,
-                                    ))
-                    else:
-                        # Legacy fallback: use chore-level settings
-                        if chore.recurrence == Recurrence.once:
-                            continue
-
-                        should_generate = False
-                        if chore.recurrence == Recurrence.daily:
-                            should_generate = True
-                        elif chore.recurrence == Recurrence.weekly:
-                            should_generate = today.weekday() == chore.created_at.weekday()
-                        elif chore.recurrence == Recurrence.custom and chore.custom_days:
-                            should_generate = today.weekday() in chore.custom_days
-
-                        if should_generate:
-                            rotation_result = await db.execute(
-                                select(ChoreRotation).where(ChoreRotation.chore_id == chore.id)
-                            )
-                            rotation = rotation_result.scalar_one_or_none()
-
-                            if rotation:
-                                should_advance = False
-                                if rotation.last_rotated is None:
-                                    should_advance = True
-                                elif rotation.cadence.value == "daily":
-                                    should_advance = True
-                                elif rotation.cadence.value == "weekly":
-                                    days_since = (datetime.now(timezone.utc) - rotation.last_rotated).days
-                                    should_advance = days_since >= 7
-                                elif rotation.cadence.value == "fortnightly":
-                                    days_since = (datetime.now(timezone.utc) - rotation.last_rotated).days
-                                    should_advance = days_since >= 14
-                                elif rotation.cadence.value == "monthly":
-                                    days_since = (datetime.now(timezone.utc) - rotation.last_rotated).days
-                                    should_advance = days_since >= 30
-
-                                if should_advance:
-                                    rotation.current_index = (rotation.current_index + 1) % len(rotation.kid_ids)
-                                    rotation.last_rotated = datetime.now(timezone.utc)
-
-                                user_ids = [rotation.kid_ids[rotation.current_index]]
-                            else:
-                                past_result = await db.execute(
-                                    select(ChoreAssignment.user_id).where(
-                                        ChoreAssignment.chore_id == chore.id
-                                    ).distinct()
-                                )
-                                user_ids = list(past_result.scalars().all())
-
-                            for uid in user_ids:
-                                existing = await db.execute(
-                                    select(ChoreAssignment).where(
-                                        ChoreAssignment.chore_id == chore.id,
-                                        ChoreAssignment.user_id == uid,
-                                        ChoreAssignment.date == today,
-                                    )
-                                )
-                                if existing.scalar_one_or_none() is None:
-                                    db.add(ChoreAssignment(
-                                        chore_id=chore.id, user_id=uid,
-                                        date=today, status=AssignmentStatus.pending,
-                                    ))
-
-                # Cleanup expired refresh tokens
+                # Clean up expired refresh tokens
                 await db.execute(
-                    select(RefreshToken).where(
+                    delete(RefreshToken).where(
                         RefreshToken.expires_at < datetime.now(timezone.utc)
                     )
                 )
 
                 await db.commit()
-        except Exception as e:
-            print(f"Daily reset error: {e}")
+        except Exception:
+            logger.exception("Daily reset error")
 
 
 @asynccontextmanager
@@ -206,7 +80,6 @@ app.add_middleware(
 )
 
 
-# Security headers middleware
 @app.middleware("http")
 async def security_headers(request: Request, call_next):
     response = await call_next(request)
@@ -228,7 +101,7 @@ async def security_headers(request: Request, call_next):
 
 
 # Import and register routers
-from backend.routers import (
+from backend.routers import (  # noqa: E402
     auth, chores, rewards, points, stats, calendar,
     notifications, admin, avatar, wishlist, events, spin, rotations, uploads,
 )
@@ -249,13 +122,11 @@ app.include_router(rotations.router)
 app.include_router(uploads.router)
 
 
-# Health check
 @app.get("/api/health")
 async def health():
     return {"status": "ok"}
 
 
-# WebSocket endpoint
 @app.websocket("/ws/{user_id}")
 async def websocket_endpoint(websocket: WebSocket, user_id: int):
     token = websocket.query_params.get("token")
@@ -282,7 +153,6 @@ if STATIC_DIR.is_dir():
 
     @app.get("/{full_path:path}")
     async def serve_frontend(full_path: str):
-        # Never serve frontend HTML for unmatched API routes
         if full_path.startswith("api/"):
             return JSONResponse({"detail": "Not found"}, status_code=404)
         file_path = STATIC_DIR / full_path

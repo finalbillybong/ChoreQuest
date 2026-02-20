@@ -1,5 +1,4 @@
-from datetime import datetime
-from typing import Optional
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
@@ -37,7 +36,7 @@ router = APIRouter(prefix="/api/rewards", tags=["rewards"])
 
 @router.get("/redemptions", response_model=list[RedemptionResponse])
 async def list_redemptions(
-    status: Optional[str] = Query(None),
+    status: str | None = Query(None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -85,7 +84,7 @@ async def approve_redemption(
 
     redemption.status = RedemptionStatus.approved
     redemption.approved_by = current_user.id
-    redemption.approved_at = datetime.utcnow()
+    redemption.approved_at = datetime.now(timezone.utc)
 
     # Notify the kid
     notif = Notification(
@@ -158,7 +157,7 @@ async def deny_redemption(
 
     redemption.status = RedemptionStatus.denied
     redemption.approved_by = current_user.id
-    redemption.approved_at = datetime.utcnow()
+    redemption.approved_at = datetime.now(timezone.utc)
 
     # Notify the kid
     notif = Notification(
@@ -211,7 +210,7 @@ async def fulfill_redemption(
 
     redemption.status = RedemptionStatus.fulfilled
     redemption.fulfilled_by = current_user.id
-    redemption.fulfilled_at = datetime.utcnow()
+    redemption.fulfilled_at = datetime.now(timezone.utc)
 
     # Notify the kid
     notif = Notification(
@@ -317,7 +316,7 @@ async def update_reward(
     for field, value in update_data.items():
         setattr(reward, field, value)
 
-    reward.updated_at = datetime.utcnow()
+    reward.updated_at = datetime.now(timezone.utc)
     await db.commit()
     await db.refresh(reward)
 
@@ -339,7 +338,7 @@ async def delete_reward(
         raise HTTPException(status_code=404, detail="Reward not found")
 
     reward.is_active = False
-    reward.updated_at = datetime.utcnow()
+    reward.updated_at = datetime.now(timezone.utc)
     await db.commit()
 
     await ws_manager.broadcast({"type": "data_changed", "data": {"entity": "reward"}}, exclude_user=current_user.id)
@@ -398,7 +397,7 @@ async def redeem_reward(
         user_id=current_user.id,
         points_spent=reward.point_cost,
         status=RedemptionStatus.approved,
-        approved_at=datetime.utcnow(),
+        approved_at=datetime.now(timezone.utc),
     )
 
     db.add(redemption)

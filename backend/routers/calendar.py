@@ -1,7 +1,7 @@
-import logging
-from datetime import date, timedelta, datetime
+from datetime import date, timedelta
+
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select, func, and_
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -11,8 +11,6 @@ from backend.models import (
     ChoreAssignment,
     ChoreAssignmentRule,
     ChoreExclusion,
-    ChoreRotation,
-    RotationCadence,
     User,
     UserRole,
     AssignmentStatus,
@@ -20,204 +18,12 @@ from backend.models import (
     NotificationType,
     Recurrence,
 )
-from backend.schemas import AssignmentResponse, TradeRequest
+from backend.schemas import TradeRequest
 from backend.dependencies import get_current_user, require_parent
 from backend.websocket_manager import ws_manager
+from backend.services.assignment_generator import auto_generate_week_assignments
 
 router = APIRouter(prefix="/api/calendar", tags=["calendar"])
-
-
-async def _get_assigned_user_ids(db: AsyncSession, chore: Chore) -> list[int]:
-    """Determine which user IDs should be assigned to a chore.
-
-    First checks for a ChoreRotation. Then checks assignment rules.
-    Falls back to past ChoreAssignment records.
-    """
-    # Check for rotation first
-    result = await db.execute(
-        select(ChoreRotation).where(ChoreRotation.chore_id == chore.id)
-    )
-    rotation = result.scalar_one_or_none()
-    if rotation and rotation.kid_ids:
-        return rotation.kid_ids
-
-    # Check for active assignment rules
-    rules_result = await db.execute(
-        select(ChoreAssignmentRule.user_id).where(
-            ChoreAssignmentRule.chore_id == chore.id,
-            ChoreAssignmentRule.is_active == True,
-        )
-    )
-    rule_user_ids = list(rules_result.scalars().all())
-    if rule_user_ids:
-        return rule_user_ids
-
-    # Fall back to distinct assigned users from previous assignments
-    result = await db.execute(
-        select(ChoreAssignment.user_id)
-        .where(ChoreAssignment.chore_id == chore.id)
-        .distinct()
-    )
-    user_ids = list(result.scalars().all())
-    return user_ids
-
-
-async def _auto_generate_assignments(
-    db: AsyncSession, week_start: date
-) -> None:
-    """Auto-generate ChoreAssignment records for recurring chores
-    that don't already have records for the given week.
-
-    Slots recorded in ``chore_exclusions`` are skipped so that
-    intentionally removed assignments are not recreated.
-    """
-    week_end = week_start + timedelta(days=6)
-    week_dates = [week_start + timedelta(days=i) for i in range(7)]
-
-    # Pre-load exclusions for this week
-    excl_result = await db.execute(
-        select(ChoreExclusion).where(
-            ChoreExclusion.date >= week_start,
-            ChoreExclusion.date <= week_end,
-        )
-    )
-    exclusion_set = {
-        (e.chore_id, e.user_id, e.date)
-        for e in excl_result.scalars().all()
-    }
-
-    # Get all active recurring chores
-    result = await db.execute(
-        select(Chore).where(Chore.is_active == True)
-    )
-    chores = result.scalars().all()
-
-    for chore in chores:
-        # Check for per-kid assignment rules first
-        rules_result = await db.execute(
-            select(ChoreAssignmentRule).where(
-                ChoreAssignmentRule.chore_id == chore.id,
-                ChoreAssignmentRule.is_active == True,
-            )
-        )
-        rules = rules_result.scalars().all()
-
-        if rules:
-            # Check if a rotation exists for this chore
-            rot_result = await db.execute(
-                select(ChoreRotation).where(ChoreRotation.chore_id == chore.id)
-            )
-            rotation = rot_result.scalar_one_or_none()
-
-            if rotation:
-                cadence_val = rotation.cadence.value if hasattr(rotation.cadence, 'value') else str(rotation.cadence)
-                print(
-                    f"[AUTOGEN] chore={chore.id} rotation kid_ids={rotation.kid_ids}"
-                    f" cadence={cadence_val!r} (raw={rotation.cadence!r},"
-                    f" type={type(rotation.cadence).__name__})"
-                    f" idx={rotation.current_index}",
-                    flush=True,
-                )
-
-            # Use per-kid assignment rules (new flow)
-            for rule in rules:
-                if rule.recurrence == Recurrence.once:
-                    continue  # One-time rules are handled at creation
-
-                for day in week_dates:
-                    should_create = False
-                    if rule.recurrence == Recurrence.daily:
-                        should_create = True
-                    elif rule.recurrence == Recurrence.weekly:
-                        if day.weekday() == chore.created_at.weekday():
-                            should_create = True
-                    elif rule.recurrence == Recurrence.custom:
-                        if rule.custom_days and day.weekday() in rule.custom_days:
-                            should_create = True
-
-                    if not should_create:
-                        continue
-
-                    # If rotation exists, only create for the rotation's
-                    # current kid (offset by day for daily cadence)
-                    if rotation and rotation.kid_ids:
-                        today_date = date.today()
-                        days_offset = (day - today_date).days
-                        cadence_str = rotation.cadence.value if hasattr(rotation.cadence, 'value') else str(rotation.cadence)
-                        if cadence_str == "daily":
-                            idx = (rotation.current_index + days_offset) % len(rotation.kid_ids)
-                        else:
-                            # weekly/fortnightly/monthly: same kid for the period
-                            idx = rotation.current_index
-                        rotation_kid = int(rotation.kid_ids[idx])
-                        if int(rule.user_id) != rotation_kid:
-                            continue
-
-                    if (chore.id, rule.user_id, day) in exclusion_set:
-                        continue
-
-                    existing = await db.execute(
-                        select(ChoreAssignment).where(
-                            ChoreAssignment.chore_id == chore.id,
-                            ChoreAssignment.user_id == rule.user_id,
-                            ChoreAssignment.date == day,
-                        )
-                    )
-                    if not existing.scalar_one_or_none():
-                        db.add(ChoreAssignment(
-                            chore_id=chore.id,
-                            user_id=rule.user_id,
-                            date=day,
-                            status=AssignmentStatus.pending,
-                        ))
-                        print(
-                            f"[AUTOGEN]   CREATED chore={chore.id} kid={rule.user_id} day={day}",
-                            flush=True,
-                        )
-        else:
-            # Legacy fallback: use chore-level recurrence
-            if chore.recurrence == Recurrence.once:
-                continue
-
-            user_ids = await _get_assigned_user_ids(db, chore)
-            if not user_ids:
-                continue
-
-            for day in week_dates:
-                should_create = False
-
-                if chore.recurrence == Recurrence.daily:
-                    should_create = True
-                elif chore.recurrence == Recurrence.weekly:
-                    if day.weekday() == chore.created_at.weekday():
-                        should_create = True
-                elif chore.recurrence == Recurrence.custom:
-                    if chore.custom_days and day.weekday() in chore.custom_days:
-                        should_create = True
-
-                if not should_create:
-                    continue
-
-                for user_id in user_ids:
-                    if (chore.id, user_id, day) in exclusion_set:
-                        continue
-
-                    existing = await db.execute(
-                        select(ChoreAssignment).where(
-                            ChoreAssignment.chore_id == chore.id,
-                            ChoreAssignment.user_id == user_id,
-                            ChoreAssignment.date == day,
-                        )
-                    )
-                    if not existing.scalar_one_or_none():
-                        db.add(ChoreAssignment(
-                            chore_id=chore.id,
-                            user_id=user_id,
-                            date=day,
-                            status=AssignmentStatus.pending,
-                        ))
-
-    await db.commit()
 
 
 @router.get("")
@@ -239,20 +45,15 @@ async def get_weekly_calendar(
     if week_start is None:
         today = date.today()
         week_start = today - timedelta(days=today.weekday())
-    else:
-        if week_start.weekday() != 0:
-            raise HTTPException(
-                status_code=400,
-                detail="week_start must be a Monday",
-            )
+    elif week_start.weekday() != 0:
+        raise HTTPException(status_code=400, detail="week_start must be a Monday")
 
     week_end = week_start + timedelta(days=6)
 
-    # Auto-generate missing assignments
-    await _auto_generate_assignments(db, week_start)
+    # Auto-generate missing assignments for the week
+    await auto_generate_week_assignments(db, week_start)
 
-    # Fetch all assignments for the week with chore (+category) and user eager-loaded
-    # Exclude assignments for deleted (inactive) chores
+    # Fetch all assignments for the week (exclude soft-deleted chores)
     result = await db.execute(
         select(ChoreAssignment)
         .join(Chore, ChoreAssignment.chore_id == Chore.id)
@@ -269,11 +70,9 @@ async def get_weekly_calendar(
     )
     assignments = result.scalars().all()
 
-    # Pre-load active assignment rules for all chore+user combos in this week
-    # so we can efficiently resolve per-kid requires_photo
-    chore_user_pairs = {(a.chore_id, a.user_id) for a in assignments}
+    # Pre-load per-kid requires_photo overrides in one query
     rule_map: dict[tuple[int, int], ChoreAssignmentRule] = {}
-    if chore_user_pairs:
+    if assignments:
         rules_result = await db.execute(
             select(ChoreAssignmentRule).where(
                 ChoreAssignmentRule.is_active == True,
@@ -282,7 +81,7 @@ async def get_weekly_calendar(
         for r in rules_result.scalars().all():
             rule_map[(r.chore_id, r.user_id)] = r
 
-    # Group by day — manually build dicts to avoid lazy-load issues
+    # Group by day
     grouped: dict[str, list] = {}
     for day_offset in range(7):
         day = week_start + timedelta(days=day_offset)
@@ -293,59 +92,14 @@ async def get_weekly_calendar(
         if day_key not in grouped:
             continue
 
-        # Resolve requires_photo: per-kid rule overrides chore-level
         kid_rule = rule_map.get((a.chore_id, a.user_id))
-        effective_requires_photo = kid_rule.requires_photo if kid_rule is not None else (a.chore.requires_photo if a.chore else False)
+        effective_requires_photo = (
+            kid_rule.requires_photo
+            if kid_rule is not None
+            else (a.chore.requires_photo if a.chore else False)
+        )
 
-        entry = {
-            "id": a.id,
-            "chore_id": a.chore_id,
-            "user_id": a.user_id,
-            "date": a.date.isoformat(),
-            "status": a.status.value if a.status else "pending",
-            "completed_at": a.completed_at.isoformat() if a.completed_at else None,
-            "verified_at": a.verified_at.isoformat() if a.verified_at else None,
-            "verified_by": a.verified_by,
-            "photo_proof_path": a.photo_proof_path,
-            "requires_photo": effective_requires_photo,
-        }
-        if a.chore:
-            entry["chore"] = {
-                "id": a.chore.id,
-                "title": a.chore.title,
-                "description": a.chore.description,
-                "points": a.chore.points,
-                "difficulty": a.chore.difficulty.value if a.chore.difficulty else None,
-                "icon": a.chore.icon,
-                "category_id": a.chore.category_id,
-                "category": {
-                    "id": a.chore.category.id,
-                    "name": a.chore.category.name,
-                    "icon": a.chore.category.icon,
-                    "colour": a.chore.category.colour,
-                    "is_default": a.chore.category.is_default,
-                } if a.chore.category else None,
-                "recurrence": a.chore.recurrence.value if a.chore.recurrence else None,
-                "custom_days": a.chore.custom_days,
-                "requires_photo": effective_requires_photo,
-                "is_active": a.chore.is_active,
-                "created_by": a.chore.created_by,
-                "created_at": a.chore.created_at.isoformat() if a.chore.created_at else None,
-            }
-        if a.user:
-            entry["user"] = {
-                "id": a.user.id,
-                "username": a.user.username,
-                "display_name": a.user.display_name,
-                "role": a.user.role.value if a.user.role else None,
-                "points_balance": a.user.points_balance,
-                "total_points_earned": a.user.total_points_earned,
-                "current_streak": a.user.current_streak,
-                "longest_streak": a.user.longest_streak,
-                "avatar_config": a.user.avatar_config,
-                "is_active": a.user.is_active,
-                "created_at": a.user.created_at.isoformat() if a.user.created_at else None,
-            }
+        entry = _build_assignment_entry(a, effective_requires_photo)
         grouped[day_key].append(entry)
 
     return {
@@ -355,6 +109,99 @@ async def get_weekly_calendar(
     }
 
 
+def _build_assignment_entry(
+    a: ChoreAssignment, effective_requires_photo: bool
+) -> dict:
+    """Build a calendar assignment dict from a ChoreAssignment with loaded relations."""
+    entry = {
+        "id": a.id,
+        "chore_id": a.chore_id,
+        "user_id": a.user_id,
+        "date": a.date.isoformat(),
+        "status": a.status.value if a.status else "pending",
+        "completed_at": a.completed_at.isoformat() if a.completed_at else None,
+        "verified_at": a.verified_at.isoformat() if a.verified_at else None,
+        "verified_by": a.verified_by,
+        "photo_proof_path": a.photo_proof_path,
+        "requires_photo": effective_requires_photo,
+    }
+    if a.chore:
+        entry["chore"] = {
+            "id": a.chore.id,
+            "title": a.chore.title,
+            "description": a.chore.description,
+            "points": a.chore.points,
+            "difficulty": a.chore.difficulty.value if a.chore.difficulty else None,
+            "icon": a.chore.icon,
+            "category_id": a.chore.category_id,
+            "category": {
+                "id": a.chore.category.id,
+                "name": a.chore.category.name,
+                "icon": a.chore.category.icon,
+                "colour": a.chore.category.colour,
+                "is_default": a.chore.category.is_default,
+            } if a.chore.category else None,
+            "recurrence": a.chore.recurrence.value if a.chore.recurrence else None,
+            "custom_days": a.chore.custom_days,
+            "requires_photo": effective_requires_photo,
+            "is_active": a.chore.is_active,
+            "created_by": a.chore.created_by,
+            "created_at": a.chore.created_at.isoformat() if a.chore.created_at else None,
+        }
+    if a.user:
+        entry["user"] = {
+            "id": a.user.id,
+            "username": a.user.username,
+            "display_name": a.user.display_name,
+            "role": a.user.role.value if a.user.role else None,
+            "points_balance": a.user.points_balance,
+            "total_points_earned": a.user.total_points_earned,
+            "current_streak": a.user.current_streak,
+            "longest_streak": a.user.longest_streak,
+            "avatar_config": a.user.avatar_config,
+            "is_active": a.user.is_active,
+            "created_at": a.user.created_at.isoformat() if a.user.created_at else None,
+        }
+    return entry
+
+
+# ---------------------------------------------------------------------------
+# Chore Trading
+# ---------------------------------------------------------------------------
+
+async def _get_trade_notification_or_404(
+    db: AsyncSession, notification_id: int, current_user: User
+) -> Notification:
+    """Load and validate a trade notification, raising appropriate errors."""
+    result = await db.execute(
+        select(Notification).where(
+            Notification.id == notification_id,
+            Notification.user_id == current_user.id,
+            Notification.type == NotificationType.trade_proposed,
+            Notification.reference_type == "trade",
+        )
+    )
+    notification = result.scalar_one_or_none()
+    if not notification:
+        raise HTTPException(status_code=404, detail="Trade notification not found")
+    return notification
+
+
+async def _get_trade_assignment_or_404(
+    db: AsyncSession, assignment_id: int
+) -> ChoreAssignment:
+    """Load a trade's assignment with its chore, raising 404 if missing."""
+    result = await db.execute(
+        select(ChoreAssignment)
+        .options(selectinload(ChoreAssignment.chore))
+        .where(ChoreAssignment.id == assignment_id)
+    )
+    assignment = result.scalar_one_or_none()
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+    return assignment
+
+
 @router.post("/trade")
 async def propose_trade(
     data: TradeRequest,
@@ -362,7 +209,6 @@ async def propose_trade(
     db: AsyncSession = Depends(get_db),
 ):
     """Kid proposes a chore trade to another kid."""
-    # Verify the assignment exists and belongs to the current user
     result = await db.execute(
         select(ChoreAssignment)
         .options(selectinload(ChoreAssignment.chore))
@@ -373,16 +219,10 @@ async def propose_trade(
         raise HTTPException(status_code=404, detail="Assignment not found")
 
     if assignment.user_id != current_user.id:
-        raise HTTPException(
-            status_code=403,
-            detail="You can only trade your own assignments",
-        )
+        raise HTTPException(status_code=403, detail="You can only trade your own assignments")
 
     if assignment.status != AssignmentStatus.pending:
-        raise HTTPException(
-            status_code=400,
-            detail="Can only trade pending assignments",
-        )
+        raise HTTPException(status_code=400, detail="Can only trade pending assignments")
 
     # Verify target user exists and is a kid
     result = await db.execute(
@@ -392,14 +232,12 @@ async def propose_trade(
             User.is_active == True,
         )
     )
-    target_user = result.scalar_one_or_none()
-    if not target_user:
+    if result.scalar_one_or_none() is None:
         raise HTTPException(status_code=404, detail="Target user not found or not a kid")
 
     if data.target_user_id == current_user.id:
         raise HTTPException(status_code=400, detail="Cannot trade with yourself")
 
-    # Create notification for the target kid
     chore_title = assignment.chore.title if assignment.chore else "a chore"
     notification = Notification(
         user_id=data.target_user_id,
@@ -413,7 +251,6 @@ async def propose_trade(
     await db.commit()
     await db.refresh(notification)
 
-    # Send real-time notification
     await ws_manager.send_to_user(
         data.target_user_id,
         {
@@ -437,44 +274,18 @@ async def accept_trade(
     db: AsyncSession = Depends(get_db),
 ):
     """Kid accepts a trade proposal."""
-    # Look up the trade notification
-    result = await db.execute(
-        select(Notification).where(
-            Notification.id == notification_id,
-            Notification.user_id == current_user.id,
-            Notification.type == NotificationType.trade_proposed,
-            Notification.reference_type == "trade",
-        )
-    )
-    notification = result.scalar_one_or_none()
-    if not notification:
-        raise HTTPException(status_code=404, detail="Trade notification not found")
-
-    # Get the assignment
-    assignment_id = notification.reference_id
-    result = await db.execute(
-        select(ChoreAssignment)
-        .options(selectinload(ChoreAssignment.chore))
-        .where(ChoreAssignment.id == assignment_id)
-    )
-    assignment = result.scalar_one_or_none()
-    if not assignment:
-        raise HTTPException(status_code=404, detail="Assignment not found")
+    notification = await _get_trade_notification_or_404(db, notification_id, current_user)
+    assignment = await _get_trade_assignment_or_404(db, notification.reference_id)
 
     if assignment.status != AssignmentStatus.pending:
-        raise HTTPException(
-            status_code=400,
-            detail="Assignment is no longer pending",
-        )
+        raise HTTPException(status_code=400, detail="Assignment is no longer pending")
 
-    # The proposer is the original owner of the assignment
     proposer_id = assignment.user_id
 
     # Reassign to the accepting kid
     assignment.user_id = current_user.id
     notification.is_read = True
 
-    # Notify the proposer
     chore_title = assignment.chore.title if assignment.chore else "a chore"
     proposer_notification = Notification(
         user_id=proposer_id,
@@ -487,7 +298,6 @@ async def accept_trade(
     db.add(proposer_notification)
     await db.commit()
 
-    # Send real-time notification to the proposer
     await ws_manager.send_to_user(
         proposer_id,
         {
@@ -501,7 +311,6 @@ async def accept_trade(
         },
     )
 
-    # Notify the accepting kid so their dashboard refreshes with the new quest
     await ws_manager.send_to_user(
         current_user.id,
         {
@@ -513,7 +322,6 @@ async def accept_trade(
         },
     )
 
-    # Broadcast to parents so their calendar view reflects the reassignment
     await ws_manager.broadcast(
         {"type": "data_changed", "data": {"entity": "assignment"}},
         exclude_user=current_user.id,
@@ -529,34 +337,12 @@ async def deny_trade(
     db: AsyncSession = Depends(get_db),
 ):
     """Kid denies a trade proposal."""
-    # Look up the trade notification
-    result = await db.execute(
-        select(Notification).where(
-            Notification.id == notification_id,
-            Notification.user_id == current_user.id,
-            Notification.type == NotificationType.trade_proposed,
-            Notification.reference_type == "trade",
-        )
-    )
-    notification = result.scalar_one_or_none()
-    if not notification:
-        raise HTTPException(status_code=404, detail="Trade notification not found")
-
-    # Get the assignment to find the proposer
-    assignment_id = notification.reference_id
-    result = await db.execute(
-        select(ChoreAssignment)
-        .options(selectinload(ChoreAssignment.chore))
-        .where(ChoreAssignment.id == assignment_id)
-    )
-    assignment = result.scalar_one_or_none()
-    if not assignment:
-        raise HTTPException(status_code=404, detail="Assignment not found")
+    notification = await _get_trade_notification_or_404(db, notification_id, current_user)
+    assignment = await _get_trade_assignment_or_404(db, notification.reference_id)
 
     proposer_id = assignment.user_id
     notification.is_read = True
 
-    # Notify the proposer
     chore_title = assignment.chore.title if assignment.chore else "a chore"
     proposer_notification = Notification(
         user_id=proposer_id,
@@ -569,7 +355,6 @@ async def deny_trade(
     db.add(proposer_notification)
     await db.commit()
 
-    # Send real-time notification to the proposer
     await ws_manager.send_to_user(
         proposer_id,
         {
@@ -586,6 +371,10 @@ async def deny_trade(
     return {"message": "Trade denied", "assignment_id": assignment.id}
 
 
+# ---------------------------------------------------------------------------
+# Assignment Removal
+# ---------------------------------------------------------------------------
+
 @router.delete("/assignments/{assignment_id}", status_code=204)
 async def remove_assignment(
     assignment_id: int,
@@ -598,12 +387,11 @@ async def remove_assignment(
 ):
     """Remove a pending assignment. Parent+ only.
 
-    Only pending assignments can be removed — completed, verified, or
+    Only pending assignments can be removed -- completed, verified, or
     skipped assignments are left intact.
 
     If ``all_future=true``, every pending assignment for the same
-    chore + kid from today onward is also deleted (useful for
-    recurring quests).
+    chore + kid from today onward is also deleted.
     """
     result = await db.execute(
         select(ChoreAssignment)
@@ -620,8 +408,6 @@ async def remove_assignment(
             detail="Only pending assignments can be removed",
         )
 
-    # For recurring chores, record exclusions so auto-generation
-    # won't recreate the removed assignments.
     is_recurring = (
         assignment.chore
         and assignment.chore.recurrence
@@ -629,59 +415,74 @@ async def remove_assignment(
     )
 
     if all_future:
-        # Remove all pending assignments for this chore + kid from this date onward
-        future_result = await db.execute(
-            select(ChoreAssignment).where(
-                ChoreAssignment.chore_id == assignment.chore_id,
-                ChoreAssignment.user_id == assignment.user_id,
-                ChoreAssignment.date >= assignment.date,
-                ChoreAssignment.status == AssignmentStatus.pending,
-            )
-        )
+        existing_exclusions = set()
         if is_recurring:
-            # Find existing exclusions so we don't insert duplicates
-            existing_excl = await db.execute(
-                select(ChoreExclusion).where(
-                    ChoreExclusion.chore_id == assignment.chore_id,
-                    ChoreExclusion.user_id == assignment.user_id,
-                    ChoreExclusion.date >= assignment.date,
-                )
-            )
-            existing_set = {
-                (e.chore_id, e.user_id, e.date)
-                for e in existing_excl.scalars().all()
-            }
-        for a in future_result.scalars().all():
-            if is_recurring and (a.chore_id, a.user_id, a.date) not in existing_set:
-                db.add(ChoreExclusion(
-                    chore_id=a.chore_id,
-                    user_id=a.user_id,
-                    date=a.date,
-                ))
-            await db.delete(a)
+            existing_exclusions = await _load_existing_exclusions(db, assignment)
+        await _remove_future_assignments(db, assignment, is_recurring, existing_exclusions)
     else:
         if is_recurring:
-            # Check for existing exclusion before inserting
-            existing = await db.execute(
-                select(ChoreExclusion).where(
-                    ChoreExclusion.chore_id == assignment.chore_id,
-                    ChoreExclusion.user_id == assignment.user_id,
-                    ChoreExclusion.date == assignment.date,
-                )
-            )
-            if not existing.scalar_one_or_none():
-                db.add(ChoreExclusion(
-                    chore_id=assignment.chore_id,
-                    user_id=assignment.user_id,
-                    date=assignment.date,
-                ))
+            await _add_exclusion_if_new(db, assignment.chore_id, assignment.user_id, assignment.date)
         await db.delete(assignment)
 
     await db.commit()
-
     await ws_manager.broadcast(
         {"type": "data_changed", "data": {"entity": "assignment"}},
         exclude_user=parent.id,
     )
-
     return None
+
+
+async def _load_existing_exclusions(
+    db: AsyncSession, assignment: ChoreAssignment
+) -> set[tuple[int, int, date]]:
+    """Load existing exclusions for the assignment's chore+user from its date onward."""
+    result = await db.execute(
+        select(ChoreExclusion).where(
+            ChoreExclusion.chore_id == assignment.chore_id,
+            ChoreExclusion.user_id == assignment.user_id,
+            ChoreExclusion.date >= assignment.date,
+        )
+    )
+    return {
+        (e.chore_id, e.user_id, e.date) for e in result.scalars().all()
+    }
+
+
+async def _remove_future_assignments(
+    db: AsyncSession,
+    assignment: ChoreAssignment,
+    is_recurring: bool,
+    existing_exclusions: set[tuple[int, int, date]],
+) -> None:
+    """Remove all pending assignments for the same chore+kid from the date onward."""
+    future_result = await db.execute(
+        select(ChoreAssignment).where(
+            ChoreAssignment.chore_id == assignment.chore_id,
+            ChoreAssignment.user_id == assignment.user_id,
+            ChoreAssignment.date >= assignment.date,
+            ChoreAssignment.status == AssignmentStatus.pending,
+        )
+    )
+    for a in future_result.scalars().all():
+        if is_recurring and (a.chore_id, a.user_id, a.date) not in existing_exclusions:
+            db.add(ChoreExclusion(
+                chore_id=a.chore_id, user_id=a.user_id, date=a.date,
+            ))
+        await db.delete(a)
+
+
+async def _add_exclusion_if_new(
+    db: AsyncSession, chore_id: int, user_id: int, exclusion_date: date
+) -> None:
+    """Add a ChoreExclusion if one doesn't already exist for this slot."""
+    existing = await db.execute(
+        select(ChoreExclusion).where(
+            ChoreExclusion.chore_id == chore_id,
+            ChoreExclusion.user_id == user_id,
+            ChoreExclusion.date == exclusion_date,
+        )
+    )
+    if not existing.scalar_one_or_none():
+        db.add(ChoreExclusion(
+            chore_id=chore_id, user_id=user_id, date=exclusion_date,
+        ))
