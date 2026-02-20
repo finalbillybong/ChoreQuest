@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.config import settings
 from backend.database import get_db
 from backend.models import User, UserRole, RefreshToken, InviteCode, AuditLog
+from backend.seed import seed_database
 from backend.schemas import (
     RegisterRequest,
     LoginRequest,
@@ -147,6 +148,11 @@ async def register(
     db.add(audit)
     await db.commit()
     await db.refresh(user)
+
+    # First user (admin) was created after startup seed ran with no creator —
+    # re-seed now so default quests and templates are populated.
+    if is_first_user:
+        await seed_database(db)
 
     return await _issue_tokens(user, db, response)
 
