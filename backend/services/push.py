@@ -99,10 +99,13 @@ async def get_vapid_public_key(db: AsyncSession) -> str:
 # Send push to a single subscription
 # ---------------------------------------------------------------------------
 
-def _send_one(subscription_info: dict, payload: str, vapid_private: str, vapid_claims: dict) -> bool:
-    """Synchronously send a single web push. Returns True on success."""
+def _send_one(subscription_info: dict, payload: str, vapid_private: str, vapid_claims: dict) -> str:
+    """Synchronously send a single web push.
+
+    Returns "ok", "gone" (endpoint dead — safe to delete), or "error".
+    """
     if not _ensure_pywebpush():
-        return False
+        return "error"
     try:
         _webpush(
             subscription_info=subscription_info,
@@ -111,17 +114,17 @@ def _send_one(subscription_info: dict, payload: str, vapid_private: str, vapid_c
             vapid_claims=vapid_claims,
             ttl=86400,
         )
-        return True
+        return "ok"
     except _WebPushException as e:
         status = getattr(e, "response", None)
         status_code = status.status_code if status else None
         if status_code in (404, 410):
-            return False
+            return "gone"
         logger.warning("Push failed (status=%s): %s", status_code, e)
-        return False
+        return "error"
     except Exception:
         logger.exception("Unexpected push error")
-        return False
+        return "error"
 
 
 # ---------------------------------------------------------------------------
@@ -165,7 +168,7 @@ async def send_push_to_user(
     })
 
     sent = 0
-    dead_ids = []
+    gone_ids = []
 
     for sub in subs:
         subscription_info = {
@@ -175,15 +178,16 @@ async def send_push_to_user(
                 "auth": sub.auth,
             },
         }
-        ok = _send_one(subscription_info, payload, vapid_private, vapid_claims)
-        if ok:
+        result = _send_one(subscription_info, payload, vapid_private, vapid_claims)
+        if result == "ok":
             sent += 1
-        else:
-            dead_ids.append(sub.id)
+        elif result == "gone":
+            gone_ids.append(sub.id)
+        # "error" → transient failure, keep subscription for next time
 
-    if dead_ids:
+    if gone_ids:
         await db.execute(
-            delete(PushSubscription).where(PushSubscription.id.in_(dead_ids))
+            delete(PushSubscription).where(PushSubscription.id.in_(gone_ids))
         )
         await db.commit()
 
