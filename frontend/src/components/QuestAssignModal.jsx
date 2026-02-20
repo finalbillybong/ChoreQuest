@@ -19,6 +19,7 @@ const RECURRENCE_OPTIONS = [
   { value: 'once', label: 'One-time' },
   { value: 'daily', label: 'Daily' },
   { value: 'weekly', label: 'Weekly' },
+  { value: 'fortnightly', label: 'Fortnightly' },
   { value: 'custom', label: 'Custom Days' },
 ];
 const CADENCE_OPTIONS = [
@@ -145,7 +146,7 @@ export default function QuestAssignModal({
     const cadenceToRecurrence = {
       daily: 'daily',
       weekly: 'weekly',
-      fortnightly: 'weekly',
+      fortnightly: 'fortnightly',
       monthly: 'weekly',
     };
     const recurrence = cadenceToRecurrence[rotationCadence] || 'daily';

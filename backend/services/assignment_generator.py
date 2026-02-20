@@ -91,7 +91,8 @@ async def generate_daily_assignments(db: AsyncSession, today: date) -> None:
                     continue
 
                 if not should_create_on_day(
-                    rule.recurrence, today, chore.created_at.weekday(), rule.custom_days
+                    rule.recurrence, today, chore.created_at.weekday(), rule.custom_days,
+                    created_at_date=chore.created_at.date() if hasattr(chore.created_at, 'date') else chore.created_at,
                 ):
                     continue
 
@@ -102,7 +103,8 @@ async def generate_daily_assignments(db: AsyncSession, today: date) -> None:
                 continue
 
             if not should_create_on_day(
-                chore.recurrence, today, chore.created_at.weekday(), chore.custom_days
+                chore.recurrence, today, chore.created_at.weekday(), chore.custom_days,
+                created_at_date=chore.created_at.date() if hasattr(chore.created_at, 'date') else chore.created_at,
             ):
                 continue
 
@@ -218,7 +220,8 @@ async def _generate_from_rules(
 
         for day in week_dates:
             if not should_create_on_day(
-                rule.recurrence, day, chore.created_at.weekday(), rule.custom_days
+                rule.recurrence, day, chore.created_at.weekday(), rule.custom_days,
+                created_at_date=chore.created_at.date() if hasattr(chore.created_at, 'date') else chore.created_at,
             ):
                 continue
 
@@ -265,7 +268,8 @@ async def _generate_legacy(
 
     for day in week_dates:
         if not should_create_on_day(
-            chore.recurrence, day, chore.created_at.weekday(), chore.custom_days
+            chore.recurrence, day, chore.created_at.weekday(), chore.custom_days,
+            created_at_date=chore.created_at.date() if hasattr(chore.created_at, 'date') else chore.created_at,
         ):
             continue
 

@@ -25,6 +25,7 @@ class Recurrence(str, enum.Enum):
     once = "once"
     daily = "daily"
     weekly = "weekly"
+    fortnightly = "fortnightly"
     custom = "custom"
 
 

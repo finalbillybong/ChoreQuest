@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { api } from '../api/client';
 import { useAuth } from '../hooks/useAuth';
 import AvatarDisplay from './AvatarDisplay';
-import { Save, Loader2 } from 'lucide-react';
+import { Save, Loader2, ChevronDown } from 'lucide-react';
 
 const HEAD_OPTIONS = [
   { id: 'round', label: 'Round' },
@@ -102,6 +102,17 @@ const DEFAULT_CONFIG = {
   bg_color: '#1a1a2e',
 };
 
+const CATEGORIES = [
+  { id: 'head', label: 'Head' },
+  { id: 'skin', label: 'Skin' },
+  { id: 'hair', label: 'Hair' },
+  { id: 'eyes', label: 'Eyes' },
+  { id: 'mouth', label: 'Mouth' },
+  { id: 'body', label: 'Body' },
+  { id: 'outfit', label: 'Outfit' },
+  { id: 'background', label: 'BG' },
+];
+
 function ColorSwatch({ colors, selected, onSelect }) {
   return (
     <div className="flex flex-wrap gap-1.5">
@@ -140,6 +151,75 @@ function ShapeSelector({ options, selected, onSelect }) {
   );
 }
 
+function CategoryContent({ category, config, set }) {
+  switch (category) {
+    case 'head':
+      return (
+        <div className="space-y-3">
+          <p className="text-muted text-xs font-medium">Shape</p>
+          <ShapeSelector options={HEAD_OPTIONS} selected={config.head} onSelect={(v) => set('head', v)} />
+        </div>
+      );
+    case 'skin':
+      return (
+        <div className="space-y-3">
+          <p className="text-muted text-xs font-medium">Colour</p>
+          <ColorSwatch colors={SKIN_COLORS} selected={config.head_color} onSelect={(v) => set('head_color', v)} />
+        </div>
+      );
+    case 'hair':
+      return (
+        <div className="space-y-3">
+          <p className="text-muted text-xs font-medium">Style</p>
+          <ShapeSelector options={HAIR_OPTIONS} selected={config.hair} onSelect={(v) => set('hair', v)} />
+          <p className="text-muted text-xs font-medium">Colour</p>
+          <ColorSwatch colors={HAIR_COLORS} selected={config.hair_color} onSelect={(v) => set('hair_color', v)} />
+        </div>
+      );
+    case 'eyes':
+      return (
+        <div className="space-y-3">
+          <p className="text-muted text-xs font-medium">Style</p>
+          <ShapeSelector options={EYES_OPTIONS} selected={config.eyes} onSelect={(v) => set('eyes', v)} />
+          <p className="text-muted text-xs font-medium">Colour</p>
+          <ColorSwatch colors={EYE_COLORS} selected={config.eye_color} onSelect={(v) => set('eye_color', v)} />
+        </div>
+      );
+    case 'mouth':
+      return (
+        <div className="space-y-3">
+          <p className="text-muted text-xs font-medium">Style</p>
+          <ShapeSelector options={MOUTH_OPTIONS} selected={config.mouth} onSelect={(v) => set('mouth', v)} />
+          <p className="text-muted text-xs font-medium">Colour</p>
+          <ColorSwatch colors={MOUTH_COLORS} selected={config.mouth_color} onSelect={(v) => set('mouth_color', v)} />
+        </div>
+      );
+    case 'body':
+      return (
+        <div className="space-y-3">
+          <p className="text-muted text-xs font-medium">Shape</p>
+          <ShapeSelector options={BODY_OPTIONS} selected={config.body} onSelect={(v) => set('body', v)} />
+        </div>
+      );
+    case 'outfit':
+      return (
+        <div className="space-y-3">
+          <p className="text-muted text-xs font-medium">Colour</p>
+          <ColorSwatch colors={BODY_COLORS} selected={config.body_color} onSelect={(v) => set('body_color', v)} />
+        </div>
+      );
+    case 'background':
+      return (
+        <div className="space-y-3">
+          <p className="text-muted text-xs font-medium">Colour</p>
+          <ColorSwatch colors={BG_COLORS} selected={config.bg_color} onSelect={(v) => set('bg_color', v)} />
+        </div>
+      );
+    default:
+      return null;
+  }
+}
+
 export default function AvatarEditor() {
   const { user, updateUser } = useAuth();
   const [config, setConfig] = useState(() => ({
@@ -148,6 +228,7 @@ export default function AvatarEditor() {
   }));
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
+  const [openCategory, setOpenCategory] = useState(null);
 
   useEffect(() => {
     if (user?.avatar_config && Object.keys(user.avatar_config).length > 0) {
@@ -175,9 +256,16 @@ export default function AvatarEditor() {
     }
   };
 
+  const toggleCategory = (id) => {
+    setOpenCategory((prev) => (prev === id ? null : id));
+  };
+
+  const row1 = CATEGORIES.slice(0, 4);
+  const row2 = CATEGORIES.slice(4);
+
   return (
     <div>
-      {/* Sticky live preview — stays visible while scrolling options */}
+      {/* Sticky live preview */}
       <div className="sticky top-14 z-10 pb-3">
         <div className="game-panel p-3 flex items-center justify-between gap-3">
           <AvatarDisplay config={config} size="lg" />
@@ -202,64 +290,57 @@ export default function AvatarEditor() {
         </div>
       </div>
 
-      {/* Options */}
-      <div className="game-panel p-4 space-y-5">
-        {/* Head */}
-        <Section title="Head Shape">
-          <ShapeSelector options={HEAD_OPTIONS} selected={config.head} onSelect={(v) => set('head', v)} />
-        </Section>
+      {/* Category buttons + expandable options */}
+      <div className="game-panel p-4 space-y-3">
+        {/* Row 1 */}
+        <div className="grid grid-cols-4 gap-2">
+          {row1.map((cat) => (
+            <button
+              key={cat.id}
+              onClick={() => toggleCategory(cat.id)}
+              className={`flex items-center justify-center gap-1 px-2 py-2 rounded-lg border text-xs font-medium transition-all ${
+                openCategory === cat.id
+                  ? 'border-sky bg-sky/15 text-sky'
+                  : 'border-border text-muted hover:border-border-light hover:text-cream'
+              }`}
+            >
+              {cat.label}
+              <ChevronDown
+                size={12}
+                className={`transition-transform ${openCategory === cat.id ? 'rotate-180' : ''}`}
+              />
+            </button>
+          ))}
+        </div>
 
-        {/* Skin Colour */}
-        <Section title="Skin Colour">
-          <ColorSwatch colors={SKIN_COLORS} selected={config.head_color} onSelect={(v) => set('head_color', v)} />
-        </Section>
+        {/* Row 2 */}
+        <div className="grid grid-cols-4 gap-2">
+          {row2.map((cat) => (
+            <button
+              key={cat.id}
+              onClick={() => toggleCategory(cat.id)}
+              className={`flex items-center justify-center gap-1 px-2 py-2 rounded-lg border text-xs font-medium transition-all ${
+                openCategory === cat.id
+                  ? 'border-sky bg-sky/15 text-sky'
+                  : 'border-border text-muted hover:border-border-light hover:text-cream'
+              }`}
+            >
+              {cat.label}
+              <ChevronDown
+                size={12}
+                className={`transition-transform ${openCategory === cat.id ? 'rotate-180' : ''}`}
+              />
+            </button>
+          ))}
+        </div>
 
-        {/* Hair */}
-        <Section title="Hair Style">
-          <ShapeSelector options={HAIR_OPTIONS} selected={config.hair} onSelect={(v) => set('hair', v)} />
-        </Section>
-
-        {/* Hair Colour */}
-        <Section title="Hair Colour">
-          <ColorSwatch colors={HAIR_COLORS} selected={config.hair_color} onSelect={(v) => set('hair_color', v)} />
-        </Section>
-
-        {/* Eyes */}
-        <Section title="Eyes">
-          <ShapeSelector options={EYES_OPTIONS} selected={config.eyes} onSelect={(v) => set('eyes', v)} />
-          <ColorSwatch colors={EYE_COLORS} selected={config.eye_color} onSelect={(v) => set('eye_color', v)} />
-        </Section>
-
-        {/* Mouth */}
-        <Section title="Mouth">
-          <ShapeSelector options={MOUTH_OPTIONS} selected={config.mouth} onSelect={(v) => set('mouth', v)} />
-          <ColorSwatch colors={MOUTH_COLORS} selected={config.mouth_color} onSelect={(v) => set('mouth_color', v)} />
-        </Section>
-
-        {/* Body */}
-        <Section title="Body Shape">
-          <ShapeSelector options={BODY_OPTIONS} selected={config.body} onSelect={(v) => set('body', v)} />
-        </Section>
-
-        {/* Body / Outfit Colour */}
-        <Section title="Outfit Colour">
-          <ColorSwatch colors={BODY_COLORS} selected={config.body_color} onSelect={(v) => set('body_color', v)} />
-        </Section>
-
-        {/* Background */}
-        <Section title="Background">
-          <ColorSwatch colors={BG_COLORS} selected={config.bg_color} onSelect={(v) => set('bg_color', v)} />
-        </Section>
+        {/* Expanded options panel */}
+        {openCategory && (
+          <div className="pt-2 pb-1 border-t border-border/50">
+            <CategoryContent category={openCategory} config={config} set={set} />
+          </div>
+        )}
       </div>
-    </div>
-  );
-}
-
-function Section({ title, children }) {
-  return (
-    <div className="space-y-2">
-      <p className="text-muted text-xs font-medium">{title}</p>
-      {children}
     </div>
   );
 }

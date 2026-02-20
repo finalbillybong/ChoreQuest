@@ -18,8 +18,6 @@ import {
   Calendar,
   Camera,
   Filter,
-  Search,
-  BookTemplate,
   CheckCircle2,
   Eye,
   EyeOff,
@@ -115,7 +113,6 @@ export default function Chores() {
   // Filter state
   const [filterCategory, setFilterCategory] = useState('');
   const [filterDifficulty, setFilterDifficulty] = useState('');
-  const [searchTerm, setSearchTerm] = useState('');
   const [showCompleted, setShowCompleted] = useState(false);
 
   // Modal state
@@ -238,14 +235,6 @@ export default function Chores() {
   const filteredChores = currentChores.filter((chore) => {
     if (filterCategory && chore.category?.name !== filterCategory) return false;
     if (filterDifficulty && chore.difficulty !== filterDifficulty) return false;
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      const tTitle = themedTitle(chore.title || '', colorTheme).toLowerCase();
-      const tDesc = themedDescription(chore.title || '', chore.description || '', colorTheme).toLowerCase();
-      if (!tTitle.includes(term) && !tDesc.includes(term) &&
-          !chore.title?.toLowerCase().includes(term) && !chore.description?.toLowerCase().includes(term))
-        return false;
-    }
     if (isKid && !showCompleted) {
       const status = assignmentStatusMap[chore.id];
       if (status === 'completed' || status === 'verified') return false;
@@ -358,16 +347,6 @@ export default function Chores() {
           <div className="flex items-center gap-2 text-muted">
             <Filter size={16} />
             <span className="text-sm">Filters:</span>
-          </div>
-          <div className="relative flex-1 min-w-0">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
-            <input
-              type="text"
-              placeholder="Search quests..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="field-input pl-9 py-2"
-            />
           </div>
           <select
             value={filterCategory}
