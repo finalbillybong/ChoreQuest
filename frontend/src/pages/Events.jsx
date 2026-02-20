@@ -9,6 +9,7 @@ import {
   Trash2,
   Loader2,
   Zap,
+  Square,
 } from 'lucide-react';
 
 function formatDate(iso) {
@@ -118,6 +119,15 @@ export default function Events() {
     }
   };
 
+  const endEvent = async (id) => {
+    try {
+      await api(`/api/events/${id}/end`, { method: 'POST' });
+      fetchEvents();
+    } catch (err) {
+      setError(err.message || 'Failed to end event');
+    }
+  };
+
   const deleteEvent = async (id) => {
     try {
       await api(`/api/events/${id}`, { method: 'DELETE' });
@@ -199,6 +209,15 @@ export default function Events() {
 
                 {isParent && (
                   <div className="flex items-center gap-1 flex-shrink-0">
+                    {event.is_active && (
+                      <button
+                        onClick={() => endEvent(event.id)}
+                        className="p-2 rounded hover:bg-gold/10 text-gold/60 hover:text-gold transition-colors"
+                        title="End event early"
+                      >
+                        <Square size={14} />
+                      </button>
+                    )}
                     <button
                       onClick={() => openEdit(event)}
                       className="p-2 rounded hover:bg-surface-raised text-muted hover:text-cream transition-colors"

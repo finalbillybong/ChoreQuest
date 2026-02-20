@@ -16,7 +16,9 @@ from backend.services.push import send_push_to_user
 
 logger = logging.getLogger(__name__)
 
-# Collect new Notification objects during flush, then send pushes after commit.
+# Event loop reference captured at install time (avoids fragile
+# asyncio.get_running_loop() calls inside SQLAlchemy greenlets).
+_loop = None
 
 
 def _after_flush(session: Session, flush_context):
@@ -28,14 +30,7 @@ def _after_flush(session: Session, flush_context):
     if not new_notifs:
         return
 
-    # Store on session info so after_commit can pick them up
-    pending = getattr(session.info, "setdefault", None)
-    if pending is None:
-        # session.info is a plain dict
-        session.info.setdefault("_pending_push", [])
-    else:
-        session.info.setdefault("_pending_push", [])
-
+    session.info.setdefault("_pending_push", [])
     for n in new_notifs:
         session.info["_pending_push"].append({
             "user_id": n.user_id,
@@ -48,34 +43,35 @@ def _after_flush(session: Session, flush_context):
 def _after_commit(session: Session):
     """Fire push notifications as background tasks after successful commit."""
     pending = session.info.pop("_pending_push", [])
-    if not pending:
-        return
-
-    try:
-        loop = asyncio.get_running_loop()
-    except RuntimeError:
+    if not pending or _loop is None:
         return
 
     for item in pending:
-        loop.create_task(_send_push_safe(
-            user_id=item["user_id"],
-            title=item["title"],
-            body=item["body"],
-            tag=item["tag"],
-        ))
+        _loop.call_soon_threadsafe(
+            _loop.create_task,
+            _send_push_safe(
+                user_id=item["user_id"],
+                title=item["title"],
+                body=item["body"],
+                tag=item["tag"],
+            ),
+        )
 
 
 async def _send_push_safe(user_id: int, title: str, body: str, tag: str):
     """Send push in a fresh DB session so we don't interfere with the caller."""
     try:
         async with async_session() as db:
-            await send_push_to_user(db, user_id, title, body, url="/", tag=tag)
+            sent = await send_push_to_user(db, user_id, title, body, url="/", tag=tag)
+            logger.info("Push sent to user %s: %d device(s)", user_id, sent)
     except Exception:
         logger.warning("Push notification failed for user %s", user_id, exc_info=True)
 
 
 def install_push_hooks():
     """Register SQLAlchemy event listeners. Call once at startup."""
+    global _loop
+    _loop = asyncio.get_running_loop()
     event.listen(Session, "after_flush", _after_flush)
     event.listen(Session, "after_commit", _after_commit)
-    logger.info("Push notification hooks installed")
+    logger.info("Push notification hooks installed (loop=%s)", _loop)

@@ -25,7 +25,7 @@ async def init_db():
             Reward, RewardRedemption, PointTransaction,
             Achievement, UserAchievement, WishlistItem, SeasonalEvent,
             Notification, SpinResult, ApiKey, AuditLog, AppSetting,
-            InviteCode, RefreshToken,
+            InviteCode, RefreshToken, PushSubscription,
         )
         await conn.run_sync(Base.metadata.create_all)
 

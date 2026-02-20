@@ -13,12 +13,17 @@ from backend.websocket_manager import ws_manager
 router = APIRouter(prefix="/api/events", tags=["events"])
 
 
+def _make_aware(dt: datetime) -> datetime:
+    """Treat naive datetimes (from SQLite) as UTC."""
+    return dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt
+
+
 def _event_to_response(event: SeasonalEvent) -> dict:
-    """Build an EventResponse dict with computed is_active based on date range."""
+    """Build an EventResponse dict with computed is_active based on date range + DB flag."""
     now = datetime.now(timezone.utc)
-    computed_active = event.start_date <= now <= event.end_date
+    in_range = _make_aware(event.start_date) <= now <= _make_aware(event.end_date)
     data = EventResponse.model_validate(event).model_dump()
-    data["is_active"] = computed_active
+    data["is_active"] = event.is_active and in_range
     return data
 
 
@@ -90,6 +95,26 @@ async def update_event(
     if event.end_date <= event.start_date:
         raise HTTPException(status_code=400, detail="end_date must be after start_date")
 
+    await db.commit()
+    await db.refresh(event)
+    await ws_manager.broadcast({"type": "data_changed", "data": {"entity": "event"}})
+    return _event_to_response(event)
+
+
+# ---------- POST /{id}/end ----------
+@router.post("/{event_id}/end", response_model=EventResponse)
+async def end_event(
+    event_id: int,
+    db: AsyncSession = Depends(get_db),
+    _parent=Depends(require_parent),
+):
+    """End a seasonal event early (parent+ only)."""
+    result = await db.execute(select(SeasonalEvent).where(SeasonalEvent.id == event_id))
+    event = result.scalar_one_or_none()
+    if event is None:
+        raise HTTPException(status_code=404, detail="Event not found")
+
+    event.is_active = False
     await db.commit()
     await db.refresh(event)
     await ws_manager.broadcast({"type": "data_changed", "data": {"entity": "event"}})

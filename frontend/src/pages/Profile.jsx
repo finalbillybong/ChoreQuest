@@ -31,11 +31,26 @@ import { usePushNotifications } from '../hooks/usePushNotifications';
 function PushNotificationToggle() {
   const { supported, supportLevel, permission, subscribed, loading, toggle } = usePushNotifications();
   const [toggling, setToggling] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState('');
 
   const handleToggle = async () => {
     setToggling(true);
     await toggle();
     setToggling(false);
+  };
+
+  const handleTest = async () => {
+    setTesting(true);
+    setTestResult('');
+    try {
+      const data = await api('/api/push/test', { method: 'POST' });
+      setTestResult(data.detail);
+    } catch (err) {
+      setTestResult(err.message || 'Test failed');
+    } finally {
+      setTesting(false);
+    }
   };
 
   const denied = permission === 'denied';
@@ -117,6 +132,20 @@ function PushNotificationToggle() {
               }`}
             />
           </button>
+        </div>
+      )}
+      {subscribed && (
+        <div className="mt-3 flex items-center gap-2">
+          <button
+            onClick={handleTest}
+            disabled={testing}
+            className="text-xs text-sky/70 hover:text-sky underline"
+          >
+            {testing ? 'Sending...' : 'Send test notification'}
+          </button>
+          {testResult && (
+            <span className="text-xs text-muted">{testResult}</span>
+          )}
         </div>
       )}
     </div>

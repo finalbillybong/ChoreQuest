@@ -4,7 +4,7 @@ from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.database import get_db
-from backend.dependencies import get_current_user
+from backend.dependencies import get_current_user, require_parent
 from backend.models import PushSubscription
 from backend.services.push import get_vapid_public_key, send_push_to_user
 
@@ -91,3 +91,27 @@ async def push_status(
     )
     has_subscription = result.scalar_one_or_none() is not None
     return {"subscribed": has_subscription}
+
+
+# ---------- POST /test ----------
+@router.post("/test")
+async def test_push(
+    db: AsyncSession = Depends(get_db),
+    user=Depends(require_parent),
+):
+    """Send a test push notification to the current user (parent only)."""
+    sub_count = await db.execute(
+        select(PushSubscription.id).where(PushSubscription.user_id == user.id)
+    )
+    subs = sub_count.scalars().all()
+    if not subs:
+        raise HTTPException(status_code=400, detail="No push subscriptions found. Toggle push off and on again.")
+
+    sent = await send_push_to_user(
+        db, user.id,
+        title="ChoreQuest Test",
+        body="Push notifications are working!",
+        url="/",
+        tag="test",
+    )
+    return {"detail": f"Sent to {sent}/{len(subs)} device(s)"}

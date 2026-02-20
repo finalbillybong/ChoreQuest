@@ -937,12 +937,13 @@ async def verify_chore(
     assignment.verified_by = user.id
     assignment.updated_at = now
 
-    # Calculate event multiplier
+    # Calculate event multiplier (use naive UTC to match SQLite storage)
+    now_naive = now.replace(tzinfo=None)
     ev_result = await db.execute(
         select(SeasonalEvent).where(
             SeasonalEvent.is_active == True,
-            SeasonalEvent.start_date <= now,
-            SeasonalEvent.end_date >= now,
+            SeasonalEvent.start_date <= now_naive,
+            SeasonalEvent.end_date >= now_naive,
         )
     )
     active_events = ev_result.scalars().all()
