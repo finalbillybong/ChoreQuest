@@ -139,6 +139,27 @@ export default function QuestAssignModal({
     }
   }, [rotationEnabled, selectedCount, kidConfigs]);
 
+  // Keep per-kid recurrence in sync with rotation cadence
+  useEffect(() => {
+    if (!rotationEnabled || selectedCount < 2) return;
+    const cadenceToRecurrence = {
+      daily: 'daily',
+      weekly: 'weekly',
+      fortnightly: 'weekly',
+      monthly: 'weekly',
+    };
+    const recurrence = cadenceToRecurrence[rotationCadence] || 'daily';
+    setKidConfigs((prev) => {
+      const next = { ...prev };
+      for (const [kidId, config] of Object.entries(next)) {
+        if (config.selected && config.recurrence !== recurrence) {
+          next[kidId] = { ...config, recurrence };
+        }
+      }
+      return next;
+    });
+  }, [rotationEnabled, rotationCadence, selectedCount]);
+
   const toggleKid = (kidId) => {
     setKidConfigs((prev) => ({
       ...prev,
@@ -196,6 +217,18 @@ export default function QuestAssignModal({
 
     const body = { assignments };
     if (rotationEnabled && selectedCount >= 2) {
+      // Sync per-kid recurrence with the rotation cadence so the quest
+      // frequency matches what the user chose (e.g. weekly cadence →
+      // quest appears once per week, not daily).
+      const cadenceToRecurrence = {
+        daily: 'daily',
+        weekly: 'weekly',
+        fortnightly: 'weekly',
+        monthly: 'weekly',
+      };
+      const recurrence = cadenceToRecurrence[rotationCadence] || 'daily';
+      assignments.forEach((a) => { a.recurrence = recurrence; });
+
       // Reorder so the chosen first kid is at index 0 (backend uses kid_ids[0])
       if (rotationFirstKid != null) {
         const firstIdx = assignments.findIndex((a) => a.user_id === Number(rotationFirstKid));
@@ -331,13 +364,19 @@ export default function QuestAssignModal({
                       <div>
                         <label className="block text-muted text-xs font-medium mb-1">
                           Recurrence
+                          {rotationEnabled && selectedCount >= 2 && (
+                            <span className="text-purple ml-1">(set by rotation)</span>
+                          )}
                         </label>
                         <select
                           value={config.recurrence}
                           onChange={(e) =>
                             updateKidConfig(kid.id, 'recurrence', e.target.value)
                           }
-                          className={`${selectClass} w-full`}
+                          disabled={rotationEnabled && selectedCount >= 2}
+                          className={`${selectClass} w-full${
+                            rotationEnabled && selectedCount >= 2 ? ' opacity-50 cursor-not-allowed' : ''
+                          }`}
                         >
                           {RECURRENCE_OPTIONS.map((opt) => (
                             <option key={opt.value} value={opt.value}>
