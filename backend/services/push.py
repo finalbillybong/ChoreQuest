@@ -42,18 +42,18 @@ def _ensure_pywebpush():
 def _generate_vapid_keys() -> tuple[str, str]:
     """Generate a new VAPID EC P-256 key pair.
 
-    Returns (private_key_pem, public_key_urlsafe_b64).
+    Returns (private_key_raw_b64url, public_key_urlsafe_b64).
+    Both keys are base64url-encoded (no padding), which is the format
+    pywebpush expects.
     """
     from cryptography.hazmat.primitives.asymmetric import ec
     from cryptography.hazmat.primitives import serialization
 
     private_key = ec.generate_private_key(ec.SECP256R1())
 
-    private_pem = private_key.private_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PrivateFormat.PKCS8,
-        encryption_algorithm=serialization.NoEncryption(),
-    ).decode()
+    # Extract raw 32-byte private scalar — pywebpush expects this as base64url
+    raw_private = private_key.private_numbers().private_value.to_bytes(32, "big")
+    private_b64 = base64.urlsafe_b64encode(raw_private).rstrip(b"=").decode()
 
     public_bytes = private_key.public_key().public_bytes(
         encoding=serialization.Encoding.X962,
@@ -61,11 +61,21 @@ def _generate_vapid_keys() -> tuple[str, str]:
     )
     public_b64 = base64.urlsafe_b64encode(public_bytes).rstrip(b"=").decode()
 
-    return private_pem, public_b64
+    return private_b64, public_b64
+
+
+def _normalize_private_key(key: str) -> str:
+    """Convert a VAPID private key to raw base64url format if it's PEM."""
+    if not key.startswith("-----"):
+        return key  # already raw base64url
+    from cryptography.hazmat.primitives import serialization
+    priv = serialization.load_pem_private_key(key.encode(), password=None)
+    raw = priv.private_numbers().private_value.to_bytes(32, "big")
+    return base64.urlsafe_b64encode(raw).rstrip(b"=").decode()
 
 
 async def get_vapid_keys(db: AsyncSession) -> tuple[str, str]:
-    """Return (private_pem, public_b64) — from env, DB, or freshly generated."""
+    """Return (private_key, public_b64) — from env, DB, or freshly generated."""
     if settings.VAPID_PRIVATE_KEY and settings.VAPID_PUBLIC_KEY:
         return settings.VAPID_PRIVATE_KEY, settings.VAPID_PUBLIC_KEY
 
@@ -110,7 +120,7 @@ def _send_one(subscription_info: dict, payload: str, vapid_private: str, vapid_c
         _webpush(
             subscription_info=subscription_info,
             data=payload,
-            vapid_private_key=vapid_private,
+            vapid_private_key=_normalize_private_key(vapid_private),
             vapid_claims=vapid_claims,
             ttl=86400,
         )
