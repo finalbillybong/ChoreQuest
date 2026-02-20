@@ -18,13 +18,24 @@ export function usePushNotifications() {
   const [permission, setPermission] = useState('default');
   const [subscribed, setSubscribed] = useState(false);
   const [loading, setLoading] = useState(true);
+  // 'full' | 'needs-install' | 'unsupported'
+  const [supportLevel, setSupportLevel] = useState('unsupported');
 
   // Check browser support
   useEffect(() => {
-    const ok = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+    const hasSW = 'serviceWorker' in navigator;
+    const hasPush = 'PushManager' in window;
+    const hasNotif = 'Notification' in window;
+    const ok = hasSW && hasPush && hasNotif;
     setSupported(ok);
     if (ok) {
       setPermission(Notification.permission);
+      setSupportLevel('full');
+    } else if (hasSW && !hasPush) {
+      // iOS Safari in a browser tab — PushManager only exists in standalone PWA mode
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+        || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      setSupportLevel(isIOS ? 'needs-install' : 'unsupported');
     }
   }, []);
 
@@ -127,6 +138,7 @@ export function usePushNotifications() {
 
   return {
     supported,
+    supportLevel,
     permission,
     subscribed,
     loading,

@@ -29,10 +29,11 @@ import {
 import { usePushNotifications } from '../hooks/usePushNotifications';
 
 function PushNotificationToggle() {
-  const { supported, permission, subscribed, loading, toggle } = usePushNotifications();
+  const { supported, supportLevel, permission, subscribed, loading, toggle } = usePushNotifications();
   const [toggling, setToggling] = useState(false);
 
-  if (!supported) return null;
+  // Hide only on truly unsupported browsers (no service worker at all)
+  if (supportLevel === 'unsupported') return null;
 
   const handleToggle = async () => {
     setToggling(true);
@@ -41,6 +42,7 @@ function PushNotificationToggle() {
   };
 
   const denied = permission === 'denied';
+  const needsInstall = supportLevel === 'needs-install';
 
   return (
     <div className="game-panel p-5">
@@ -48,39 +50,55 @@ function PushNotificationToggle() {
         {subscribed ? <Bell size={16} className="text-sky" /> : <BellOff size={16} className="text-muted" />}
         Push Notifications
       </h2>
-      <div className="flex items-center justify-between">
-        <div className="min-w-0 flex-1 mr-3">
+      {needsInstall ? (
+        <div>
           <p className="text-cream/80 text-sm">
-            {denied
-              ? 'Notifications blocked by browser'
-              : subscribed
-                ? 'You\'ll get alerts even when the app is closed'
-                : 'Get notified about quests, rewards & achievements'}
+            Get notified about quests, rewards & achievements
           </p>
-          {denied && (
-            <p className="text-muted text-xs mt-1">
-              Check your browser settings to allow notifications for this site.
-            </p>
-          )}
+          <p className="text-amber/80 text-xs mt-2">
+            To enable push notifications, add ChoreQuest to your Home Screen:
+          </p>
+          <ol className="text-muted text-xs mt-1 list-decimal list-inside space-y-0.5">
+            <li>Tap the <strong className="text-cream/70">Share</strong> button in Safari</li>
+            <li>Scroll down and tap <strong className="text-cream/70">Add to Home Screen</strong></li>
+            <li>Open ChoreQuest from your Home Screen</li>
+          </ol>
         </div>
-        <button
-          onClick={handleToggle}
-          disabled={loading || toggling || denied}
-          className={`relative w-12 h-6 rounded-full transition-colors flex-shrink-0 ${
-            subscribed
-              ? 'bg-sky/30 border border-sky/40'
-              : 'bg-navy border border-border'
-          } ${(denied) ? 'opacity-40 cursor-not-allowed' : ''}`}
-        >
-          <div
-            className={`absolute top-0.5 w-5 h-5 rounded-full transition-all ${
+      ) : (
+        <div className="flex items-center justify-between">
+          <div className="min-w-0 flex-1 mr-3">
+            <p className="text-cream/80 text-sm">
+              {denied
+                ? 'Notifications blocked by browser'
+                : subscribed
+                  ? 'You\'ll get alerts even when the app is closed'
+                  : 'Get notified about quests, rewards & achievements'}
+            </p>
+            {denied && (
+              <p className="text-muted text-xs mt-1">
+                Check your browser settings to allow notifications for this site.
+              </p>
+            )}
+          </div>
+          <button
+            onClick={handleToggle}
+            disabled={loading || toggling || denied}
+            className={`relative w-12 h-6 rounded-full transition-colors flex-shrink-0 ${
               subscribed
-                ? 'left-6 bg-sky'
-                : 'left-0.5 bg-muted/60'
-            }`}
-          />
-        </button>
-      </div>
+                ? 'bg-sky/30 border border-sky/40'
+                : 'bg-navy border border-border'
+            } ${(denied) ? 'opacity-40 cursor-not-allowed' : ''}`}
+          >
+            <div
+              className={`absolute top-0.5 w-5 h-5 rounded-full transition-all ${
+                subscribed
+                  ? 'left-6 bg-sky'
+                  : 'left-0.5 bg-muted/60'
+              }`}
+            />
+          </button>
+        </div>
+      )}
     </div>
   );
 }
