@@ -17,6 +17,7 @@ from backend.auth import decode_access_token
 from backend.websocket_manager import ws_manager
 from backend.models import RefreshToken
 from backend.services.assignment_generator import generate_daily_assignments
+from backend.services.push_hook import install_push_hooks
 
 logger = logging.getLogger(__name__)
 
@@ -60,6 +61,7 @@ async def daily_reset_task():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
+    install_push_hooks()
     async with async_session() as db:
         await seed_database(db)
     task = asyncio.create_task(daily_reset_task())
@@ -93,6 +95,7 @@ async def security_headers(request: Request, call_next):
         "font-src 'self' https://fonts.gstatic.com; "
         "img-src 'self' data: blob:; "
         "connect-src 'self' wss: ws:; "
+        "worker-src 'self'; "
         "frame-ancestors 'none'"
     )
     if settings.COOKIE_SECURE:
@@ -103,7 +106,7 @@ async def security_headers(request: Request, call_next):
 # Import and register routers
 from backend.routers import (  # noqa: E402
     auth, chores, rewards, points, stats, calendar,
-    notifications, admin, avatar, wishlist, events, spin, rotations, uploads,
+    notifications, admin, avatar, wishlist, events, spin, rotations, uploads, push,
 )
 
 app.include_router(auth.router)
@@ -120,6 +123,7 @@ app.include_router(events.router)
 app.include_router(spin.router)
 app.include_router(rotations.router)
 app.include_router(uploads.router)
+app.include_router(push.router)
 
 
 @app.get("/api/health")
