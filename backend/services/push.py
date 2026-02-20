@@ -42,18 +42,21 @@ def _ensure_pywebpush():
 def _generate_vapid_keys() -> tuple[str, str]:
     """Generate a new VAPID EC P-256 key pair.
 
-    Returns (private_key_raw_b64url, public_key_urlsafe_b64).
-    Both keys are base64url-encoded (no padding), which is the format
-    pywebpush expects.
+    Returns (private_key_b64url, public_key_b64url).
+    The private key is DER-encoded (PKCS8) then base64url-encoded without
+    padding — exactly what pywebpush's Vapid.from_string → from_der expects.
     """
     from cryptography.hazmat.primitives.asymmetric import ec
     from cryptography.hazmat.primitives import serialization
 
     private_key = ec.generate_private_key(ec.SECP256R1())
 
-    # Extract raw 32-byte private scalar — pywebpush expects this as base64url
-    raw_private = private_key.private_numbers().private_value.to_bytes(32, "big")
-    private_b64 = base64.urlsafe_b64encode(raw_private).rstrip(b"=").decode()
+    private_der = private_key.private_bytes(
+        encoding=serialization.Encoding.DER,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption(),
+    )
+    private_b64 = base64.urlsafe_b64encode(private_der).rstrip(b"=").decode()
 
     public_bytes = private_key.public_key().public_bytes(
         encoding=serialization.Encoding.X962,
@@ -65,13 +68,39 @@ def _generate_vapid_keys() -> tuple[str, str]:
 
 
 def _normalize_private_key(key: str) -> str:
-    """Convert a VAPID private key to raw base64url format if it's PEM."""
+    """Ensure a VAPID private key is in base64url-encoded DER format.
+
+    Handles PEM keys (from older stored values) and raw 32-byte keys
+    by converting them to DER PKCS8 base64url, which is what pywebpush
+    expects via Vapid.from_string → from_der.
+    """
     if not key.startswith("-----"):
-        return key  # already raw base64url
+        # Could be raw (32 bytes decoded) or already DER — check length
+        raw = base64.urlsafe_b64decode(key + "==")
+        if len(raw) == 32:
+            # Raw 32-byte scalar — convert to DER so from_der can parse it
+            from cryptography.hazmat.primitives.asymmetric import ec
+            from cryptography.hazmat.primitives import serialization
+            priv = ec.derive_private_key(
+                int.from_bytes(raw, "big"), ec.SECP256R1()
+            )
+            der = priv.private_bytes(
+                encoding=serialization.Encoding.DER,
+                format=serialization.PrivateFormat.PKCS8,
+                encryption_algorithm=serialization.NoEncryption(),
+            )
+            return base64.urlsafe_b64encode(der).rstrip(b"=").decode()
+        return key  # already DER base64url
+
+    # PEM → load and re-encode as DER base64url
     from cryptography.hazmat.primitives import serialization
     priv = serialization.load_pem_private_key(key.encode(), password=None)
-    raw = priv.private_numbers().private_value.to_bytes(32, "big")
-    return base64.urlsafe_b64encode(raw).rstrip(b"=").decode()
+    der = priv.private_bytes(
+        encoding=serialization.Encoding.DER,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption(),
+    )
+    return base64.urlsafe_b64encode(der).rstrip(b"=").decode()
 
 
 async def get_vapid_keys(db: AsyncSession) -> tuple[str, str]:
