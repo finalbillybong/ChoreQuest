@@ -83,6 +83,12 @@ export function usePushNotifications() {
       // Get service worker registration
       const registration = await navigator.serviceWorker.ready;
 
+      // Clear any stale subscription (e.g. after DB reset changed VAPID keys)
+      const existing = await registration.pushManager.getSubscription();
+      if (existing) {
+        await existing.unsubscribe();
+      }
+
       // Subscribe to push
       const pushSub = await registration.pushManager.subscribe({
         userVisibleOnly: true,
