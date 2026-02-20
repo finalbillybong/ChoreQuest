@@ -52,7 +52,7 @@ DEFAULT_QUESTS = [
         "category": "Bedroom",
         "difficulty": Difficulty.medium,
         "points": 20,
-        "recurrence": Recurrence.daily,
+        "recurrence": Recurrence.once,
         "icon": "bed",
     },
     {
@@ -61,7 +61,7 @@ DEFAULT_QUESTS = [
         "category": "Kitchen",
         "difficulty": Difficulty.easy,
         "points": 15,
-        "recurrence": Recurrence.daily,
+        "recurrence": Recurrence.once,
         "icon": "cooking-pot",
     },
     {
@@ -70,7 +70,7 @@ DEFAULT_QUESTS = [
         "category": "Homework",
         "difficulty": Difficulty.hard,
         "points": 30,
-        "recurrence": Recurrence.daily,
+        "recurrence": Recurrence.once,
         "icon": "book-open",
     },
     {
@@ -79,7 +79,7 @@ DEFAULT_QUESTS = [
         "category": "Kitchen",
         "difficulty": Difficulty.medium,
         "points": 25,
-        "recurrence": Recurrence.daily,
+        "recurrence": Recurrence.once,
         "icon": "cooking-pot",
     },
     {
@@ -88,7 +88,7 @@ DEFAULT_QUESTS = [
         "category": "Laundry",
         "difficulty": Difficulty.easy,
         "points": 15,
-        "recurrence": Recurrence.daily,
+        "recurrence": Recurrence.once,
         "icon": "shirt",
     },
     {
@@ -97,7 +97,7 @@ DEFAULT_QUESTS = [
         "category": "Pets",
         "difficulty": Difficulty.easy,
         "points": 10,
-        "recurrence": Recurrence.daily,
+        "recurrence": Recurrence.once,
         "icon": "paw-print",
     },
     {
@@ -106,7 +106,7 @@ DEFAULT_QUESTS = [
         "category": "Garden",
         "difficulty": Difficulty.hard,
         "points": 30,
-        "recurrence": Recurrence.weekly,
+        "recurrence": Recurrence.once,
         "icon": "flower-2",
     },
     {
@@ -115,7 +115,7 @@ DEFAULT_QUESTS = [
         "category": "Bathroom",
         "difficulty": Difficulty.medium,
         "points": 20,
-        "recurrence": Recurrence.weekly,
+        "recurrence": Recurrence.once,
         "icon": "bath",
     },
     {
@@ -124,7 +124,7 @@ DEFAULT_QUESTS = [
         "category": "General",
         "difficulty": Difficulty.easy,
         "points": 10,
-        "recurrence": Recurrence.daily,
+        "recurrence": Recurrence.once,
         "icon": "home",
     },
     {
@@ -133,7 +133,7 @@ DEFAULT_QUESTS = [
         "category": "Outdoor",
         "difficulty": Difficulty.medium,
         "points": 20,
-        "recurrence": Recurrence.weekly,
+        "recurrence": Recurrence.once,
         "icon": "trees",
     },
 ]

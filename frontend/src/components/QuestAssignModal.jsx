@@ -16,21 +16,19 @@ import {
   CalendarDays,
 } from 'lucide-react';
 
-const RECURRENCE_OPTIONS = [
+const FREQUENCY_OPTIONS = [
   { value: 'once', label: 'One-time' },
   { value: 'daily', label: 'Daily' },
   { value: 'weekly', label: 'Weekly' },
   { value: 'fortnightly', label: 'Fortnightly' },
-  { value: 'custom', label: 'Custom Days' },
 ];
-const CADENCE_OPTIONS = [
+const ROTATION_CADENCE_OPTIONS = [
   { value: 'daily', label: 'Daily' },
   { value: 'weekly', label: 'Weekly' },
   { value: 'fortnightly', label: 'Fortnightly' },
   { value: 'monthly', label: 'Monthly' },
 ];
 const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-const DIFFICULTY_LEVEL = { easy: 1, medium: 2, hard: 3, expert: 4 };
 
 const selectClass =
   'bg-navy-light border-2 border-border text-cream p-2 rounded text-sm ' +
@@ -44,68 +42,75 @@ export default function QuestAssignModal({
   kids,
 }) {
   const { colorTheme } = useTheme();
-  // Per-kid assignment configs: { [kidId]: { selected, recurrence, custom_days, requires_photo } }
+
+  // Per-kid: { [kidId]: { selected, requires_photo } }
   const [kidConfigs, setKidConfigs] = useState({});
   const [expandedKid, setExpandedKid] = useState(null);
+
+  // Shared schedule (applies to all selected kids)
+  const [scheduleFrequency, setScheduleFrequency] = useState('daily');
+  const [scheduleDays, setScheduleDays] = useState([]);
+
+  // Rotation (2+ kids only)
   const [rotationEnabled, setRotationEnabled] = useState(false);
   const [rotationCadence, setRotationCadence] = useState('weekly');
   const [rotationFirstKid, setRotationFirstKid] = useState(null);
-  const [rotationDays, setRotationDays] = useState([]);
+
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const [existingRules, setExistingRules] = useState([]);
-
-  // Track whether any heroes were previously assigned (to show unassign warning)
   const [hadExistingAssignments, setHadExistingAssignments] = useState(false);
 
-  // Initialize kid configs
+  // Initialize
   useEffect(() => {
     if (!isOpen || !chore || !kids.length) return;
 
-    // Fetch existing rules for this chore
+    // Fetch existing rules
     api(`/api/chores/${chore.id}/rules`)
       .then((rules) => {
         const rulesList = Array.isArray(rules) ? rules : [];
-        setExistingRules(rulesList);
         const hasActive = rulesList.some((r) => r.is_active);
         setHadExistingAssignments(hasActive);
+
+        // Build kid configs
         const configs = {};
         for (const kid of kids) {
           const existingRule = rulesList.find(
             (r) => r.user_id === kid.id && r.is_active
           );
-          configs[kid.id] = existingRule
-            ? {
-                selected: true,
-                recurrence: existingRule.recurrence || 'daily',
-                custom_days: existingRule.custom_days || [],
-                requires_photo: existingRule.requires_photo || false,
-              }
-            : {
-                selected: false,
-                recurrence: 'daily',
-                custom_days: [],
-                requires_photo: false,
-              };
+          configs[kid.id] = {
+            selected: !!existingRule,
+            requires_photo: existingRule?.requires_photo || false,
+          };
         }
         setKidConfigs(configs);
+
+        // Derive shared schedule from first active rule
+        const firstActive = rulesList.find((r) => r.is_active);
+        if (firstActive) {
+          if (firstActive.recurrence === 'custom' && firstActive.custom_days?.length) {
+            setScheduleFrequency('daily');
+            setScheduleDays(firstActive.custom_days);
+          } else {
+            setScheduleFrequency(firstActive.recurrence || 'daily');
+            setScheduleDays([]);
+          }
+        } else {
+          setScheduleFrequency('daily');
+          setScheduleDays([]);
+        }
       })
       .catch(() => {
         const configs = {};
         for (const kid of kids) {
-          configs[kid.id] = {
-            selected: false,
-            recurrence: 'daily',
-            custom_days: [],
-            requires_photo: false,
-          };
+          configs[kid.id] = { selected: false, requires_photo: false };
         }
         setKidConfigs(configs);
-        setExistingRules([]);
         setHadExistingAssignments(false);
+        setScheduleFrequency('daily');
+        setScheduleDays([]);
       });
 
-    // Fetch existing rotation for this chore
+    // Fetch existing rotation
     api(`/api/chores/${chore.id}/rotation`)
       .then((rot) => {
         if (rot && rot.kid_ids && rot.kid_ids.length >= 2) {
@@ -125,17 +130,6 @@ export default function QuestAssignModal({
         setRotationFirstKid(null);
       });
 
-    // Restore rotation days from existing rules (if any use custom recurrence)
-    api(`/api/chores/${chore.id}/rules`)
-      .then((rules) => {
-        const rulesList = Array.isArray(rules) ? rules : [];
-        const customRule = rulesList.find(
-          (r) => r.is_active && r.recurrence === 'custom' && r.custom_days?.length
-        );
-        setRotationDays(customRule ? customRule.custom_days : []);
-      })
-      .catch(() => setRotationDays([]));
-
     setError('');
   }, [isOpen, chore, kids]);
 
@@ -143,7 +137,7 @@ export default function QuestAssignModal({
   const selectedCount = selectedKids.length;
   const isUnassigningAll = hadExistingAssignments && selectedCount === 0;
 
-  // Auto-default rotationFirstKid when rotation is on but no valid first kid is set
+  // Auto-default rotationFirstKid
   useEffect(() => {
     if (!rotationEnabled || selectedCount < 2) return;
     const selectedIds = selectedKids.map(([id]) => Number(id));
@@ -152,42 +146,6 @@ export default function QuestAssignModal({
     }
   }, [rotationEnabled, selectedCount, kidConfigs]);
 
-  // Keep per-kid recurrence in sync with rotation settings
-  useEffect(() => {
-    if (!rotationEnabled || selectedCount < 2) return;
-
-    if (rotationDays.length > 0) {
-      // Specific days selected — use custom recurrence with those days
-      setKidConfigs((prev) => {
-        const next = { ...prev };
-        for (const [kidId, config] of Object.entries(next)) {
-          if (config.selected && (config.recurrence !== 'custom' || JSON.stringify(config.custom_days) !== JSON.stringify(rotationDays))) {
-            next[kidId] = { ...config, recurrence: 'custom', custom_days: [...rotationDays] };
-          }
-        }
-        return next;
-      });
-    } else {
-      // No specific days — fall back to cadence mapping
-      const cadenceToRecurrence = {
-        daily: 'daily',
-        weekly: 'weekly',
-        fortnightly: 'fortnightly',
-        monthly: 'weekly',
-      };
-      const recurrence = cadenceToRecurrence[rotationCadence] || 'daily';
-      setKidConfigs((prev) => {
-        const next = { ...prev };
-        for (const [kidId, config] of Object.entries(next)) {
-          if (config.selected && config.recurrence !== recurrence) {
-            next[kidId] = { ...config, recurrence };
-          }
-        }
-        return next;
-      });
-    }
-  }, [rotationEnabled, rotationCadence, rotationDays, selectedCount]);
-
   const toggleKid = (kidId) => {
     setKidConfigs((prev) => ({
       ...prev,
@@ -195,29 +153,15 @@ export default function QuestAssignModal({
     }));
   };
 
-  const updateKidConfig = (kidId, field, value) => {
-    setKidConfigs((prev) => ({
-      ...prev,
-      [kidId]: { ...prev[kidId], [field]: value },
-    }));
+  const toggleScheduleDay = (dayIdx) => {
+    setScheduleDays((prev) =>
+      prev.includes(dayIdx)
+        ? prev.filter((d) => d !== dayIdx)
+        : [...prev, dayIdx]
+    );
   };
 
-  const toggleCustomDay = (kidId, day) => {
-    setKidConfigs((prev) => {
-      const current = prev[kidId]?.custom_days || [];
-      return {
-        ...prev,
-        [kidId]: {
-          ...prev[kidId],
-          custom_days: current.includes(day)
-            ? current.filter((d) => d !== day)
-            : [...current, day],
-        },
-      };
-    });
-  };
-
-  // Toggle photo proof for all selected kids at once
+  // Toggle photo proof for all selected kids
   const togglePhotoAll = () => {
     const anyHasPhoto = selectedKids.some(([, c]) => c.requires_photo);
     const newValue = !anyHasPhoto;
@@ -232,38 +176,31 @@ export default function QuestAssignModal({
     });
   };
 
+  // Compute the effective recurrence + custom_days from shared schedule
+  const getEffectiveSchedule = () => {
+    if (scheduleDays.length > 0) {
+      return { recurrence: 'custom', custom_days: [...scheduleDays] };
+    }
+    return { recurrence: scheduleFrequency, custom_days: null };
+  };
+
   const handleSubmit = async () => {
     setSubmitting(true);
     setError('');
 
+    const { recurrence, custom_days } = getEffectiveSchedule();
+
     let assignments = selectedKids.map(([kidId, config]) => ({
       user_id: Number(kidId),
-      recurrence: config.recurrence,
-      custom_days: config.recurrence === 'custom' ? config.custom_days : null,
+      recurrence,
+      custom_days,
       requires_photo: config.requires_photo,
     }));
 
     const body = { assignments };
-    if (rotationEnabled && selectedCount >= 2) {
-      if (rotationDays.length > 0) {
-        // Specific days selected — use custom recurrence
-        assignments.forEach((a) => {
-          a.recurrence = 'custom';
-          a.custom_days = [...rotationDays];
-        });
-      } else {
-        // No specific days — map cadence to recurrence
-        const cadenceToRecurrence = {
-          daily: 'daily',
-          weekly: 'weekly',
-          fortnightly: 'fortnightly',
-          monthly: 'weekly',
-        };
-        const recurrence = cadenceToRecurrence[rotationCadence] || 'daily';
-        assignments.forEach((a) => { a.recurrence = recurrence; });
-      }
 
-      // Reorder so the chosen first kid is at index 0 (backend uses kid_ids[0])
+    if (rotationEnabled && selectedCount >= 2) {
+      // Reorder so the chosen first kid is at index 0
       if (rotationFirstKid != null) {
         const firstIdx = assignments.findIndex((a) => a.user_id === Number(rotationFirstKid));
         if (firstIdx > 0) {
@@ -289,6 +226,20 @@ export default function QuestAssignModal({
 
   const allSelectedHavePhoto = selectedCount > 0 && selectedKids.every(([, c]) => c.requires_photo);
   const someSelectedHavePhoto = selectedCount > 0 && selectedKids.some(([, c]) => c.requires_photo);
+  const hasDaysSelected = scheduleDays.length > 0;
+
+  // Summary text for the schedule
+  const scheduleLabel = (() => {
+    if (hasDaysSelected) {
+      return scheduleDays
+        .slice()
+        .sort((a, b) => a - b)
+        .map((d) => DAY_NAMES[d])
+        .join(', ');
+    }
+    const opt = FREQUENCY_OPTIONS.find((f) => f.value === scheduleFrequency);
+    return opt ? opt.label : scheduleFrequency;
+  })();
 
   return (
     <Modal
@@ -353,7 +304,6 @@ export default function QuestAssignModal({
                     isSelected ? 'border-sky/40 bg-sky/5' : 'border-border'
                   }`}
                 >
-                  {/* Kid header row */}
                   <div className="flex items-center gap-3 p-3">
                     <input
                       type="checkbox"
@@ -377,75 +327,17 @@ export default function QuestAssignModal({
                     {isSelected && (
                       <button
                         type="button"
-                        onClick={() =>
-                          setExpandedKid(isExpanded ? null : kid.id)
-                        }
+                        onClick={() => setExpandedKid(isExpanded ? null : kid.id)}
                         className="p-1 rounded hover:bg-surface-raised text-muted hover:text-cream transition-colors"
                       >
-                        {isExpanded ? (
-                          <ChevronUp size={16} />
-                        ) : (
-                          <ChevronDown size={16} />
-                        )}
+                        {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                       </button>
                     )}
                   </div>
 
-                  {/* Expanded per-kid settings */}
+                  {/* Expanded: per-kid photo proof only */}
                   {isExpanded && (
-                    <div className="px-3 pb-3 space-y-3 border-t border-border/50 pt-3 ml-7">
-                      {/* Recurrence */}
-                      <div>
-                        <label className="block text-muted text-xs font-medium mb-1">
-                          Recurrence
-                          {rotationEnabled && selectedCount >= 2 && (
-                            <span className="text-purple ml-1">(set by rotation)</span>
-                          )}
-                        </label>
-                        <select
-                          value={config.recurrence}
-                          onChange={(e) =>
-                            updateKidConfig(kid.id, 'recurrence', e.target.value)
-                          }
-                          disabled={rotationEnabled && selectedCount >= 2}
-                          className={`${selectClass} w-full${
-                            rotationEnabled && selectedCount >= 2 ? ' opacity-50 cursor-not-allowed' : ''
-                          }`}
-                        >
-                          {RECURRENCE_OPTIONS.map((opt) => (
-                            <option key={opt.value} value={opt.value}>
-                              {opt.label}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      {/* Custom days */}
-                      {config.recurrence === 'custom' && (
-                        <div>
-                          <label className="block text-muted text-xs font-medium mb-1">
-                            Quest Days
-                          </label>
-                          <div className="flex flex-wrap gap-1.5">
-                            {DAY_NAMES.map((day, idx) => (
-                              <button
-                                key={day}
-                                type="button"
-                                onClick={() => toggleCustomDay(kid.id, idx)}
-                                className={`px-2 py-1 rounded border text-xs transition-colors ${
-                                  config.custom_days.includes(idx)
-                                    ? 'border-sky bg-sky/20 text-sky'
-                                    : 'border-border text-muted hover:border-cream/30'
-                                }`}
-                              >
-                                {day}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Per-kid photo proof */}
+                    <div className="px-3 pb-3 border-t border-border/50 pt-3 ml-7">
                       <div className="flex items-center justify-between">
                         <label className="text-muted text-xs font-medium flex items-center gap-1.5">
                           <Camera size={12} />
@@ -454,11 +346,10 @@ export default function QuestAssignModal({
                         <button
                           type="button"
                           onClick={() =>
-                            updateKidConfig(
-                              kid.id,
-                              'requires_photo',
-                              !config.requires_photo
-                            )
+                            setKidConfigs((prev) => ({
+                              ...prev,
+                              [kid.id]: { ...prev[kid.id], requires_photo: !config.requires_photo },
+                            }))
                           }
                           className={`relative w-10 h-5 rounded-full border-2 transition-colors ${
                             config.requires_photo
@@ -490,7 +381,68 @@ export default function QuestAssignModal({
           </div>
         )}
 
-        {/* Photo proof toggle (applies to all selected kids) */}
+        {/* Schedule section — shown when 1+ kids selected */}
+        {selectedCount > 0 && (
+          <div className="p-3 rounded-lg border border-border bg-surface-raised/20 space-y-3">
+            <label className="text-cream text-sm font-medium flex items-center gap-2">
+              <CalendarDays size={14} />
+              Schedule
+            </label>
+
+            {/* Frequency dropdown */}
+            <div>
+              <label className="block text-muted text-xs font-medium mb-1">
+                Frequency
+                {hasDaysSelected && (
+                  <span className="text-sky ml-1">(overridden by quest days)</span>
+                )}
+              </label>
+              <select
+                value={scheduleFrequency}
+                onChange={(e) => setScheduleFrequency(e.target.value)}
+                disabled={hasDaysSelected}
+                className={`${selectClass} w-full${hasDaysSelected ? ' opacity-50 cursor-not-allowed' : ''}`}
+              >
+                {FREQUENCY_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Day picker */}
+            <div>
+              <label className="block text-muted text-xs font-medium mb-1">
+                Quest Days
+                <span className="text-muted/60 ml-1">(optional)</span>
+              </label>
+              <div className="flex flex-wrap gap-1.5">
+                {DAY_NAMES.map((day, idx) => (
+                  <button
+                    key={day}
+                    type="button"
+                    onClick={() => toggleScheduleDay(idx)}
+                    className={`px-2.5 py-1.5 rounded border text-xs font-medium transition-colors ${
+                      scheduleDays.includes(idx)
+                        ? 'border-sky bg-sky/20 text-sky'
+                        : 'border-border text-muted hover:border-cream/30'
+                    }`}
+                  >
+                    {day}
+                  </button>
+                ))}
+              </div>
+              <p className="text-muted text-xs mt-1">
+                {hasDaysSelected
+                  ? `Quest appears on ${scheduleDays.slice().sort((a, b) => a - b).map((d) => DAY_NAMES[d]).join(', ')}.`
+                  : 'Pick specific days, or leave empty to use the frequency above.'}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Photo proof toggle */}
         {selectedCount > 0 && (
           <div className="p-3 rounded-lg border border-border bg-surface-raised/20">
             <div className="flex items-center justify-between">
@@ -530,7 +482,7 @@ export default function QuestAssignModal({
           </div>
         )}
 
-        {/* Rotation section */}
+        {/* Rotation section — shown when 2+ kids selected */}
         {selectedCount >= 2 && (
           <div className="p-3 rounded-lg border border-border bg-surface-raised/20 space-y-3">
             <div className="flex items-center justify-between">
@@ -554,18 +506,21 @@ export default function QuestAssignModal({
                 />
               </button>
             </div>
+            <p className="text-muted text-xs">
+              Alternate which hero is assigned. The schedule above controls when the quest appears.
+            </p>
             {rotationEnabled && (
               <div className="space-y-3">
                 <div>
                   <label className="block text-muted text-xs font-medium mb-1">
-                    Rotation Cadence
+                    Swap Every
                   </label>
                   <select
                     value={rotationCadence}
                     onChange={(e) => setRotationCadence(e.target.value)}
                     className={`${selectClass} w-full`}
                   >
-                    {CADENCE_OPTIONS.map((opt) => (
+                    {ROTATION_CADENCE_OPTIONS.map((opt) => (
                       <option key={opt.value} value={opt.value}>
                         {opt.label}
                       </option>
@@ -573,44 +528,10 @@ export default function QuestAssignModal({
                   </select>
                 </div>
                 <div>
-                  <label className="flex items-center gap-1.5 text-muted text-xs font-medium mb-1">
-                    <CalendarDays size={12} />
-                    Quest Days
-                    <span className="text-muted/60">(optional)</span>
-                  </label>
-                  <div className="flex flex-wrap gap-1.5">
-                    {DAY_NAMES.map((day, idx) => (
-                      <button
-                        key={day}
-                        type="button"
-                        onClick={() =>
-                          setRotationDays((prev) =>
-                            prev.includes(idx)
-                              ? prev.filter((d) => d !== idx)
-                              : [...prev, idx]
-                          )
-                        }
-                        className={`px-2 py-1 rounded border text-xs transition-colors ${
-                          rotationDays.includes(idx)
-                            ? 'border-purple bg-purple/20 text-purple'
-                            : 'border-border text-muted hover:border-cream/30'
-                        }`}
-                      >
-                        {day}
-                      </button>
-                    ))}
-                  </div>
-                  <p className="text-muted text-xs mt-1">
-                    {rotationDays.length > 0
-                      ? `Quest appears on ${rotationDays.map((d) => DAY_NAMES[d]).join(', ')} only.`
-                      : 'No days selected — quest appears every day matching the cadence.'}
-                  </p>
-                </div>
-                <div>
                   <label className="block text-muted text-xs font-medium mb-1">
                     Starts With
                   </label>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     {selectedKids.map(([kidId]) => {
                       const kid = kids.find((k) => k.id === Number(kidId));
                       if (!kid) return null;
@@ -637,7 +558,7 @@ export default function QuestAssignModal({
                     })}
                   </div>
                   <p className="text-muted text-xs mt-1">
-                    This hero will be assigned the quest first, then it rotates.
+                    This hero gets the quest first, then it rotates.
                   </p>
                 </div>
               </div>
