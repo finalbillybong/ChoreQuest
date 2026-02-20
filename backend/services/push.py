@@ -151,6 +151,59 @@ async def get_vapid_public_key(db: AsyncSession) -> str:
 # Send push to a single subscription
 # ---------------------------------------------------------------------------
 
+def _b64url(data: bytes) -> str:
+    """Base64url-encode without padding."""
+    return base64.urlsafe_b64encode(data).rstrip(b"=").decode()
+
+
+def _build_vapid_token(private_key, public_key_b64: str, aud: str, sub: str) -> dict:
+    """Build VAPID Authorization header from scratch using only cryptography.
+
+    Returns dict with "Authorization" key ready for WebPusher.send().
+    No py_vapid involved.
+    """
+    import time as _time
+    from cryptography.hazmat.primitives import hashes
+    from cryptography.hazmat.primitives.asymmetric import ec, utils
+
+    # JWT header
+    header = {"typ": "JWT", "alg": "ES256"}
+    # JWT claims
+    claims = {
+        "aud": aud,
+        "exp": int(_time.time()) + (12 * 60 * 60),
+        "sub": sub,
+    }
+
+    h = _b64url(json.dumps(header, separators=(",", ":")).encode())
+    p = _b64url(json.dumps(claims, separators=(",", ":")).encode())
+    signing_input = f"{h}.{p}"
+
+    # ES256 signature (DER → raw r||s as per RFC 7518 §3.4)
+    der_sig = private_key.sign(
+        signing_input.encode(),
+        ec.ECDSA(hashes.SHA256()),
+    )
+    r, s = utils.decode_dss_signature(der_sig)
+    raw_sig = r.to_bytes(32, "big") + s.to_bytes(32, "big")
+
+    token = f"{signing_input}.{_b64url(raw_sig)}"
+
+    logger.info(
+        "VAPID JWT built:\n"
+        "  header:  %s\n"
+        "  claims:  %s\n"
+        "  token:   %s...%s\n"
+        "  k param: %s...%s",
+        json.dumps(header),
+        json.dumps(claims),
+        token[:50], token[-20:],
+        public_key_b64[:20], public_key_b64[-10:],
+    )
+
+    return {"Authorization": f"vapid t={token},k={public_key_b64}"}
+
+
 def _send_one(
     subscription_info: dict,
     payload: str,
@@ -166,13 +219,12 @@ def _send_one(
         return "error"
 
     try:
-        from py_vapid import Vapid
         from pywebpush import WebPusher
     except ImportError:
-        logger.exception("Missing py_vapid or pywebpush")
+        logger.exception("Missing pywebpush")
         return "error"
 
-    # --- Load key and build Vapid instance directly ---
+    # --- Load key ---
     try:
         ec_key = _load_private_key(vapid_private)
     except Exception:
@@ -181,48 +233,30 @@ def _send_one(
 
     derived_pub = _public_key_b64(ec_key)
 
-    # --- Diagnostic: verify key pair ---
     endpoint = subscription_info.get("endpoint", "")
     url = urlparse(endpoint)
     aud = f"{url.scheme}://{url.netloc}"
 
     logger.info(
-        "VAPID diagnostics:\n"
+        "Push attempt:\n"
         "  endpoint:    %s\n"
         "  aud:         %s\n"
-        "  stored pub:  %s\n"
-        "  derived pub: %s\n"
         "  keys match:  %s\n"
         "  sub claim:   %s",
         endpoint,
         aud,
-        vapid_public,
-        derived_pub,
         derived_pub == vapid_public,
         vapid_claims.get("sub"),
     )
 
-    # --- Build claims ---
-    import time as _time
-    claims = {
-        "aud": aud,
-        "exp": int(_time.time()) + (12 * 60 * 60),
-        "sub": vapid_claims["sub"],
-    }
-
-    # --- Sign with py_vapid directly ---
+    # --- Build VAPID auth header (no py_vapid) ---
     try:
-        vv = Vapid(ec_key)
-        vapid_headers = vv.sign(claims)
+        vapid_headers = _build_vapid_token(
+            ec_key, vapid_public, aud, vapid_claims["sub"],
+        )
     except Exception:
-        logger.exception("VAPID signing failed")
+        logger.exception("VAPID token construction failed")
         return "error"
-
-    logger.info(
-        "VAPID headers generated:\n%s",
-        json.dumps({k: v[:120] + "..." if len(v) > 120 else v
-                     for k, v in vapid_headers.items()}, indent=2),
-    )
 
     # --- Send via WebPusher ---
     try:
