@@ -64,9 +64,14 @@ export default function SpinWheel({ availability, onSpinComplete }) {
       const data = await api('/api/spin/spin', { method: 'POST' });
       const wonPoints = data.points_won ?? data.points ?? data.result ?? 5;
 
-      // Find segment index that matches (or pick random one with similar value)
-      let targetIdx = SEGMENTS.findIndex((s) => s.value === wonPoints);
-      if (targetIdx === -1) targetIdx = Math.floor(Math.random() * SEGMENTS.length);
+      // Find all segment indices that match and pick one randomly
+      const matching = SEGMENTS.reduce((acc, s, i) => {
+        if (s.value === wonPoints) acc.push(i);
+        return acc;
+      }, []);
+      const targetIdx = matching.length > 0
+        ? matching[Math.floor(Math.random() * matching.length)]
+        : Math.floor(Math.random() * SEGMENTS.length);
 
       // Calculate target rotation
       const segmentCenter = targetIdx * SEGMENT_ANGLE + SEGMENT_ANGLE / 2;

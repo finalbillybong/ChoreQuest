@@ -24,6 +24,10 @@ router = APIRouter(prefix="/api/spin", tags=["spin"])
 SPIN_MIN = 1
 SPIN_MAX = 25
 
+# Must mirror SEGMENTS in frontend SpinWheel.jsx — backend picks from
+# these values so the wheel animation always matches the awarded points.
+WHEEL_VALUES = [1, 5, 2, 10, 3, 15, 1, 25, 2, 5, 3, 10]
+
 
 async def _can_spin_today(db: AsyncSession, user: User) -> tuple[bool, int | None, str | None]:
     """
@@ -115,8 +119,8 @@ async def execute_spin(
             detail=reason or "Cannot spin today.",
         )
 
-    # Random points between SPIN_MIN and SPIN_MAX inclusive
-    points_won = random.randint(SPIN_MIN, SPIN_MAX)
+    # Pick from the wheel segments so the frontend animation matches
+    points_won = random.choice(WHEEL_VALUES)
     today = date.today()
 
     # Create spin result
