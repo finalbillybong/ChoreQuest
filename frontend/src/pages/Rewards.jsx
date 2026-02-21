@@ -567,14 +567,14 @@ function TabBar({ activeTab, setTab }) {
         <button
           key={key}
           onClick={() => setTab(key)}
-          className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-md text-sm font-semibold transition-all ${
+          className={`flex-1 flex items-center justify-center gap-1 sm:gap-2 py-2.5 px-1.5 sm:px-3 rounded-md text-xs sm:text-sm font-semibold transition-all ${
             activeTab === key
               ? 'bg-sky/15 text-sky border border-sky/25'
               : 'text-muted hover:text-cream border border-transparent'
           }`}
         >
-          <Icon size={16} />
-          <span>{label}</span>
+          <Icon size={16} className="shrink-0" />
+          <span className="truncate">{label}</span>
         </button>
       ))}
     </div>
