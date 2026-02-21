@@ -86,7 +86,7 @@ export default function Layout({ children }) {
   const isActive = (path) => path === '/' ? location.pathname === '/' : (location.pathname === path || location.pathname.startsWith(path + '/'));
 
   return (
-    <div className="min-h-screen bg-navy flex">
+    <div className="min-h-screen bg-navy flex overflow-x-hidden max-w-[100vw]">
       {/* ─── Desktop Sidebar ─── */}
       <aside className="hidden md:flex flex-col w-60 bg-surface border-r border-border min-h-screen fixed left-0 top-0 z-30">
         <div
@@ -141,7 +141,7 @@ export default function Layout({ children }) {
       </aside>
 
       {/* ─── Main Content Area ─── */}
-      <div className="flex-1 flex flex-col md:ml-60 min-h-screen">
+      <div className="flex-1 flex flex-col md:ml-60 min-h-screen min-w-0">
         {/* Top Bar */}
         <header className="sticky top-0 z-20 bg-surface/90 backdrop-blur-md border-b border-border px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">

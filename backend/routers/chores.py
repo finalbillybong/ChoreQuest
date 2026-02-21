@@ -1131,7 +1131,9 @@ async def uncomplete_chore(
     assigned_user = assigned_user_result.scalar_one()
 
     assigned_user.points_balance = max(0, assigned_user.points_balance - total_deducted)
-    assigned_user.total_points_earned = max(0, assigned_user.total_points_earned - total_deducted)
+    # Note: do NOT decrement total_points_earned — it tracks lifetime XP
+    # earned and is used for milestone unlocks (avatar items, achievements).
+    # Deducting it would cause kids to lose unlocks when quests are undone.
 
     for tx in transactions:
         await db.delete(tx)

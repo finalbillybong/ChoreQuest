@@ -122,10 +122,12 @@ export default function Party() {
         </div>
 
         {family_streak > 0 && (
-          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-crimson/10 border border-crimson/20">
-            <Flame size={16} className="text-crimson" />
-            <span className="text-cream text-sm font-medium">
-              Family Streak: {family_streak} day{family_streak !== 1 ? 's' : ''}
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-3 py-2 rounded-lg bg-crimson/10 border border-crimson/20">
+            <span className="flex items-center gap-2">
+              <Flame size={16} className="text-crimson flex-shrink-0" />
+              <span className="text-cream text-sm font-medium">
+                Family Streak: {family_streak} day{family_streak !== 1 ? 's' : ''}
+              </span>
             </span>
             <span className="text-muted text-xs ml-auto">
               Everyone completed at least one quest!
