@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../api/client';
 import { useAuth } from '../hooks/useAuth';
-import AvatarDisplay from './AvatarDisplay';
 import { Save, Loader2, ChevronDown } from 'lucide-react';
 
 const HEAD_OPTIONS = [
@@ -220,7 +219,7 @@ function CategoryContent({ category, config, set }) {
   }
 }
 
-export default function AvatarEditor() {
+export default function AvatarEditor({ onConfigChange }) {
   const { user, updateUser } = useAuth();
   const [config, setConfig] = useState(() => ({
     ...DEFAULT_CONFIG,
@@ -235,6 +234,11 @@ export default function AvatarEditor() {
       setConfig((prev) => ({ ...DEFAULT_CONFIG, ...prev, ...user.avatar_config }));
     }
   }, [user?.avatar_config]);
+
+  // Notify parent of config changes so the profile avatar updates live
+  useEffect(() => {
+    onConfigChange?.(config);
+  }, [config, onConfigChange]);
 
   const set = (key, value) => {
     setConfig((prev) => ({ ...prev, [key]: value }));
@@ -265,28 +269,25 @@ export default function AvatarEditor() {
 
   return (
     <div>
-      {/* Sticky live preview */}
-      <div className="sticky top-14 z-10 pb-3">
-        <div className="game-panel p-3 flex items-center justify-between gap-3">
-          <AvatarDisplay config={config} size="lg" />
-          <div className="flex-1 min-w-0">
-            <h2 className="text-cream text-sm font-bold mb-2">
-              Customise Avatar
-            </h2>
-            <button
-              onClick={save}
-              disabled={saving}
-              className="game-btn game-btn-blue w-full flex items-center justify-center gap-2 !py-2 !text-xs"
-            >
-              {saving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
-              {saving ? 'Saving...' : 'Save Avatar'}
-            </button>
-            {msg && (
-              <p className={`text-xs text-center mt-1 ${msg.includes('!') ? 'text-emerald' : 'text-crimson'}`}>
-                {msg}
-              </p>
-            )}
-          </div>
+      {/* Save bar */}
+      <div className="game-panel p-3 flex items-center justify-between gap-3 mb-3">
+        <h2 className="text-cream text-sm font-bold">
+          Customise Avatar
+        </h2>
+        <div className="flex items-center gap-2">
+          {msg && (
+            <p className={`text-xs ${msg.includes('!') ? 'text-emerald' : 'text-crimson'}`}>
+              {msg}
+            </p>
+          )}
+          <button
+            onClick={save}
+            disabled={saving}
+            className="game-btn game-btn-blue flex items-center gap-2 !py-2 !text-xs"
+          >
+            {saving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
+            {saving ? 'Saving...' : 'Save Avatar'}
+          </button>
         </div>
       </div>
 
