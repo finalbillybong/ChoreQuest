@@ -1046,17 +1046,24 @@ async def verify_chore(
     ))
     await db.commit()
 
+    # Roll for quest drop avatar item
+    from backend.routers.avatar import try_quest_drop
+    drop = await try_quest_drop(db, kid, chore.difficulty.value)
+    if drop:
+        await db.commit()
+
+    ws_data = {
+        "chore_id": chore.id,
+        "chore_title": chore.title,
+        "points": total_awarded,
+        "assignment_id": assignment.id,
+    }
+    if drop:
+        ws_data["avatar_drop"] = drop
+
     await ws_manager.send_to_user(
         assignment.user_id,
-        {
-            "type": "chore_verified",
-            "data": {
-                "chore_id": chore.id,
-                "chore_title": chore.title,
-                "points": total_awarded,
-                "assignment_id": assignment.id,
-            },
-        },
+        {"type": "chore_verified", "data": ws_data},
     )
 
     assignment = await _reload_assignment_with_relations(db, assignment.id)

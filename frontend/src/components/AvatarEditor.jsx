@@ -10,6 +10,9 @@ const HEAD_OPTIONS = [
   { id: 'diamond', label: 'Diamond' },
   { id: 'heart', label: 'Heart' },
   { id: 'long', label: 'Long' },
+  { id: 'triangle', label: 'Triangle' },
+  { id: 'pear', label: 'Pear' },
+  { id: 'wide', label: 'Wide' },
 ];
 
 const HAIR_OPTIONS = [
@@ -24,6 +27,15 @@ const HAIR_OPTIONS = [
   { id: 'bun', label: 'Bun' },
   { id: 'pigtails', label: 'Pigtails' },
   { id: 'afro', label: 'Afro' },
+  { id: 'braids', label: 'Braids' },
+  { id: 'wavy', label: 'Wavy' },
+  { id: 'side_part', label: 'Side Part' },
+  { id: 'fade', label: 'Fade' },
+  { id: 'dreadlocks', label: 'Dreads' },
+  { id: 'bob', label: 'Bob' },
+  { id: 'shoulder', label: 'Shoulder' },
+  { id: 'undercut', label: 'Undercut' },
+  { id: 'twin_buns', label: 'Twin Buns' },
 ];
 
 const EYES_OPTIONS = [
@@ -35,6 +47,13 @@ const EYES_OPTIONS = [
   { id: 'angry', label: 'Angry' },
   { id: 'dot', label: 'Dot' },
   { id: 'star', label: 'Star' },
+  { id: 'glasses', label: 'Glasses' },
+  { id: 'sunglasses', label: 'Shades' },
+  { id: 'eye_patch', label: 'Eye Patch' },
+  { id: 'crying', label: 'Crying' },
+  { id: 'heart_eyes', label: 'Hearts' },
+  { id: 'dizzy', label: 'Dizzy' },
+  { id: 'closed', label: 'Closed' },
 ];
 
 const MOUTH_OPTIONS = [
@@ -46,12 +65,74 @@ const MOUTH_OPTIONS = [
   { id: 'frown', label: 'Frown' },
   { id: 'surprised', label: 'Surprised' },
   { id: 'smirk', label: 'Smirk' },
+  { id: 'braces', label: 'Braces' },
+  { id: 'vampire', label: 'Vampire' },
+  { id: 'whistle', label: 'Whistle' },
+  { id: 'mask', label: 'Mask' },
+  { id: 'beard', label: 'Beard' },
+  { id: 'moustache', label: 'Moustache' },
 ];
 
 const BODY_OPTIONS = [
   { id: 'slim', label: 'Slim' },
   { id: 'regular', label: 'Regular' },
   { id: 'broad', label: 'Broad' },
+];
+
+const HAT_OPTIONS = [
+  { id: 'none', label: 'None' },
+  { id: 'crown', label: 'Crown' },
+  { id: 'wizard', label: 'Wizard' },
+  { id: 'beanie', label: 'Beanie' },
+  { id: 'cap', label: 'Cap' },
+  { id: 'pirate', label: 'Pirate' },
+  { id: 'headphones', label: 'Headphones' },
+  { id: 'tiara', label: 'Tiara' },
+  { id: 'horns', label: 'Horns' },
+  { id: 'bunny_ears', label: 'Bunny Ears' },
+  { id: 'cat_ears', label: 'Cat Ears' },
+  { id: 'halo', label: 'Halo' },
+  { id: 'viking', label: 'Viking' },
+];
+
+const ACCESSORY_OPTIONS = [
+  { id: 'none', label: 'None' },
+  { id: 'scarf', label: 'Scarf' },
+  { id: 'necklace', label: 'Necklace' },
+  { id: 'bow_tie', label: 'Bow Tie' },
+  { id: 'cape', label: 'Cape' },
+  { id: 'wings', label: 'Wings' },
+  { id: 'shield', label: 'Shield' },
+  { id: 'sword', label: 'Sword' },
+];
+
+const FACE_EXTRA_OPTIONS = [
+  { id: 'none', label: 'None' },
+  { id: 'freckles', label: 'Freckles' },
+  { id: 'blush', label: 'Blush' },
+  { id: 'face_paint', label: 'Face Paint' },
+  { id: 'scar', label: 'Scar' },
+  { id: 'bandage', label: 'Bandage' },
+  { id: 'stickers', label: 'Stickers' },
+];
+
+const OUTFIT_PATTERN_OPTIONS = [
+  { id: 'none', label: 'None' },
+  { id: 'stripes', label: 'Stripes' },
+  { id: 'stars', label: 'Stars' },
+  { id: 'camo', label: 'Camo' },
+  { id: 'tie_dye', label: 'Tie Dye' },
+  { id: 'plaid', label: 'Plaid' },
+];
+
+const PET_OPTIONS = [
+  { id: 'none', label: 'None' },
+  { id: 'cat', label: 'Cat' },
+  { id: 'dog', label: 'Dog' },
+  { id: 'dragon', label: 'Dragon' },
+  { id: 'owl', label: 'Owl' },
+  { id: 'bunny', label: 'Bunny' },
+  { id: 'phoenix', label: 'Phoenix' },
 ];
 
 const SKIN_COLORS = [
@@ -87,6 +168,24 @@ const BG_COLORS = [
   '#2e86c1', '#27ae60', '#f39c12', '#8e44ad',
 ];
 
+const HAT_COLORS = [
+  '#f39c12', '#e74c3c', '#3b82f6', '#10b981',
+  '#a855f7', '#ec4899', '#f59e0b', '#1a1a2e',
+  '#c0c0c0', '#f9d71c', '#8b4513', '#ecf0f1',
+];
+
+const ACCESSORY_COLORS = [
+  '#3b82f6', '#ef4444', '#10b981', '#f39c12',
+  '#a855f7', '#ec4899', '#c0c0c0', '#f9d71c',
+  '#8b4513', '#1a1a2e', '#ecf0f1', '#06b6d4',
+];
+
+const PET_COLORS = [
+  '#8b4513', '#4a3728', '#f39c12', '#ef4444',
+  '#10b981', '#a855f7', '#ecf0f1', '#1a1a2e',
+  '#c0c0c0', '#ff6b9d', '#06b6d4', '#f59e0b',
+];
+
 const DEFAULT_CONFIG = {
   head: 'round',
   hair: 'short',
@@ -99,6 +198,14 @@ const DEFAULT_CONFIG = {
   mouth_color: '#cc6666',
   body_color: '#3b82f6',
   bg_color: '#1a1a2e',
+  hat: 'none',
+  hat_color: '#f39c12',
+  accessory: 'none',
+  accessory_color: '#3b82f6',
+  face_extra: 'none',
+  outfit_pattern: 'none',
+  pet: 'none',
+  pet_color: '#8b4513',
 };
 
 const CATEGORIES = [
@@ -109,7 +216,12 @@ const CATEGORIES = [
   { id: 'mouth', label: 'Mouth' },
   { id: 'body', label: 'Body' },
   { id: 'outfit', label: 'Outfit' },
+  { id: 'pattern', label: 'Pattern' },
   { id: 'background', label: 'BG' },
+  { id: 'hat', label: 'Hat' },
+  { id: 'face', label: 'Face' },
+  { id: 'accessory', label: 'Gear' },
+  { id: 'pet', label: 'Pet' },
 ];
 
 function ColorSwatch({ colors, selected, onSelect }) {
@@ -207,11 +319,52 @@ function CategoryContent({ category, config, set }) {
           <ColorSwatch colors={BODY_COLORS} selected={config.body_color} onSelect={(v) => set('body_color', v)} />
         </div>
       );
+    case 'pattern':
+      return (
+        <div className="space-y-3">
+          <p className="text-muted text-xs font-medium">Pattern</p>
+          <ShapeSelector options={OUTFIT_PATTERN_OPTIONS} selected={config.outfit_pattern} onSelect={(v) => set('outfit_pattern', v)} />
+        </div>
+      );
     case 'background':
       return (
         <div className="space-y-3">
           <p className="text-muted text-xs font-medium">Colour</p>
           <ColorSwatch colors={BG_COLORS} selected={config.bg_color} onSelect={(v) => set('bg_color', v)} />
+        </div>
+      );
+    case 'hat':
+      return (
+        <div className="space-y-3">
+          <p className="text-muted text-xs font-medium">Style</p>
+          <ShapeSelector options={HAT_OPTIONS} selected={config.hat} onSelect={(v) => set('hat', v)} />
+          <p className="text-muted text-xs font-medium">Colour</p>
+          <ColorSwatch colors={HAT_COLORS} selected={config.hat_color} onSelect={(v) => set('hat_color', v)} />
+        </div>
+      );
+    case 'face':
+      return (
+        <div className="space-y-3">
+          <p className="text-muted text-xs font-medium">Extra</p>
+          <ShapeSelector options={FACE_EXTRA_OPTIONS} selected={config.face_extra} onSelect={(v) => set('face_extra', v)} />
+        </div>
+      );
+    case 'accessory':
+      return (
+        <div className="space-y-3">
+          <p className="text-muted text-xs font-medium">Gear</p>
+          <ShapeSelector options={ACCESSORY_OPTIONS} selected={config.accessory} onSelect={(v) => set('accessory', v)} />
+          <p className="text-muted text-xs font-medium">Colour</p>
+          <ColorSwatch colors={ACCESSORY_COLORS} selected={config.accessory_color} onSelect={(v) => set('accessory_color', v)} />
+        </div>
+      );
+    case 'pet':
+      return (
+        <div className="space-y-3">
+          <p className="text-muted text-xs font-medium">Companion</p>
+          <ShapeSelector options={PET_OPTIONS} selected={config.pet} onSelect={(v) => set('pet', v)} />
+          <p className="text-muted text-xs font-medium">Colour</p>
+          <ColorSwatch colors={PET_COLORS} selected={config.pet_color} onSelect={(v) => set('pet_color', v)} />
         </div>
       );
     default:
@@ -264,9 +417,6 @@ export default function AvatarEditor({ onConfigChange }) {
     setOpenCategory((prev) => (prev === id ? null : id));
   };
 
-  const row1 = CATEGORIES.slice(0, 4);
-  const row2 = CATEGORIES.slice(4);
-
   return (
     <div>
       {/* Save bar */}
@@ -293,34 +443,12 @@ export default function AvatarEditor({ onConfigChange }) {
 
       {/* Category buttons + expandable options */}
       <div className="game-panel p-4 space-y-3">
-        {/* Row 1 */}
-        <div className="grid grid-cols-4 gap-2">
-          {row1.map((cat) => (
+        <div className="flex flex-wrap gap-2">
+          {CATEGORIES.map((cat) => (
             <button
               key={cat.id}
               onClick={() => toggleCategory(cat.id)}
-              className={`flex items-center justify-center gap-1 px-2 py-2 rounded-lg border text-xs font-medium transition-all ${
-                openCategory === cat.id
-                  ? 'border-sky bg-sky/15 text-sky'
-                  : 'border-border text-muted hover:border-border-light hover:text-cream'
-              }`}
-            >
-              {cat.label}
-              <ChevronDown
-                size={12}
-                className={`transition-transform ${openCategory === cat.id ? 'rotate-180' : ''}`}
-              />
-            </button>
-          ))}
-        </div>
-
-        {/* Row 2 */}
-        <div className="grid grid-cols-4 gap-2">
-          {row2.map((cat) => (
-            <button
-              key={cat.id}
-              onClick={() => toggleCategory(cat.id)}
-              className={`flex items-center justify-center gap-1 px-2 py-2 rounded-lg border text-xs font-medium transition-all ${
+              className={`flex items-center justify-center gap-1 px-3 py-2 rounded-lg border text-xs font-medium transition-all ${
                 openCategory === cat.id
                   ? 'border-sky bg-sky/15 text-sky'
                   : 'border-border text-muted hover:border-border-light hover:text-cream'

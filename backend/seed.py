@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.models import (
     ChoreCategory, Achievement, AppSetting, Chore, ChoreAssignment,
     ChoreAssignmentRule, QuestTemplate, User, UserRole, Difficulty, Recurrence,
-    AssignmentStatus,
+    AssignmentStatus, AvatarItem, AvatarItemRarity, AvatarUnlockMethod,
 )
 
 DEFAULT_CATEGORIES = [
@@ -173,6 +173,132 @@ QUEST_TEMPLATES = [
 ]
 
 
+# fmt: off
+# Avatar items: (category, item_id, display_name, rarity, unlock_method, unlock_value, is_default)
+_F = AvatarUnlockMethod.free
+_S = AvatarUnlockMethod.shop
+_X = AvatarUnlockMethod.xp
+_K = AvatarUnlockMethod.streak
+_Q = AvatarUnlockMethod.quest_drop
+_C = AvatarItemRarity.common
+_U = AvatarItemRarity.uncommon
+_R = AvatarItemRarity.rare
+_E = AvatarItemRarity.epic
+_L = AvatarItemRarity.legendary
+
+DEFAULT_AVATAR_ITEMS = [
+    # ── Head ──
+    ("head", "round", "Round", _C, _F, None, True),
+    ("head", "oval", "Oval", _C, _F, None, True),
+    ("head", "square", "Square", _C, _F, None, True),
+    ("head", "diamond", "Diamond", _C, _F, None, True),
+    ("head", "heart", "Heart", _C, _F, None, True),
+    ("head", "long", "Long", _C, _F, None, True),
+    ("head", "triangle", "Triangle", _U, _S, 25, False),
+    ("head", "pear", "Pear", _U, _S, 25, False),
+    ("head", "wide", "Wide", _U, _S, 25, False),
+    # ── Hair ──
+    ("hair", "none", "None", _C, _F, None, True),
+    ("hair", "short", "Short", _C, _F, None, True),
+    ("hair", "long", "Long", _C, _F, None, True),
+    ("hair", "spiky", "Spiky", _C, _F, None, True),
+    ("hair", "curly", "Curly", _C, _F, None, True),
+    ("hair", "mohawk", "Mohawk", _C, _F, None, True),
+    ("hair", "buzz", "Buzz", _C, _F, None, True),
+    ("hair", "ponytail", "Ponytail", _C, _F, None, True),
+    ("hair", "bun", "Bun", _C, _F, None, True),
+    ("hair", "pigtails", "Pigtails", _C, _F, None, True),
+    ("hair", "afro", "Afro", _C, _F, None, True),
+    ("hair", "braids", "Braids", _U, _S, 30, False),
+    ("hair", "wavy", "Wavy", _U, _S, 30, False),
+    ("hair", "side_part", "Side Part", _U, _S, 30, False),
+    ("hair", "fade", "Fade", _U, _S, 30, False),
+    ("hair", "dreadlocks", "Dreadlocks", _R, _S, 50, False),
+    ("hair", "bob", "Bob", _U, _S, 30, False),
+    ("hair", "shoulder", "Shoulder", _U, _S, 30, False),
+    ("hair", "undercut", "Undercut", _U, _S, 30, False),
+    ("hair", "twin_buns", "Twin Buns", _R, _S, 40, False),
+    # ── Eyes ──
+    ("eyes", "normal", "Normal", _C, _F, None, True),
+    ("eyes", "happy", "Happy", _C, _F, None, True),
+    ("eyes", "wide", "Wide", _C, _F, None, True),
+    ("eyes", "sleepy", "Sleepy", _C, _F, None, True),
+    ("eyes", "wink", "Wink", _C, _F, None, True),
+    ("eyes", "angry", "Angry", _C, _F, None, True),
+    ("eyes", "dot", "Dot", _C, _F, None, True),
+    ("eyes", "star", "Star", _C, _F, None, True),
+    ("eyes", "glasses", "Glasses", _U, _S, 40, False),
+    ("eyes", "sunglasses", "Sunglasses", _R, _X, 200, False),
+    ("eyes", "eye_patch", "Eye Patch", _R, _Q, None, False),
+    ("eyes", "crying", "Crying", _U, _S, 30, False),
+    ("eyes", "heart_eyes", "Heart Eyes", _R, _K, 7, False),
+    ("eyes", "dizzy", "Dizzy", _U, _S, 30, False),
+    ("eyes", "closed", "Closed", _U, _S, 30, False),
+    # ── Mouth ──
+    ("mouth", "smile", "Smile", _C, _F, None, True),
+    ("mouth", "grin", "Grin", _C, _F, None, True),
+    ("mouth", "neutral", "Neutral", _C, _F, None, True),
+    ("mouth", "open", "Open", _C, _F, None, True),
+    ("mouth", "tongue", "Tongue", _C, _F, None, True),
+    ("mouth", "frown", "Frown", _C, _F, None, True),
+    ("mouth", "surprised", "Surprised", _C, _F, None, True),
+    ("mouth", "smirk", "Smirk", _C, _F, None, True),
+    ("mouth", "braces", "Braces", _U, _S, 30, False),
+    ("mouth", "vampire", "Vampire Fangs", _R, _Q, None, False),
+    ("mouth", "whistle", "Whistle", _U, _S, 25, False),
+    ("mouth", "mask", "Mask", _U, _S, 40, False),
+    ("mouth", "beard", "Beard", _R, _S, 50, False),
+    ("mouth", "moustache", "Moustache", _R, _S, 40, False),
+    # ── Hats ──
+    ("hat", "none", "None", _C, _F, None, True),
+    ("hat", "crown", "Royal Crown", _E, _X, 500, False),
+    ("hat", "wizard", "Wizard Hat", _R, _K, 14, False),
+    ("hat", "beanie", "Beanie", _U, _S, 40, False),
+    ("hat", "cap", "Cap", _U, _S, 30, False),
+    ("hat", "pirate", "Pirate Hat", _R, _Q, None, False),
+    ("hat", "headphones", "Headphones", _U, _S, 50, False),
+    ("hat", "tiara", "Tiara", _R, _X, 300, False),
+    ("hat", "horns", "Horns", _R, _Q, None, False),
+    ("hat", "bunny_ears", "Bunny Ears", _U, _S, 40, False),
+    ("hat", "cat_ears", "Cat Ears", _U, _S, 40, False),
+    ("hat", "halo", "Halo", _E, _K, 30, False),
+    ("hat", "viking", "Viking Helmet", _E, _Q, None, False),
+    # ── Accessories ──
+    ("accessory", "none", "None", _C, _F, None, True),
+    ("accessory", "scarf", "Scarf", _U, _S, 30, False),
+    ("accessory", "necklace", "Necklace", _U, _S, 40, False),
+    ("accessory", "bow_tie", "Bow Tie", _U, _S, 25, False),
+    ("accessory", "cape", "Hero's Cape", _E, _X, 400, False),
+    ("accessory", "wings", "Angel Wings", _E, _K, 21, False),
+    ("accessory", "shield", "Shield", _R, _S, 60, False),
+    ("accessory", "sword", "Sword", _L, _Q, None, False),
+    # ── Face extras ──
+    ("face_extra", "none", "None", _C, _F, None, True),
+    ("face_extra", "freckles", "Freckles", _C, _F, None, True),
+    ("face_extra", "blush", "Blush", _C, _F, None, True),
+    ("face_extra", "face_paint", "Face Paint", _U, _S, 30, False),
+    ("face_extra", "scar", "Battle Scar", _R, _Q, None, False),
+    ("face_extra", "bandage", "Bandage", _U, _S, 25, False),
+    ("face_extra", "stickers", "Stickers", _U, _S, 20, False),
+    # ── Outfit patterns ──
+    ("outfit_pattern", "none", "None", _C, _F, None, True),
+    ("outfit_pattern", "stripes", "Stripes", _C, _F, None, True),
+    ("outfit_pattern", "stars", "Stars", _U, _S, 25, False),
+    ("outfit_pattern", "camo", "Camo", _U, _S, 30, False),
+    ("outfit_pattern", "tie_dye", "Tie Dye", _R, _S, 35, False),
+    ("outfit_pattern", "plaid", "Plaid", _U, _S, 25, False),
+    # ── Pets ──
+    ("pet", "none", "None", _C, _F, None, True),
+    ("pet", "cat", "Cat", _R, _S, 80, False),
+    ("pet", "dog", "Dog", _R, _S, 80, False),
+    ("pet", "dragon", "Dragon", _L, _X, 1000, False),
+    ("pet", "owl", "Owl", _R, _K, 14, False),
+    ("pet", "bunny", "Bunny", _R, _S, 60, False),
+    ("pet", "phoenix", "Phoenix", _L, _Q, None, False),
+]
+# fmt: on
+
+
 async def seed_database(db: AsyncSession):
     # Seed categories
     result = await db.execute(select(ChoreCategory).limit(1))
@@ -277,6 +403,17 @@ async def seed_database(db: AsyncSession):
                 migrated += 1
         if migrated > 0:
             await db.commit()
+
+    # Seed avatar items catalogue
+    avatar_count = await db.execute(select(func.count()).select_from(AvatarItem))
+    if avatar_count.scalar() == 0:
+        for cat, item_id, name, rarity, method, value, default in DEFAULT_AVATAR_ITEMS:
+            db.add(AvatarItem(
+                category=cat, item_id=item_id, display_name=name,
+                rarity=rarity, unlock_method=method, unlock_value=value,
+                is_default=default,
+            ))
+        await db.commit()
 
     # One-time cleanup: deactivate stale rules created by migration that were
     # never manually managed through the assign modal.

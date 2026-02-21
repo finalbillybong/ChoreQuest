@@ -65,6 +65,30 @@ class NotificationType(str, enum.Enum):
     streak_milestone = "streak_milestone"
     reward_approved = "reward_approved"
     reward_denied = "reward_denied"
+    avatar_item_drop = "avatar_item_drop"
+
+
+class AvatarItemRarity(str, enum.Enum):
+    common = "common"
+    uncommon = "uncommon"
+    rare = "rare"
+    epic = "epic"
+    legendary = "legendary"
+
+
+class AvatarUnlockMethod(str, enum.Enum):
+    free = "free"
+    xp = "xp"
+    streak = "streak"
+    shop = "shop"
+    quest_drop = "quest_drop"
+
+
+class AvatarAcquiredVia(str, enum.Enum):
+    free = "free"
+    purchase = "purchase"
+    drop = "drop"
+    milestone = "milestone"
 
 
 class RotationCadence(str, enum.Enum):
@@ -407,3 +431,32 @@ class InviteCode(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     creator = relationship("User")
+
+
+class AvatarItem(Base):
+    """Catalogue of all avatar customisation items (free + unlockable)."""
+    __tablename__ = "avatar_items"
+    __table_args__ = (UniqueConstraint("category", "item_id"),)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    category: Mapped[str] = mapped_column(String(30), nullable=False)
+    item_id: Mapped[str] = mapped_column(String(30), nullable=False)
+    display_name: Mapped[str] = mapped_column(String(60), nullable=False)
+    rarity: Mapped[AvatarItemRarity] = mapped_column(Enum(AvatarItemRarity), nullable=False)
+    unlock_method: Mapped[AvatarUnlockMethod] = mapped_column(Enum(AvatarUnlockMethod), nullable=False)
+    unlock_value: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    is_default: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class UserAvatarItem(Base):
+    """Tracks which avatar items a user has unlocked."""
+    __tablename__ = "user_avatar_items"
+    __table_args__ = (UniqueConstraint("user_id", "avatar_item_id"),)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    avatar_item_id: Mapped[int] = mapped_column(ForeignKey("avatar_items.id"), nullable=False)
+    acquired_via: Mapped[AvatarAcquiredVia] = mapped_column(Enum(AvatarAcquiredVia), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User")
+    avatar_item = relationship("AvatarItem")
