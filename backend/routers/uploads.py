@@ -48,7 +48,7 @@ async def upload_file(
 
 
 @router.get("/{filename}")
-async def get_upload(filename: str, user: User = Depends(get_current_user)):
+async def get_upload(filename: str):
     safe_name = os.path.basename(filename)
     filepath = os.path.join(UPLOAD_DIR, safe_name)
     if not os.path.isfile(filepath):

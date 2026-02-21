@@ -27,15 +27,32 @@ export default function Modal({ isOpen, onClose, title, children, actions }) {
   );
 
   useEffect(() => {
-    if (isOpen) {
-      document.addEventListener('keydown', handleKeyDown);
+    if (!isOpen) return;
+
+    document.addEventListener('keydown', handleKeyDown);
+
+    // Lock body scroll by fixing it in place, preserving scroll position
+    const alreadyLocked = document.body.style.position === 'fixed';
+    const scrollY = alreadyLocked
+      ? -parseInt(document.body.style.top || '0', 10)
+      : window.scrollY;
+
+    if (!alreadyLocked) {
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.left = '0';
+      document.body.style.right = '0';
       document.body.style.overflow = 'hidden';
-      document.documentElement.style.overflow = 'hidden';
     }
+
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.left = '';
+      document.body.style.right = '';
       document.body.style.overflow = '';
-      document.documentElement.style.overflow = '';
+      window.scrollTo(0, scrollY);
     };
   }, [isOpen, handleKeyDown]);
 
@@ -52,13 +69,13 @@ export default function Modal({ isOpen, onClose, title, children, actions }) {
         >
           {/* Backdrop */}
           <motion.div
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm overscroll-contain"
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             onClick={onClose}
           />
 
           {/* Panel */}
           <motion.div
-            className="game-panel relative z-10 w-full max-w-md max-h-[85vh] overflow-y-auto p-6"
+            className="game-panel relative z-10 w-full max-w-md max-h-[85vh] overflow-y-auto overscroll-contain p-6"
             variants={panelVariants}
             initial="hidden"
             animate="visible"
