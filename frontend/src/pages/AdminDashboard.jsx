@@ -19,6 +19,7 @@ import {
   Loader2,
   Eye,
   EyeOff,
+  RotateCcw,
 } from 'lucide-react';
 
 const TABS = [
@@ -62,6 +63,25 @@ function UsersTab() {
       );
     } catch (err) {
       setError(err.message || 'Failed to update role');
+    }
+  };
+
+  const resetPassword = async (usr) => {
+    const newPassword = window.prompt(`New password for ${usr.display_name || usr.username} (min 6 chars):`);
+    if (!newPassword) return;
+    if (newPassword.length < 6) {
+      setError('Password must be at least 6 characters');
+      return;
+    }
+    try {
+      await api(`/api/admin/users/${usr.id}/reset-password`, {
+        method: 'POST',
+        body: { new_password: newPassword },
+      });
+      setError('');
+      alert(`Password reset for ${usr.display_name || usr.username}`);
+    } catch (err) {
+      setError(err.message || 'Failed to reset password');
     }
   };
 
@@ -132,6 +152,12 @@ function UsersTab() {
                   <option value="parent">parent</option>
                   <option value="admin">admin</option>
                 </select>
+                <button
+                  onClick={() => resetPassword(usr)}
+                  className="game-btn game-btn-blue !py-1.5 !px-3 !text-[10px] flex-shrink-0"
+                >
+                  <RotateCcw size={12} className="inline mr-1" />Password
+                </button>
                 <button
                   onClick={() => toggleActive(usr)}
                   className={`game-btn !py-1.5 !px-3 !text-[10px] flex-shrink-0 ${

@@ -28,12 +28,32 @@ export default function Settings() {
   const [achievementsLoading, setAchievementsLoading] = useState(false);
   const [achievementsSaving, setAchievementsSaving] = useState({});
 
+  // Settings are stored as strings in the DB — parse on load, stringify on save
+  const parseSettings = (raw) => {
+    const parsed = {};
+    for (const [k, v] of Object.entries(raw)) {
+      if (v === 'true') parsed[k] = true;
+      else if (v === 'false') parsed[k] = false;
+      else if (/^\d+$/.test(v)) parsed[k] = parseInt(v, 10);
+      else parsed[k] = v;
+    }
+    return parsed;
+  };
+
+  const stringifySettings = (obj) => {
+    const out = {};
+    for (const [k, v] of Object.entries(obj)) {
+      out[k] = String(v);
+    }
+    return out;
+  };
+
   const fetchSettings = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
       const data = await api('/api/admin/settings');
-      setSettings(data);
+      setSettings(parseSettings(data));
     } catch (err) {
       if (err.message?.includes('403') || err.message?.includes('Forbidden') || err.message?.includes('permission')) {
         setError('Access denied. Only parents and admins can access settings.');
@@ -76,7 +96,7 @@ export default function Settings() {
     setSaving(true);
     setSaveMsg('');
     try {
-      await api('/api/admin/settings', { method: 'PUT', body: settings });
+      await api('/api/admin/settings', { method: 'PUT', body: { settings: stringifySettings(settings) } });
       setSaveMsg('Settings saved!');
     } catch (err) {
       setSaveMsg(err.message || 'Failed to save settings');
