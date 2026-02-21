@@ -13,6 +13,7 @@ from backend.models import User, ApiKey, InviteCode, AuditLog, AppSetting
 from backend.schemas import (
     UserResponse,
     AdminUserUpdate,
+    AdminResetPasswordRequest,
     ApiKeyCreate,
     ApiKeyResponse,
     InviteCodeCreate,
@@ -20,6 +21,7 @@ from backend.schemas import (
     AuditLogResponse,
     SettingsUpdate,
 )
+from backend.auth import hash_password
 from backend.dependencies import require_admin
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
@@ -83,6 +85,26 @@ async def deactivate_user(
     user.updated_at = datetime.now(timezone.utc)
     await db.commit()
     return {"detail": "User deactivated"}
+
+
+# ---------- POST /users/{id}/reset-password ----------
+@router.post("/users/{user_id}/reset-password")
+async def reset_user_password(
+    user_id: int,
+    body: AdminResetPasswordRequest,
+    db: AsyncSession = Depends(get_db),
+    _admin: User = Depends(require_admin),
+):
+    """Admin reset of a user's password."""
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    user.password_hash = hash_password(body.new_password)
+    user.updated_at = datetime.now(timezone.utc)
+    await db.commit()
+    return {"detail": f"Password reset for {user.username}"}
 
 
 # ============================================================

@@ -675,6 +675,17 @@ async def assign_chore(
 
         db.add(_quest_assigned_notification(item.user_id, chore))
 
+    # Sync the chore-level recurrence with the assignment rules so the
+    # quest list / detail pages display the correct schedule.
+    if body.assignments:
+        first = body.assignments[0]
+        chore.recurrence = first.recurrence
+        chore.custom_days = first.custom_days
+    elif not body.assignments:
+        # All kids unassigned — reset to once
+        chore.recurrence = Recurrence.once
+        chore.custom_days = None
+
     await db.commit()
     await ws_manager.broadcast(_CHORE_CHANGED, exclude_user=user.id)
 

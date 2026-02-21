@@ -407,6 +407,10 @@ class AdminUserUpdate(BaseModel):
     is_active: bool | None = None
 
 
+class AdminResetPasswordRequest(BaseModel):
+    new_password: str = Field(min_length=6)
+
+
 class ApiKeyCreate(BaseModel):
     name: str = Field(max_length=100)
     scopes: list[str] = []
