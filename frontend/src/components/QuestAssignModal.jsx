@@ -48,7 +48,7 @@ export default function QuestAssignModal({
   const [expandedKid, setExpandedKid] = useState(null);
 
   // Shared schedule (applies to all selected kids)
-  const [scheduleFrequency, setScheduleFrequency] = useState('daily');
+  const [scheduleFrequency, setScheduleFrequency] = useState('once');
   const [scheduleDays, setScheduleDays] = useState([]);
 
   // Rotation (2+ kids only)
@@ -88,14 +88,14 @@ export default function QuestAssignModal({
         const firstActive = rulesList.find((r) => r.is_active);
         if (firstActive) {
           if (firstActive.recurrence === 'custom' && firstActive.custom_days?.length) {
-            setScheduleFrequency('daily');
+            setScheduleFrequency('daily'); // underlying default for day-picker mode
             setScheduleDays(firstActive.custom_days);
           } else {
-            setScheduleFrequency(firstActive.recurrence || 'daily');
+            setScheduleFrequency(firstActive.recurrence || 'once');
             setScheduleDays([]);
           }
         } else {
-          setScheduleFrequency('daily');
+          setScheduleFrequency('once');
           setScheduleDays([]);
         }
       })
@@ -106,7 +106,7 @@ export default function QuestAssignModal({
         }
         setKidConfigs(configs);
         setHadExistingAssignments(false);
-        setScheduleFrequency('daily');
+        setScheduleFrequency('once');
         setScheduleDays([]);
       });
 
