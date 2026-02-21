@@ -16,12 +16,14 @@ import {
   Sparkles,
   ArrowLeft,
   Loader2,
+  Users,
 } from 'lucide-react';
 import AvatarDisplay from './AvatarDisplay';
 
 const ALL_NAV_ITEMS = [
   { label: 'Home', icon: Home, path: '/' },
   { label: 'Quests', icon: Swords, path: '/chores' },
+  { label: 'Party', icon: Users, path: '/party' },
   { label: 'Rewards', icon: Gift, path: '/rewards' },
   { label: 'Calendar', icon: CalendarDays, path: '/calendar' },
   { label: 'Events', icon: Sparkles, path: '/events', parentOnly: true },

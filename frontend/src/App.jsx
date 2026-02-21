@@ -18,6 +18,7 @@ const Leaderboard = lazy(() => import('./pages/Leaderboard'));
 const Settings = lazy(() => import('./pages/Settings'));
 const Events = lazy(() => import('./pages/Events'));
 const KidQuests = lazy(() => import('./pages/KidQuests'));
+const Party = lazy(() => import('./pages/Party'));
 
 function Loading() {
   return (
@@ -67,6 +68,7 @@ export default function App() {
           <Route path="/inventory" element={<Navigate to="/rewards?tab=inventory" replace />} />
           <Route path="/wishlist" element={<Navigate to="/rewards?tab=wishlist" replace />} />
           <Route path="/calendar" element={<Calendar />} />
+          <Route path="/party" element={<Party />} />
           <Route path="/leaderboard" element={<Leaderboard />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/events" element={<Events />} />

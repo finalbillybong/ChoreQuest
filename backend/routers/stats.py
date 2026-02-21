@@ -13,8 +13,11 @@ from backend.models import (
     ChoreAssignment,
     AssignmentStatus,
     PointTransaction,
+    PointType,
     Achievement,
     UserAchievement,
+    Notification,
+    NotificationType,
 )
 from backend.schemas import UserResponse, AchievementResponse, AchievementUpdate
 from backend.dependencies import get_current_user, require_parent
@@ -65,6 +68,130 @@ async def list_kids(
         {"id": k.id, "display_name": k.display_name or k.username}
         for k in kids
     ]
+
+
+@router.get("/party")
+async def get_party(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Family roster visible to all users — kids and parents alike."""
+    today = date.today()
+
+    # All active users (parents + kids)
+    result = await db.execute(
+        select(User).where(User.is_active == True).order_by(User.role, User.display_name)
+    )
+    all_users = result.scalars().all()
+
+    kids = [u for u in all_users if u.role == UserRole.kid]
+    kid_ids = [k.id for k in kids]
+
+    # Today's assignment counts per kid
+    today_totals = await _count_today_assignments_by_kid(db, kid_ids, today) if kid_ids else {}
+    today_completed = await _count_today_assignments_by_kid(db, kid_ids, today, completed_only=True) if kid_ids else {}
+
+    # Recent activity: last 48 hours of point transactions + avatar drops
+    two_days_ago = today - timedelta(days=2)
+    activity_result = await db.execute(
+        select(PointTransaction)
+        .where(
+            PointTransaction.created_at >= str(two_days_ago),
+            PointTransaction.amount > 0,
+            PointTransaction.type.in_([PointType.chore_complete, PointType.achievement, PointType.event_multiplier]),
+        )
+        .order_by(PointTransaction.created_at.desc())
+        .limit(20)
+    )
+    recent_txns = activity_result.scalars().all()
+
+    # Avatar drop notifications (last 48h)
+    drop_result = await db.execute(
+        select(Notification)
+        .where(
+            Notification.type == NotificationType.avatar_item_drop,
+            Notification.created_at >= str(two_days_ago),
+        )
+        .order_by(Notification.created_at.desc())
+        .limit(10)
+    )
+    recent_drops = drop_result.scalars().all()
+
+    # Build activity feed
+    activity = []
+    # Map user IDs to names
+    name_map = {u.id: u.display_name or u.username for u in all_users}
+
+    for txn in recent_txns:
+        activity.append({
+            "type": "xp",
+            "user_id": txn.user_id,
+            "user_name": name_map.get(txn.user_id, "Unknown"),
+            "description": txn.description,
+            "xp": txn.amount,
+            "timestamp": txn.created_at.isoformat() if txn.created_at else None,
+        })
+
+    for drop in recent_drops:
+        activity.append({
+            "type": "avatar_drop",
+            "user_id": drop.user_id,
+            "user_name": name_map.get(drop.user_id, "Unknown"),
+            "description": drop.message,
+            "timestamp": drop.created_at.isoformat() if drop.created_at else None,
+        })
+
+    activity.sort(key=lambda a: a.get("timestamp") or "", reverse=True)
+    activity = activity[:20]
+
+    # Family streak: consecutive days where ALL kids completed at least 1 quest
+    family_streak = 0
+    if kid_ids:
+        for days_back in range(60):
+            check_date = today - timedelta(days=days_back)
+            all_completed = True
+            for kid_id in kid_ids:
+                count_result = await db.execute(
+                    select(func.count()).select_from(ChoreAssignment).where(
+                        ChoreAssignment.user_id == kid_id,
+                        ChoreAssignment.date == check_date,
+                        ChoreAssignment.status.in_([AssignmentStatus.completed, AssignmentStatus.verified]),
+                    )
+                )
+                if count_result.scalar() == 0:
+                    all_completed = False
+                    break
+            if all_completed:
+                family_streak += 1
+            else:
+                break
+
+    # Combined family XP
+    family_total_xp = sum(u.total_points_earned for u in kids)
+
+    # Build members list
+    members = []
+    for u in all_users:
+        member = {
+            "id": u.id,
+            "display_name": u.display_name or u.username,
+            "role": u.role.value,
+            "avatar_config": u.avatar_config,
+            "current_streak": u.current_streak,
+            "total_points_earned": u.total_points_earned,
+        }
+        if u.role == UserRole.kid:
+            member["points_balance"] = u.points_balance
+            member["today_completed"] = today_completed.get(u.id, 0)
+            member["today_total"] = today_totals.get(u.id, 0)
+        members.append(member)
+
+    return {
+        "members": members,
+        "activity": activity,
+        "family_streak": family_streak,
+        "family_total_xp": family_total_xp,
+    }
 
 
 @router.get("/family/{kid_id}")
