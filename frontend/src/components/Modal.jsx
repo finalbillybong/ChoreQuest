@@ -30,10 +30,12 @@ export default function Modal({ isOpen, onClose, title, children, actions }) {
     if (isOpen) {
       document.addEventListener('keydown', handleKeyDown);
       document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
     }
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
       document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
     };
   }, [isOpen, handleKeyDown]);
 
@@ -50,7 +52,7 @@ export default function Modal({ isOpen, onClose, title, children, actions }) {
         >
           {/* Backdrop */}
           <motion.div
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm overscroll-contain"
             onClick={onClose}
           />
 

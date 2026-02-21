@@ -1,6 +1,6 @@
 // The placeholder below is stamped by the Vite plugin at build time
 // (see vite.config.js) so the SW cache auto-bumps every production build.
-const CACHE_NAME = 'chorequest-mlw6lstu';
+const CACHE_NAME = 'chorequest-mlw949bw';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
