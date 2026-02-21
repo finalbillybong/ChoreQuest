@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.database import get_db
 from backend.models import (
-    User, AvatarItem, UserAvatarItem, PointTransaction, PointType,
+    User, UserRole, AvatarItem, UserAvatarItem, PointTransaction, PointType,
     Notification, NotificationType, AvatarAcquiredVia, AvatarUnlockMethod,
 )
 from backend.dependencies import get_current_user
@@ -170,9 +170,15 @@ async def get_avatar_items(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    """Return all avatar items with the current user's unlock status."""
+    """Return all avatar items with the current user's unlock status.
+
+    Parents and admins get everything unlocked automatically — the
+    shop / unlock mechanic is a gamification layer for kids only.
+    """
     items_result = await db.execute(select(AvatarItem))
     all_items = items_result.scalars().all()
+
+    is_parent_or_admin = user.role in (UserRole.parent, UserRole.admin)
 
     owned_result = await db.execute(
         select(UserAvatarItem.avatar_item_id).where(UserAvatarItem.user_id == user.id)
@@ -181,22 +187,26 @@ async def get_avatar_items(
 
     result = []
     for item in all_items:
-        unlocked = item.is_default or item.id in owned_ids
-        # Auto-unlock milestone items (XP / streak) on read
-        if not unlocked and item.unlock_method == AvatarUnlockMethod.xp and item.unlock_value:
-            if user.total_points_earned >= item.unlock_value:
-                db.add(UserAvatarItem(
-                    user_id=user.id, avatar_item_id=item.id,
-                    acquired_via=AvatarAcquiredVia.milestone,
-                ))
-                unlocked = True
-        if not unlocked and item.unlock_method == AvatarUnlockMethod.streak and item.unlock_value:
-            if user.longest_streak >= item.unlock_value:
-                db.add(UserAvatarItem(
-                    user_id=user.id, avatar_item_id=item.id,
-                    acquired_via=AvatarAcquiredVia.milestone,
-                ))
-                unlocked = True
+        # Parents/admins: all items unlocked
+        if is_parent_or_admin:
+            unlocked = True
+        else:
+            unlocked = item.is_default or item.id in owned_ids
+            # Auto-unlock milestone items (XP / streak) on read
+            if not unlocked and item.unlock_method == AvatarUnlockMethod.xp and item.unlock_value:
+                if user.total_points_earned >= item.unlock_value:
+                    db.add(UserAvatarItem(
+                        user_id=user.id, avatar_item_id=item.id,
+                        acquired_via=AvatarAcquiredVia.milestone,
+                    ))
+                    unlocked = True
+            if not unlocked and item.unlock_method == AvatarUnlockMethod.streak and item.unlock_value:
+                if user.longest_streak >= item.unlock_value:
+                    db.add(UserAvatarItem(
+                        user_id=user.id, avatar_item_id=item.id,
+                        acquired_via=AvatarAcquiredVia.milestone,
+                    ))
+                    unlocked = True
 
         result.append({
             "id": item.id,

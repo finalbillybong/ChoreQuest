@@ -82,6 +82,7 @@ function UnlockIcon({ method }) {
 
 export default function AvatarShop() {
   const { user, updateUser } = useAuth();
+  const isParent = user?.role === 'parent' || user?.role === 'admin';
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState(null);
@@ -149,14 +150,21 @@ export default function AvatarShop() {
 
   return (
     <div className="space-y-4">
-      {/* XP balance */}
-      <div className="game-panel p-3 flex items-center justify-between">
-        <span className="text-cream text-sm font-medium">Your XP</span>
-        <span className="flex items-center gap-1 text-gold text-sm font-bold">
-          <Coins size={14} />
-          {userXp}
-        </span>
-      </div>
+      {/* XP balance (kids) or parent info banner */}
+      {isParent ? (
+        <div className="game-panel p-3 flex items-center gap-2 text-emerald text-sm">
+          <Check size={16} />
+          <span className="font-medium">All avatar items are unlocked for parents.</span>
+        </div>
+      ) : (
+        <div className="game-panel p-3 flex items-center justify-between">
+          <span className="text-cream text-sm font-medium">Your XP</span>
+          <span className="flex items-center gap-1 text-gold text-sm font-bold">
+            <Coins size={14} />
+            {userXp}
+          </span>
+        </div>
+      )}
 
       {message && (
         <div className={`p-2 rounded border text-sm ${
