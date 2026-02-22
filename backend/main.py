@@ -9,14 +9,14 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-from sqlalchemy import delete, select
+from sqlalchemy import delete
 
 from backend.config import settings
 from backend.database import init_db, async_session
 from backend.seed import seed_database
+from backend.auth import decode_access_token
 from backend.websocket_manager import ws_manager
-from backend.models import RefreshToken, Family, FamilyMember, User
-from backend.providers.registry import auth_provider
+from backend.models import RefreshToken
 from backend.services.assignment_generator import generate_daily_assignments
 from backend.services.push_hook import install_push_hooks
 
@@ -33,7 +33,7 @@ async def daily_reset_task():
     - Clean up expired refresh tokens
     """
     while True:
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         target_hour = settings.DAILY_RESET_HOUR
         next_run = now.replace(hour=target_hour, minute=0, second=0, microsecond=0)
         if now >= next_run:
@@ -45,15 +45,12 @@ async def daily_reset_task():
             async with async_session() as db:
                 today = date.today()
 
-                # Generate assignments per family
-                families = (await db.execute(select(Family))).scalars().all()
-                for fam in families:
-                    await generate_daily_assignments(db, today, family_id=fam.id)
+                await generate_daily_assignments(db, today)
 
                 # Clean up expired refresh tokens
                 await db.execute(
                     delete(RefreshToken).where(
-                        RefreshToken.expires_at < datetime.utcnow()
+                        RefreshToken.expires_at < datetime.now(timezone.utc)
                     )
                 )
 
@@ -94,21 +91,12 @@ async def security_headers(request: Request, call_next):
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     response.headers["Permissions-Policy"] = "camera=(self), microphone=()"
     response.headers["Content-Security-Policy"] = (
-        "default-src 'self'; "
-        "script-src 'self' https://apis.google.com; "
+        "default-src 'self'; script-src 'self'; "
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
         "font-src 'self' https://fonts.gstatic.com; "
         "img-src 'self' data: blob:; "
-        "connect-src 'self' wss: ws: "
-        "https://identitytoolkit.googleapis.com "
-        "https://securetoken.googleapis.com "
-        "https://*.googleapis.com "
-        "https://apis.google.com "
-        "https://www.googleapis.com "
-        "https://firebase.googleapis.com "
-        "https://firebaseinstallations.googleapis.com; "
+        "connect-src 'self' wss: ws:; "
         "worker-src 'self'; "
-        "frame-src 'self' https://*.firebaseapp.com https://*.googleapis.com; "
         "frame-ancestors 'none'"
     )
     if settings.COOKIE_SECURE:
@@ -120,7 +108,6 @@ async def security_headers(request: Request, call_next):
 from backend.routers import (  # noqa: E402
     auth, chores, rewards, points, stats, calendar,
     notifications, admin, avatar, wishlist, events, spin, rotations, uploads, push,
-    billing, families,
 )
 
 app.include_router(auth.router)
@@ -138,27 +125,11 @@ app.include_router(spin.router)
 app.include_router(rotations.router)
 app.include_router(uploads.router)
 app.include_router(push.router)
-app.include_router(billing.router)
-app.include_router(families.router)
 
 
 @app.get("/api/health")
 async def health():
     return {"status": "ok"}
-
-
-@app.get("/api/config")
-async def public_config():
-    """Public (unauthenticated) endpoint exposing the app mode and any
-    client-side config the frontend needs to initialise correctly."""
-    cfg: dict = {"app_mode": settings.APP_MODE}
-    if settings.APP_MODE == "saas":
-        cfg["firebase"] = {
-            "apiKey": settings.FIREBASE_WEB_API_KEY,
-            "projectId": settings.FIREBASE_PROJECT_ID,
-            "authDomain": f"{settings.FIREBASE_PROJECT_ID}.firebaseapp.com",
-        }
-    return cfg
 
 
 @app.websocket("/ws/{user_id}")
@@ -168,33 +139,12 @@ async def websocket_endpoint(websocket: WebSocket, user_id: int):
         await websocket.close(code=4001)
         return
 
-    payload = await auth_provider.validate_token(token)
-    if payload is None:
+    payload = decode_access_token(token)
+    if payload is None or int(payload["sub"]) != user_id:
         await websocket.close(code=4001)
         return
 
-    family_id = None
-    if settings.APP_MODE == "saas":
-        firebase_uid = payload.get("uid") or payload.get("sub")
-        async with async_session() as db:
-            result = await db.execute(
-                select(User.id).where(User.firebase_uid == firebase_uid)
-            )
-            row = result.scalar_one_or_none()
-        if row != user_id:
-            await websocket.close(code=4001)
-            return
-        async with async_session() as db:
-            fm_result = await db.execute(
-                select(FamilyMember.family_id).where(FamilyMember.user_id == user_id).limit(1)
-            )
-            family_id = fm_result.scalar_one_or_none()
-    else:
-        if int(payload["sub"]) != user_id:
-            await websocket.close(code=4001)
-            return
-
-    await ws_manager.connect(websocket, user_id, family_id=family_id)
+    await ws_manager.connect(websocket, user_id)
     try:
         while True:
             await websocket.receive_text()
@@ -205,14 +155,6 @@ async def websocket_endpoint(websocket: WebSocket, user_id: int):
 # Serve frontend static files
 if STATIC_DIR.is_dir():
     app.mount("/assets", StaticFiles(directory=str(STATIC_DIR / "assets")), name="assets")
-
-    @app.get("/sw.js")
-    async def serve_sw():
-        """Serve service worker with no-cache so browsers always fetch the latest."""
-        return FileResponse(
-            str(STATIC_DIR / "sw.js"),
-            headers={"Cache-Control": "no-cache, no-store, must-revalidate", "Service-Worker-Allowed": "/"},
-        )
 
     @app.get("/{full_path:path}")
     async def serve_frontend(full_path: str):

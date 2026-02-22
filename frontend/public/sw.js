@@ -67,11 +67,6 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Skip cross-origin requests entirely (Firebase Auth, Google Fonts, etc.)
-  if (url.origin !== self.location.origin) {
-    return;
-  }
-
   // Let the browser handle auth requests natively (preserves cookies reliably)
   if (url.pathname.startsWith('/api/auth')) {
     return;
@@ -90,7 +85,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Cache-first for same-origin static assets
+  // Cache-first for static assets
   event.respondWith(
     caches.match(request).then((cached) => {
       const fetched = fetch(request).then((response) => {

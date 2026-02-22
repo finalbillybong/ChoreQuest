@@ -6,7 +6,6 @@ from backend.models import (
     ChoreCategory, Achievement, AppSetting, Chore, ChoreAssignment,
     ChoreAssignmentRule, QuestTemplate, User, UserRole, Difficulty, Recurrence,
     AssignmentStatus, AvatarItem, AvatarItemRarity, AvatarUnlockMethod,
-    Family, FamilyMember,
 )
 
 DEFAULT_CATEGORIES = [
@@ -300,131 +299,65 @@ DEFAULT_AVATAR_ITEMS = [
 # fmt: on
 
 
-async def _get_default_family_id(db: AsyncSession) -> int | None:
-    """Return the id of the default family, or None if no family exists yet."""
-    result = await db.execute(select(Family.id).limit(1))
-    row = result.first()
-    return row[0] if row else None
-
-
-async def seed_family_data(db: AsyncSession, family_id: int, creator_id: int):
-    """Seed default categories and starter quests for a newly created family."""
-    from backend.config import settings as _settings
-
-    # Seed categories for this family
-    existing_cats = await db.execute(
-        select(ChoreCategory).where(ChoreCategory.family_id == family_id).limit(1)
-    )
-    if existing_cats.scalar_one_or_none() is None:
-        for cat in DEFAULT_CATEGORIES:
-            db.add(ChoreCategory(
-                family_id=family_id,
-                name=cat["name"], icon=cat["icon"], colour=cat["colour"],
-                is_default=True,
-            ))
-        await db.flush()
-
-    # Seed starter quests for this family
-    cat_result = await db.execute(
-        select(ChoreCategory).where(ChoreCategory.family_id == family_id)
-    )
-    cat_map = {c.name: c.id for c in cat_result.scalars().all()}
-
-    existing_chores = await db.execute(
-        select(Chore.title).where(Chore.family_id == family_id)
-    )
-    existing_titles = {row[0] for row in existing_chores.all()}
-
-    for quest in DEFAULT_QUESTS:
-        if quest["title"] in existing_titles:
-            continue
-        cat_id = cat_map.get(quest["category"])
-        if cat_id is None:
-            continue
-        db.add(Chore(
-            family_id=family_id,
-            title=quest["title"],
-            description=quest["description"],
-            points=quest["points"],
-            difficulty=quest["difficulty"],
-            icon=quest.get("icon"),
-            category_id=cat_id,
-            recurrence=quest["recurrence"],
-            requires_photo=False,
-            created_by=creator_id,
-        ))
-
-    await db.commit()
-
-
 async def seed_database(db: AsyncSession):
-    from backend.config import settings as _settings
+    # Seed categories
+    result = await db.execute(select(ChoreCategory).limit(1))
+    if result.scalar_one_or_none() is None:
+        for cat in DEFAULT_CATEGORIES:
+            db.add(ChoreCategory(name=cat["name"], icon=cat["icon"], colour=cat["colour"], is_default=True))
+        await db.commit()
 
-    family_id = await _get_default_family_id(db)
-
-    # In self-hosted mode, seed categories and quests for the default family
-    if _settings.APP_MODE != "saas":
-        result = await db.execute(select(ChoreCategory).limit(1))
-        if result.scalar_one_or_none() is None:
-            for cat in DEFAULT_CATEGORIES:
-                db.add(ChoreCategory(
-                    family_id=family_id,
-                    name=cat["name"], icon=cat["icon"], colour=cat["colour"],
-                    is_default=True,
-                ))
-            await db.commit()
-
-    # Seed achievements (global)
+    # Seed achievements
     result = await db.execute(select(Achievement).limit(1))
     if result.scalar_one_or_none() is None:
         for ach in DEFAULT_ACHIEVEMENTS:
             db.add(Achievement(**ach))
         await db.commit()
 
-    # Seed settings (global)
+    # Seed settings
     for key, value in DEFAULT_SETTINGS.items():
         result = await db.execute(select(AppSetting).where(AppSetting.key == key))
         if result.scalar_one_or_none() is None:
             db.add(AppSetting(key=key, value=json.dumps(value) if not isinstance(value, str) else value))
     await db.commit()
 
-    # Seed template quests for default family (self-hosted only)
-    if _settings.APP_MODE != "saas":
-        creator_result = await db.execute(
-            select(User).where(User.role.in_([UserRole.admin, UserRole.parent])).limit(1)
-        )
-        creator = creator_result.scalar_one_or_none()
-        if creator is not None:
-            cat_result = await db.execute(select(ChoreCategory))
-            cat_map = {c.name: c.id for c in cat_result.scalars().all()}
+    # Seed template quests (skip any that already exist by title)
+    creator_result = await db.execute(
+        select(User).where(User.role.in_([UserRole.admin, UserRole.parent])).limit(1)
+    )
+    creator = creator_result.scalar_one_or_none()
+    if creator is not None:
+        # Build category name -> id lookup
+        cat_result = await db.execute(select(ChoreCategory))
+        cat_map = {c.name: c.id for c in cat_result.scalars().all()}
 
-            existing_result = await db.execute(select(Chore.title))
-            existing_titles = {row[0] for row in existing_result.all()}
+        # Get existing chore titles to avoid duplicates
+        existing_result = await db.execute(select(Chore.title))
+        existing_titles = {row[0] for row in existing_result.all()}
 
-            added = 0
-            for quest in DEFAULT_QUESTS:
-                if quest["title"] in existing_titles:
-                    continue
-                cat_id = cat_map.get(quest["category"])
-                if cat_id is None:
-                    continue
-                db.add(Chore(
-                    family_id=family_id,
-                    title=quest["title"],
-                    description=quest["description"],
-                    points=quest["points"],
-                    difficulty=quest["difficulty"],
-                    icon=quest.get("icon"),
-                    category_id=cat_id,
-                    recurrence=quest["recurrence"],
-                    requires_photo=False,
-                    created_by=creator.id,
-                ))
-                added += 1
-            if added > 0:
-                await db.commit()
+        added = 0
+        for quest in DEFAULT_QUESTS:
+            if quest["title"] in existing_titles:
+                continue
+            cat_id = cat_map.get(quest["category"])
+            if cat_id is None:
+                continue
+            db.add(Chore(
+                title=quest["title"],
+                description=quest["description"],
+                points=quest["points"],
+                difficulty=quest["difficulty"],
+                icon=quest.get("icon"),
+                category_id=cat_id,
+                recurrence=quest["recurrence"],
+                requires_photo=False,
+                created_by=creator.id,
+            ))
+            added += 1
+        if added > 0:
+            await db.commit()
 
-    # Seed built-in quest templates (global)
+    # Seed built-in quest templates
     result = await db.execute(select(QuestTemplate).limit(1))
     if result.scalar_one_or_none() is None:
         for tpl in QUEST_TEMPLATES:

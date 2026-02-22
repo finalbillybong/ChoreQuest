@@ -7,7 +7,6 @@ from sqlalchemy.orm import selectinload
 
 from backend.database import get_db
 from backend.models import (
-    Family,
     Reward,
     RewardRedemption,
     RedemptionStatus,
@@ -24,11 +23,11 @@ from backend.schemas import (
     RewardResponse,
     RedemptionResponse,
 )
-from backend.dependencies import get_current_user, require_parent, resolve_family, require_subscription
+from backend.dependencies import get_current_user, require_parent
 from backend.achievements import check_achievements
 from backend.websocket_manager import ws_manager
 
-router = APIRouter(prefix="/api/rewards", tags=["rewards"], dependencies=[Depends(require_subscription)])
+router = APIRouter(prefix="/api/rewards", tags=["rewards"])
 
 
 # ── Redemption endpoints (defined BEFORE /{id} so FastAPI doesn't treat
@@ -40,16 +39,11 @@ async def list_redemptions(
     status: str | None = Query(None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
-    family: Family = Depends(resolve_family),
 ):
     """List redemptions.  Parents see all; kids see only their own."""
-    stmt = (
-        select(RewardRedemption)
-        .where(RewardRedemption.family_id == family.id)
-        .options(
-            selectinload(RewardRedemption.reward),
-            selectinload(RewardRedemption.user),
-        )
+    stmt = select(RewardRedemption).options(
+        selectinload(RewardRedemption.reward),
+        selectinload(RewardRedemption.user),
     )
 
     if current_user.role == UserRole.kid:
@@ -72,16 +66,15 @@ async def approve_redemption(
     redemption_id: int,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_parent),
-    family: Family = Depends(resolve_family),
 ):
     """Approve a pending redemption (Parent+)."""
     result = await db.execute(
         select(RewardRedemption)
-        .where(RewardRedemption.id == redemption_id, RewardRedemption.family_id == family.id)
         .options(
             selectinload(RewardRedemption.reward),
             selectinload(RewardRedemption.user),
         )
+        .where(RewardRedemption.id == redemption_id)
     )
     redemption = result.scalar_one_or_none()
     if redemption is None:
@@ -91,12 +84,11 @@ async def approve_redemption(
 
     redemption.status = RedemptionStatus.approved
     redemption.approved_by = current_user.id
-    redemption.approved_at = datetime.utcnow()
+    redemption.approved_at = datetime.now(timezone.utc)
 
     # Notify the kid
     notif = Notification(
         user_id=redemption.user_id,
-        family_id=family.id,
         type=NotificationType.reward_approved,
         title="Reward Approved!",
         message=f"Your redemption of '{redemption.reward.title}' has been approved!",
@@ -129,16 +121,15 @@ async def deny_redemption(
     redemption_id: int,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_parent),
-    family: Family = Depends(resolve_family),
 ):
     """Deny a pending redemption (Parent+).  Refunds the XP to the kid."""
     result = await db.execute(
         select(RewardRedemption)
-        .where(RewardRedemption.id == redemption_id, RewardRedemption.family_id == family.id)
         .options(
             selectinload(RewardRedemption.reward),
             selectinload(RewardRedemption.user),
         )
+        .where(RewardRedemption.id == redemption_id)
     )
     redemption = result.scalar_one_or_none()
     if redemption is None:
@@ -156,7 +147,6 @@ async def deny_redemption(
 
     refund_tx = PointTransaction(
         user_id=kid.id,
-        family_id=family.id,
         amount=redemption.points_spent,
         type=PointType.reward_redeem,
         description=f"Refund for denied redemption of '{redemption.reward.title}'",
@@ -167,12 +157,11 @@ async def deny_redemption(
 
     redemption.status = RedemptionStatus.denied
     redemption.approved_by = current_user.id
-    redemption.approved_at = datetime.utcnow()
+    redemption.approved_at = datetime.now(timezone.utc)
 
     # Notify the kid
     notif = Notification(
         user_id=kid.id,
-        family_id=family.id,
         type=NotificationType.reward_denied,
         title="Reward Denied",
         message=(
@@ -203,16 +192,15 @@ async def fulfill_redemption(
     redemption_id: int,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_parent),
-    family: Family = Depends(resolve_family),
 ):
     """Mark an approved redemption as fulfilled / handed out (Parent+)."""
     result = await db.execute(
         select(RewardRedemption)
-        .where(RewardRedemption.id == redemption_id, RewardRedemption.family_id == family.id)
         .options(
             selectinload(RewardRedemption.reward),
             selectinload(RewardRedemption.user),
         )
+        .where(RewardRedemption.id == redemption_id)
     )
     redemption = result.scalar_one_or_none()
     if redemption is None:
@@ -222,7 +210,7 @@ async def fulfill_redemption(
 
     redemption.status = RedemptionStatus.fulfilled
     redemption.fulfilled_by = current_user.id
-    redemption.fulfilled_at = datetime.utcnow()
+    redemption.fulfilled_at = datetime.now(timezone.utc)
 
     # Notify the kid
     notif = Notification(
@@ -262,12 +250,11 @@ async def fulfill_redemption(
 async def list_rewards(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
-    family: Family = Depends(resolve_family),
 ):
     """List all active rewards (all users)."""
     result = await db.execute(
         select(Reward)
-        .where(Reward.family_id == family.id, Reward.is_active == True)
+        .where(Reward.is_active == True)
         .order_by(Reward.point_cost.asc())
     )
     return result.scalars().all()
@@ -278,7 +265,6 @@ async def create_reward(
     body: RewardCreate,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_parent),
-    family: Family = Depends(resolve_family),
 ):
     """Create a new reward (Parent+)."""
     reward = Reward(
@@ -289,7 +275,6 @@ async def create_reward(
         stock=body.stock,
         auto_approve_threshold=body.auto_approve_threshold,
         created_by=current_user.id,
-        family_id=family.id,
     )
     db.add(reward)
     await db.commit()
@@ -305,12 +290,9 @@ async def get_reward(
     reward_id: int,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
-    family: Family = Depends(resolve_family),
 ):
     """Get reward details."""
-    result = await db.execute(
-        select(Reward).where(Reward.id == reward_id, Reward.family_id == family.id)
-    )
+    result = await db.execute(select(Reward).where(Reward.id == reward_id))
     reward = result.scalar_one_or_none()
     if reward is None:
         raise HTTPException(status_code=404, detail="Reward not found")
@@ -323,12 +305,9 @@ async def update_reward(
     body: RewardUpdate,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_parent),
-    family: Family = Depends(resolve_family),
 ):
     """Update an existing reward (Parent+)."""
-    result = await db.execute(
-        select(Reward).where(Reward.id == reward_id, Reward.family_id == family.id)
-    )
+    result = await db.execute(select(Reward).where(Reward.id == reward_id))
     reward = result.scalar_one_or_none()
     if reward is None:
         raise HTTPException(status_code=404, detail="Reward not found")
@@ -337,7 +316,7 @@ async def update_reward(
     for field, value in update_data.items():
         setattr(reward, field, value)
 
-    reward.updated_at = datetime.utcnow()
+    reward.updated_at = datetime.now(timezone.utc)
     await db.commit()
     await db.refresh(reward)
 
@@ -351,18 +330,15 @@ async def delete_reward(
     reward_id: int,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_parent),
-    family: Family = Depends(resolve_family),
 ):
     """Soft-delete a reward (Parent+)."""
-    result = await db.execute(
-        select(Reward).where(Reward.id == reward_id, Reward.family_id == family.id)
-    )
+    result = await db.execute(select(Reward).where(Reward.id == reward_id))
     reward = result.scalar_one_or_none()
     if reward is None:
         raise HTTPException(status_code=404, detail="Reward not found")
 
     reward.is_active = False
-    reward.updated_at = datetime.utcnow()
+    reward.updated_at = datetime.now(timezone.utc)
     await db.commit()
 
     await ws_manager.broadcast({"type": "data_changed", "data": {"entity": "reward"}}, exclude_user=current_user.id)
@@ -373,7 +349,6 @@ async def redeem_reward(
     reward_id: int,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
-    family: Family = Depends(resolve_family),
 ):
     """Kid redeems a reward.
 
@@ -383,9 +358,7 @@ async def redeem_reward(
       Inventory page once they've been handed out in the real world.
     * Checks achievements and sends a WebSocket notification.
     """
-    result = await db.execute(
-        select(Reward).where(Reward.id == reward_id, Reward.family_id == family.id)
-    )
+    result = await db.execute(select(Reward).where(Reward.id == reward_id))
     reward = result.scalar_one_or_none()
     if reward is None:
         raise HTTPException(status_code=404, detail="Reward not found")
@@ -411,7 +384,6 @@ async def redeem_reward(
     # Create negative point transaction
     tx = PointTransaction(
         user_id=current_user.id,
-        family_id=family.id,
         amount=-reward.point_cost,
         type=PointType.reward_redeem,
         description=f"Redeemed reward: {reward.title}",
@@ -423,10 +395,9 @@ async def redeem_reward(
     redemption = RewardRedemption(
         reward_id=reward.id,
         user_id=current_user.id,
-        family_id=family.id,
         points_spent=reward.point_cost,
         status=RedemptionStatus.approved,
-        approved_at=datetime.utcnow(),
+        approved_at=datetime.now(timezone.utc),
     )
 
     db.add(redemption)
@@ -436,11 +407,11 @@ async def redeem_reward(
     # Eagerly load relationships for the response
     result = await db.execute(
         select(RewardRedemption)
-        .where(RewardRedemption.id == redemption.id, RewardRedemption.family_id == family.id)
         .options(
             selectinload(RewardRedemption.reward),
             selectinload(RewardRedemption.user),
         )
+        .where(RewardRedemption.id == redemption.id)
     )
     redemption = result.scalar_one()
 
@@ -454,7 +425,6 @@ async def redeem_reward(
     for (pid,) in parent_result.all():
         db.add(Notification(
             user_id=pid,
-            family_id=family.id,
             type=NotificationType.reward_approved,
             title="Reward Redeemed!",
             message=f"{current_user.display_name} redeemed '{reward.title}' for {reward.point_cost} XP",
@@ -464,7 +434,7 @@ async def redeem_reward(
     await db.commit()
 
     # Check achievements after redemption
-    await check_achievements(db, current_user, family_id=family.id)
+    await check_achievements(db, current_user)
 
     # WebSocket notification
     await ws_manager.send_to_user(current_user.id, {

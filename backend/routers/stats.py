@@ -1,4 +1,4 @@
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select, func
@@ -9,8 +9,6 @@ from backend.database import get_db
 from backend.models import (
     User,
     UserRole,
-    Family,
-    FamilyMember,
     Chore,
     ChoreAssignment,
     AssignmentStatus,
@@ -22,11 +20,11 @@ from backend.models import (
     NotificationType,
 )
 from backend.schemas import UserResponse, AchievementResponse, AchievementUpdate
-from backend.dependencies import get_current_user, require_parent, resolve_family, require_subscription
+from backend.dependencies import get_current_user, require_parent
 from backend.services.assignment_generator import auto_generate_week_assignments
 from backend.services.stats_helpers import completion_rate
 
-router = APIRouter(prefix="/api/stats", tags=["stats"], dependencies=[Depends(require_subscription)])
+router = APIRouter(prefix="/api/stats", tags=["stats"])
 
 
 # ---------------------------------------------------------------------------
@@ -37,14 +35,13 @@ router = APIRouter(prefix="/api/stats", tags=["stats"], dependencies=[Depends(re
 @router.get("/me")
 async def get_my_stats(
     current_user: User = Depends(get_current_user),
-    family: Family = Depends(resolve_family),
     db: AsyncSession = Depends(get_db),
 ):
     """Current user stats."""
     achievements_count = await _count_achievements(db, current_user.id)
     thirty_days_ago = date.today() - timedelta(days=30)
     total_30d, completed_30d, rate_30d = await completion_rate(
-        db, current_user.id, thirty_days_ago, family_id=family.id,
+        db, current_user.id, thirty_days_ago,
     )
 
     return {
@@ -60,18 +57,11 @@ async def get_my_stats(
 @router.get("/kids")
 async def list_kids(
     user: User = Depends(get_current_user),
-    family: Family = Depends(resolve_family),
     db: AsyncSession = Depends(get_db),
 ):
-    """Return a lightweight list of all active kids in the family."""
+    """Return a lightweight list of all active kids. Any authenticated user can call this."""
     result = await db.execute(
-        select(User).where(
-            User.role == UserRole.kid,
-            User.is_active == True,
-            User.id.in_(
-                select(FamilyMember.user_id).where(FamilyMember.family_id == family.id)
-            ),
-        )
+        select(User).where(User.role == UserRole.kid, User.is_active == True)
     )
     kids = result.scalars().all()
     return [
@@ -83,22 +73,14 @@ async def list_kids(
 @router.get("/party")
 async def get_party(
     current_user: User = Depends(get_current_user),
-    family: Family = Depends(resolve_family),
     db: AsyncSession = Depends(get_db),
 ):
     """Family roster visible to all users — kids and parents alike."""
     today = date.today()
 
-    # All active users in this family
+    # All active users (parents + kids)
     result = await db.execute(
-        select(User)
-        .where(
-            User.is_active == True,
-            User.id.in_(
-                select(FamilyMember.user_id).where(FamilyMember.family_id == family.id)
-            ),
-        )
-        .order_by(User.role, User.display_name)
+        select(User).where(User.is_active == True).order_by(User.role, User.display_name)
     )
     all_users = result.scalars().all()
 
@@ -106,15 +88,15 @@ async def get_party(
     kid_ids = [k.id for k in kids]
 
     # Today's assignment counts per kid
-    today_totals = await _count_today_assignments_by_kid(db, kid_ids, today, family.id) if kid_ids else {}
-    today_completed = await _count_today_assignments_by_kid(db, kid_ids, today, family.id, completed_only=True) if kid_ids else {}
+    today_totals = await _count_today_assignments_by_kid(db, kid_ids, today) if kid_ids else {}
+    today_completed = await _count_today_assignments_by_kid(db, kid_ids, today, completed_only=True) if kid_ids else {}
 
     # Recent activity: last 48 hours of point transactions + avatar drops
-    two_days_ago_dt = datetime.combine(today - timedelta(days=2), datetime.min.time())
+    two_days_ago = today - timedelta(days=2)
     activity_result = await db.execute(
         select(PointTransaction)
         .where(
-            PointTransaction.created_at >= two_days_ago_dt,
+            PointTransaction.created_at >= str(two_days_ago),
             PointTransaction.amount > 0,
             PointTransaction.type.in_([PointType.chore_complete, PointType.achievement, PointType.event_multiplier]),
         )
@@ -128,7 +110,7 @@ async def get_party(
         select(Notification)
         .where(
             Notification.type == NotificationType.avatar_item_drop,
-            Notification.created_at >= two_days_ago_dt,
+            Notification.created_at >= str(two_days_ago),
         )
         .order_by(Notification.created_at.desc())
         .limit(10)
@@ -171,7 +153,6 @@ async def get_party(
             for kid_id in kid_ids:
                 count_result = await db.execute(
                     select(func.count()).select_from(ChoreAssignment).where(
-                        ChoreAssignment.family_id == family.id,
                         ChoreAssignment.user_id == kid_id,
                         ChoreAssignment.date == check_date,
                         ChoreAssignment.status.in_([AssignmentStatus.completed, AssignmentStatus.verified]),
@@ -217,19 +198,11 @@ async def get_party(
 async def get_kid_detail(
     kid_id: int,
     parent: User = Depends(require_parent),
-    family: Family = Depends(resolve_family),
     db: AsyncSession = Depends(get_db),
 ):
     """Detailed view of a single kid's quests for today. Parent+ only."""
     result = await db.execute(
-        select(User).where(
-            User.id.in_(
-                select(FamilyMember.user_id).where(FamilyMember.family_id == family.id)
-            ),
-            User.id == kid_id,
-            User.role == UserRole.kid,
-            User.is_active == True,
-        )
+        select(User).where(User.id == kid_id, User.role == UserRole.kid, User.is_active == True)
     )
     kid = result.scalar_one_or_none()
     if not kid:
@@ -237,13 +210,12 @@ async def get_kid_detail(
 
     today = date.today()
     monday = today - timedelta(days=today.weekday())
-    await auto_generate_week_assignments(db, monday, family_id=family.id)
+    await auto_generate_week_assignments(db, monday)
 
     result = await db.execute(
         select(ChoreAssignment)
         .join(Chore, ChoreAssignment.chore_id == Chore.id)
         .where(
-            ChoreAssignment.family_id == family.id,
             ChoreAssignment.user_id == kid_id,
             ChoreAssignment.date == today,
             Chore.is_active == True,
@@ -270,22 +242,15 @@ async def get_kid_detail(
 @router.get("/family")
 async def get_family_stats(
     parent: User = Depends(require_parent),
-    family: Family = Depends(resolve_family),
     db: AsyncSession = Depends(get_db),
 ):
     """Overview of all kids. Parent+ only."""
     today = date.today()
     monday = today - timedelta(days=today.weekday())
-    await auto_generate_week_assignments(db, monday, family_id=family.id)
+    await auto_generate_week_assignments(db, monday)
 
     result = await db.execute(
-        select(User).where(
-            User.id.in_(
-                select(FamilyMember.user_id).where(FamilyMember.family_id == family.id)
-            ),
-            User.role == UserRole.kid,
-            User.is_active == True,
-        )
+        select(User).where(User.role == UserRole.kid, User.is_active == True)
     )
     kids = result.scalars().all()
 
@@ -295,9 +260,9 @@ async def get_family_stats(
     kid_ids = [k.id for k in kids]
 
     # Batch-load today's assignment counts per kid (total and completed)
-    today_totals = await _count_today_assignments_by_kid(db, kid_ids, today, family.id)
+    today_totals = await _count_today_assignments_by_kid(db, kid_ids, today)
     today_completed = await _count_today_assignments_by_kid(
-        db, kid_ids, today, family.id, completed_only=True,
+        db, kid_ids, today, completed_only=True,
     )
 
     return [
@@ -317,7 +282,6 @@ async def get_family_stats(
 @router.get("/leaderboard")
 async def get_leaderboard(
     current_user: User = Depends(get_current_user),
-    family: Family = Depends(resolve_family),
     db: AsyncSession = Depends(get_db),
 ):
     """Weekly leaderboard. Sum positive PointTransactions for the current week."""
@@ -326,13 +290,7 @@ async def get_leaderboard(
     sunday = monday + timedelta(days=6)
 
     result = await db.execute(
-        select(User).where(
-            User.id.in_(
-                select(FamilyMember.user_id).where(FamilyMember.family_id == family.id)
-            ),
-            User.role == UserRole.kid,
-            User.is_active == True,
-        )
+        select(User).where(User.role == UserRole.kid, User.is_active == True)
     )
     kids = result.scalars().all()
     kid_map = {kid.id: kid for kid in kids}
@@ -347,7 +305,6 @@ async def get_leaderboard(
             func.sum(PointTransaction.amount).label("weekly_xp"),
         )
         .where(
-            PointTransaction.family_id == family.id,
             PointTransaction.user_id.in_(list(kid_map.keys())),
             PointTransaction.amount > 0,
             func.date(PointTransaction.created_at) >= monday,
@@ -365,7 +322,6 @@ async def get_leaderboard(
             func.count().label("quests_done"),
         )
         .where(
-            ChoreAssignment.family_id == family.id,
             ChoreAssignment.user_id.in_(list(kid_map.keys())),
             ChoreAssignment.date >= monday,
             ChoreAssignment.date <= sunday,
@@ -440,18 +396,10 @@ async def get_all_achievements(
 async def get_user_stats(
     user_id: int,
     parent: User = Depends(require_parent),
-    family: Family = Depends(resolve_family),
     db: AsyncSession = Depends(get_db),
 ):
     """Detailed stats for a specific user. Parent+ only."""
-    result = await db.execute(
-        select(User).where(
-            User.id.in_(
-                select(FamilyMember.user_id).where(FamilyMember.family_id == family.id)
-            ),
-            User.id == user_id,
-        )
-    )
+    result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -462,8 +410,8 @@ async def get_user_stats(
     seven_days_ago = today - timedelta(days=7)
     thirty_days_ago = today - timedelta(days=30)
 
-    total_7d, completed_7d, _ = await completion_rate(db, user.id, seven_days_ago, family_id=family.id)
-    total_30d, completed_30d, rate_30d = await completion_rate(db, user.id, thirty_days_ago, family_id=family.id)
+    total_7d, completed_7d, _ = await completion_rate(db, user.id, seven_days_ago)
+    total_30d, completed_30d, rate_30d = await completion_rate(db, user.id, thirty_days_ago)
 
     return {
         "user": UserResponse.model_validate(user),
@@ -478,21 +426,13 @@ async def get_user_stats(
 async def get_completion_history(
     user_id: int,
     current_user: User = Depends(get_current_user),
-    family: Family = Depends(resolve_family),
     db: AsyncSession = Depends(get_db),
 ):
     """Completion history. Kids can only view their own."""
     if current_user.role == UserRole.kid and current_user.id != user_id:
         raise HTTPException(status_code=403, detail="Kids can only view their own history")
 
-    result = await db.execute(
-        select(User).where(
-            User.id.in_(
-                select(FamilyMember.user_id).where(FamilyMember.family_id == family.id)
-            ),
-            User.id == user_id,
-        )
-    )
+    result = await db.execute(select(User).where(User.id == user_id))
     if not result.scalar_one_or_none():
         raise HTTPException(status_code=404, detail="User not found")
 
@@ -500,8 +440,8 @@ async def get_completion_history(
     seven_days_ago = today - timedelta(days=7)
     thirty_days_ago = today - timedelta(days=30)
 
-    total_7d, completed_7d, _ = await completion_rate(db, user_id, seven_days_ago, family_id=family.id)
-    total_30d, completed_30d, _ = await completion_rate(db, user_id, thirty_days_ago, family_id=family.id)
+    total_7d, completed_7d, _ = await completion_rate(db, user_id, seven_days_ago)
+    total_30d, completed_30d, _ = await completion_rate(db, user_id, thirty_days_ago)
 
     return {
         "user_id": user_id,
@@ -565,7 +505,6 @@ async def _count_today_assignments_by_kid(
     db: AsyncSession,
     kid_ids: list[int],
     today: date,
-    family_id: int,
     *,
     completed_only: bool = False,
 ) -> dict[int, int]:
@@ -577,7 +516,6 @@ async def _count_today_assignments_by_kid(
         )
         .join(Chore, ChoreAssignment.chore_id == Chore.id)
         .where(
-            ChoreAssignment.family_id == family_id,
             ChoreAssignment.user_id.in_(kid_ids),
             ChoreAssignment.date == today,
             Chore.is_active == True,

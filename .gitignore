@@ -4,8 +4,6 @@ __pycache__/
 node_modules/
 dist/
 .env
-.env.saas
 data/
-*firebase*adminsdk*.json
 *.db
 .DS_Store

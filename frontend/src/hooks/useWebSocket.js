@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
-import { getCurrentToken } from '../api/client';
+import { getAccessToken, ensureToken } from '../api/client';
 
 export function useWebSocket(userId, onMessage) {
   const wsRef = useRef(null);
@@ -7,9 +7,9 @@ export function useWebSocket(userId, onMessage) {
   const retryCount = useRef(0);
   const [connected, setConnected] = useState(false);
 
-  const connect = useCallback(async () => {
+  const connect = useCallback(() => {
     if (!userId) return;
-    const token = await getCurrentToken();
+    const token = getAccessToken();
     if (!token) return;
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -32,7 +32,10 @@ export function useWebSocket(userId, onMessage) {
       wsRef.current = null;
       const delay = Math.min(1000 * Math.pow(2, retryCount.current), 30000);
       retryCount.current += 1;
-      reconnectTimeout.current = setTimeout(() => connect(), delay);
+      reconnectTimeout.current = setTimeout(() => {
+        // Refresh access token before reconnecting (it may have expired)
+        ensureToken().catch(() => {}).finally(() => connect());
+      }, delay);
     };
 
     ws.onerror = () => ws.close();

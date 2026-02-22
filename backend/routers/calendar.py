@@ -11,8 +11,6 @@ from backend.models import (
     ChoreAssignment,
     ChoreAssignmentRule,
     ChoreExclusion,
-    Family,
-    FamilyMember,
     User,
     UserRole,
     AssignmentStatus,
@@ -21,11 +19,11 @@ from backend.models import (
     Recurrence,
 )
 from backend.schemas import TradeRequest
-from backend.dependencies import get_current_user, require_parent, resolve_family, require_subscription
+from backend.dependencies import get_current_user, require_parent
 from backend.websocket_manager import ws_manager
 from backend.services.assignment_generator import auto_generate_week_assignments
 
-router = APIRouter(prefix="/api/calendar", tags=["calendar"], dependencies=[Depends(require_subscription)])
+router = APIRouter(prefix="/api/calendar", tags=["calendar"])
 
 
 @router.get("")
@@ -35,7 +33,6 @@ async def get_weekly_calendar(
         description="ISO date for the Monday of the desired week (e.g. 2025-01-13)",
     ),
     current_user: User = Depends(get_current_user),
-    family: Family = Depends(resolve_family),
     db: AsyncSession = Depends(get_db),
 ):
     """Weekly calendar view.
@@ -54,7 +51,7 @@ async def get_weekly_calendar(
     week_end = week_start + timedelta(days=6)
 
     # Auto-generate missing assignments for the week
-    await auto_generate_week_assignments(db, week_start, family_id=family.id)
+    await auto_generate_week_assignments(db, week_start)
 
     # Fetch all assignments for the week (exclude soft-deleted chores)
     result = await db.execute(
@@ -65,7 +62,6 @@ async def get_weekly_calendar(
             selectinload(ChoreAssignment.user),
         )
         .where(
-            ChoreAssignment.family_id == family.id,
             ChoreAssignment.date >= week_start,
             ChoreAssignment.date <= week_end,
             Chore.is_active == True,
@@ -174,13 +170,12 @@ def _build_assignment_entry(
 # ---------------------------------------------------------------------------
 
 async def _get_trade_notification_or_404(
-    db: AsyncSession, notification_id: int, current_user: User, family_id: int
+    db: AsyncSession, notification_id: int, current_user: User
 ) -> Notification:
     """Load and validate a trade notification, raising appropriate errors."""
     result = await db.execute(
         select(Notification).where(
             Notification.id == notification_id,
-            Notification.family_id == family_id,
             Notification.user_id == current_user.id,
             Notification.type == NotificationType.trade_proposed,
             Notification.reference_type == "trade",
@@ -193,16 +188,13 @@ async def _get_trade_notification_or_404(
 
 
 async def _get_trade_assignment_or_404(
-    db: AsyncSession, assignment_id: int, family_id: int
+    db: AsyncSession, assignment_id: int
 ) -> ChoreAssignment:
     """Load a trade's assignment with its chore, raising 404 if missing."""
     result = await db.execute(
         select(ChoreAssignment)
         .options(selectinload(ChoreAssignment.chore))
-        .where(
-            ChoreAssignment.id == assignment_id,
-            ChoreAssignment.family_id == family_id,
-        )
+        .where(ChoreAssignment.id == assignment_id)
     )
     assignment = result.scalar_one_or_none()
     if not assignment:
@@ -232,12 +224,9 @@ async def propose_trade(
     if assignment.status != AssignmentStatus.pending:
         raise HTTPException(status_code=400, detail="Can only trade pending assignments")
 
-    # Verify target user exists, is a kid, and is in the same family
+    # Verify target user exists and is a kid
     result = await db.execute(
         select(User).where(
-            User.id.in_(
-                select(FamilyMember.user_id).where(FamilyMember.family_id == family.id)
-            ),
             User.id == data.target_user_id,
             User.role == UserRole.kid,
             User.is_active == True,
@@ -251,7 +240,6 @@ async def propose_trade(
 
     chore_title = assignment.chore.title if assignment.chore else "a chore"
     notification = Notification(
-        family_id=family.id,
         user_id=data.target_user_id,
         type=NotificationType.trade_proposed,
         title="Chore Trade Proposed",
@@ -283,12 +271,11 @@ async def propose_trade(
 async def accept_trade(
     notification_id: int,
     current_user: User = Depends(get_current_user),
-    family: Family = Depends(resolve_family),
     db: AsyncSession = Depends(get_db),
 ):
     """Kid accepts a trade proposal."""
-    notification = await _get_trade_notification_or_404(db, notification_id, current_user, family.id)
-    assignment = await _get_trade_assignment_or_404(db, notification.reference_id, family.id)
+    notification = await _get_trade_notification_or_404(db, notification_id, current_user)
+    assignment = await _get_trade_assignment_or_404(db, notification.reference_id)
 
     if assignment.status != AssignmentStatus.pending:
         raise HTTPException(status_code=400, detail="Assignment is no longer pending")
@@ -301,7 +288,6 @@ async def accept_trade(
 
     chore_title = assignment.chore.title if assignment.chore else "a chore"
     proposer_notification = Notification(
-        family_id=family.id,
         user_id=proposer_id,
         type=NotificationType.trade_accepted,
         title="Trade Accepted",
@@ -348,19 +334,17 @@ async def accept_trade(
 async def deny_trade(
     notification_id: int,
     current_user: User = Depends(get_current_user),
-    family: Family = Depends(resolve_family),
     db: AsyncSession = Depends(get_db),
 ):
     """Kid denies a trade proposal."""
-    notification = await _get_trade_notification_or_404(db, notification_id, current_user, family.id)
-    assignment = await _get_trade_assignment_or_404(db, notification.reference_id, family.id)
+    notification = await _get_trade_notification_or_404(db, notification_id, current_user)
+    assignment = await _get_trade_assignment_or_404(db, notification.reference_id)
 
     proposer_id = assignment.user_id
     notification.is_read = True
 
     chore_title = assignment.chore.title if assignment.chore else "a chore"
     proposer_notification = Notification(
-        family_id=family.id,
         user_id=proposer_id,
         type=NotificationType.trade_denied,
         title="Trade Denied",
@@ -399,7 +383,6 @@ async def remove_assignment(
         description="Also remove all future pending instances of this chore for the same kid",
     ),
     parent: User = Depends(require_parent),
-    family: Family = Depends(resolve_family),
     db: AsyncSession = Depends(get_db),
 ):
     """Remove a pending assignment. Parent+ only.
@@ -413,10 +396,7 @@ async def remove_assignment(
     result = await db.execute(
         select(ChoreAssignment)
         .options(selectinload(ChoreAssignment.chore))
-        .where(
-            ChoreAssignment.id == assignment_id,
-            ChoreAssignment.family_id == family.id,
-        )
+        .where(ChoreAssignment.id == assignment_id)
     )
     assignment = result.scalar_one_or_none()
     if not assignment:
@@ -437,11 +417,11 @@ async def remove_assignment(
     if all_future:
         existing_exclusions = set()
         if is_recurring:
-            existing_exclusions = await _load_existing_exclusions(db, assignment, family.id)
-        await _remove_future_assignments(db, assignment, family.id, is_recurring, existing_exclusions)
+            existing_exclusions = await _load_existing_exclusions(db, assignment)
+        await _remove_future_assignments(db, assignment, is_recurring, existing_exclusions)
     else:
         if is_recurring:
-            await _add_exclusion_if_new(db, assignment.chore_id, assignment.user_id, assignment.date, family.id)
+            await _add_exclusion_if_new(db, assignment.chore_id, assignment.user_id, assignment.date)
         await db.delete(assignment)
 
     await db.commit()
@@ -453,12 +433,11 @@ async def remove_assignment(
 
 
 async def _load_existing_exclusions(
-    db: AsyncSession, assignment: ChoreAssignment, family_id: int
+    db: AsyncSession, assignment: ChoreAssignment
 ) -> set[tuple[int, int, date]]:
     """Load existing exclusions for the assignment's chore+user from its date onward."""
     result = await db.execute(
         select(ChoreExclusion).where(
-            ChoreExclusion.family_id == family_id,
             ChoreExclusion.chore_id == assignment.chore_id,
             ChoreExclusion.user_id == assignment.user_id,
             ChoreExclusion.date >= assignment.date,
@@ -472,14 +451,12 @@ async def _load_existing_exclusions(
 async def _remove_future_assignments(
     db: AsyncSession,
     assignment: ChoreAssignment,
-    family_id: int,
     is_recurring: bool,
     existing_exclusions: set[tuple[int, int, date]],
 ) -> None:
     """Remove all pending assignments for the same chore+kid from the date onward."""
     future_result = await db.execute(
         select(ChoreAssignment).where(
-            ChoreAssignment.family_id == family_id,
             ChoreAssignment.chore_id == assignment.chore_id,
             ChoreAssignment.user_id == assignment.user_id,
             ChoreAssignment.date >= assignment.date,
@@ -489,21 +466,17 @@ async def _remove_future_assignments(
     for a in future_result.scalars().all():
         if is_recurring and (a.chore_id, a.user_id, a.date) not in existing_exclusions:
             db.add(ChoreExclusion(
-                family_id=family_id,
-                chore_id=a.chore_id,
-                user_id=a.user_id,
-                date=a.date,
+                chore_id=a.chore_id, user_id=a.user_id, date=a.date,
             ))
         await db.delete(a)
 
 
 async def _add_exclusion_if_new(
-    db: AsyncSession, chore_id: int, user_id: int, exclusion_date: date, family_id: int
+    db: AsyncSession, chore_id: int, user_id: int, exclusion_date: date
 ) -> None:
     """Add a ChoreExclusion if one doesn't already exist for this slot."""
     existing = await db.execute(
         select(ChoreExclusion).where(
-            ChoreExclusion.family_id == family_id,
             ChoreExclusion.chore_id == chore_id,
             ChoreExclusion.user_id == user_id,
             ChoreExclusion.date == exclusion_date,
@@ -511,8 +484,5 @@ async def _add_exclusion_if_new(
     )
     if not existing.scalar_one_or_none():
         db.add(ChoreExclusion(
-            family_id=family_id,
-            chore_id=chore_id,
-            user_id=user_id,
-            date=exclusion_date,
+            chore_id=chore_id, user_id=user_id, date=exclusion_date,
         ))

@@ -3,11 +3,11 @@ from sqlalchemy import select, func, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.database import get_db
-from backend.models import Notification, Family
+from backend.models import Notification
 from backend.schemas import NotificationResponse
-from backend.dependencies import get_current_user, resolve_family, require_subscription
+from backend.dependencies import get_current_user
 
-router = APIRouter(prefix="/api/notifications", tags=["notifications"], dependencies=[Depends(require_subscription)])
+router = APIRouter(prefix="/api/notifications", tags=["notifications"])
 
 
 # ---------- GET / ----------
@@ -18,13 +18,9 @@ async def list_notifications(
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),
     user=Depends(get_current_user),
-    family: Family = Depends(resolve_family),
 ):
     """List notifications for the current user."""
-    stmt = select(Notification).where(
-        Notification.user_id == user.id,
-        Notification.family_id == family.id,
-    )
+    stmt = select(Notification).where(Notification.user_id == user.id)
 
     if unread_only:
         stmt = stmt.where(Notification.is_read == False)
@@ -41,17 +37,12 @@ async def list_notifications(
 async def unread_count(
     db: AsyncSession = Depends(get_db),
     user=Depends(get_current_user),
-    family: Family = Depends(resolve_family),
 ):
     """Return the count of unread notifications for the current user."""
     result = await db.execute(
         select(func.count())
         .select_from(Notification)
-        .where(
-            Notification.user_id == user.id,
-            Notification.family_id == family.id,
-            Notification.is_read == False,
-        )
+        .where(Notification.user_id == user.id, Notification.is_read == False)
     )
     count = result.scalar()
     return {"count": count}
@@ -63,14 +54,10 @@ async def mark_read(
     notification_id: int,
     db: AsyncSession = Depends(get_db),
     user=Depends(get_current_user),
-    family: Family = Depends(resolve_family),
 ):
     """Mark a single notification as read (must belong to the current user)."""
     result = await db.execute(
-        select(Notification).where(
-            Notification.id == notification_id,
-            Notification.family_id == family.id,
-        )
+        select(Notification).where(Notification.id == notification_id)
     )
     notification = result.scalar_one_or_none()
 
@@ -91,16 +78,11 @@ async def mark_read(
 async def mark_all_read(
     db: AsyncSession = Depends(get_db),
     user=Depends(get_current_user),
-    family: Family = Depends(resolve_family),
 ):
     """Mark all notifications as read for the current user."""
     await db.execute(
         update(Notification)
-        .where(
-            Notification.user_id == user.id,
-            Notification.family_id == family.id,
-            Notification.is_read == False,
-        )
+        .where(Notification.user_id == user.id, Notification.is_read == False)
         .values(is_read=True)
     )
     await db.commit()

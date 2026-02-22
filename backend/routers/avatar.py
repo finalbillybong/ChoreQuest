@@ -10,9 +10,8 @@ from backend.database import get_db
 from backend.models import (
     User, UserRole, AvatarItem, UserAvatarItem, PointTransaction, PointType,
     Notification, NotificationType, AvatarAcquiredVia, AvatarUnlockMethod,
-    Family,
 )
-from backend.dependencies import get_current_user, resolve_family
+from backend.dependencies import get_current_user
 from backend.websocket_manager import ws_manager
 
 router = APIRouter(prefix="/api/avatar", tags=["avatar"])
@@ -158,7 +157,7 @@ async def save_avatar(
 ):
     """Save avatar configuration for the current user."""
     user.avatar_config = body.config
-    user.updated_at = datetime.utcnow()
+    user.updated_at = datetime.now(timezone.utc)
     await db.commit()
     await db.refresh(user)
     await ws_manager.broadcast({"type": "data_changed", "data": {"entity": "user"}}, exclude_user=user.id)
@@ -231,7 +230,6 @@ async def purchase_avatar_item(
     item_id: int,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
-    family: Family = Depends(resolve_family),
 ):
     """Purchase an avatar item from the shop using XP points."""
     item_result = await db.execute(select(AvatarItem).where(AvatarItem.id == item_id))
@@ -263,7 +261,6 @@ async def purchase_avatar_item(
     user.points_balance -= cost
     db.add(PointTransaction(
         user_id=user.id,
-        family_id=family.id,
         amount=-cost,
         type=PointType.reward_redeem,
         description=f"Avatar item: {item.display_name}",
@@ -293,7 +290,7 @@ async def purchase_avatar_item(
 DROP_RATES = {"easy": 0.05, "medium": 0.10, "hard": 0.15, "expert": 0.20}
 
 
-async def try_quest_drop(db: AsyncSession, user: User, difficulty: str, family: Family):
+async def try_quest_drop(db: AsyncSession, user: User, difficulty: str):
     """Roll for a random quest-drop avatar item. Returns the item dict or None."""
     rate = DROP_RATES.get(difficulty, 0.10)
     if random.random() > rate:
@@ -322,7 +319,6 @@ async def try_quest_drop(db: AsyncSession, user: User, difficulty: str, family: 
     ))
     db.add(Notification(
         user_id=user.id,
-        family_id=family.id,
         type=NotificationType.avatar_item_drop,
         title="Quest Drop!",
         message=f"You found a {item.rarity.value} item: {item.display_name}!",

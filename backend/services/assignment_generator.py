@@ -17,7 +17,6 @@ from backend.models import (
     ChoreExclusion,
     ChoreRotation,
     AssignmentStatus,
-    Family,
     Recurrence,
 )
 from backend.services.recurrence import should_create_on_day
@@ -31,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 
 async def auto_generate_week_assignments(
-    db: AsyncSession, week_start: date, *, family_id: int | None = None,
+    db: AsyncSession, week_start: date
 ) -> None:
     """Generate ChoreAssignment records for recurring chores across a week.
 
@@ -44,9 +43,9 @@ async def auto_generate_week_assignments(
     week_end = week_start + timedelta(days=6)
     week_dates = [week_start + timedelta(days=i) for i in range(7)]
 
-    exclusion_set = await _load_exclusion_set(db, week_start, week_end, family_id=family_id)
+    exclusion_set = await _load_exclusion_set(db, week_start, week_end)
 
-    chores = await _load_active_chores(db, family_id=family_id)
+    chores = await _load_active_chores(db)
 
     for chore in chores:
         rules = await _load_active_rules(db, chore.id)
@@ -62,7 +61,7 @@ async def auto_generate_week_assignments(
     await db.commit()
 
 
-async def generate_daily_assignments(db: AsyncSession, today: date, *, family_id: int | None = None) -> None:
+async def generate_daily_assignments(db: AsyncSession, today: date) -> None:
     """Generate assignments for today with rotation advancement.
 
     Called by the daily reset background task. Unlike the week-based
@@ -71,8 +70,8 @@ async def generate_daily_assignments(db: AsyncSession, today: date, *, family_id
     chore actually has an occurrence so that non-active days (e.g.
     weekends for a Mon-Fri custom schedule) don't waste rotation slots.
     """
-    now = datetime.utcnow()
-    chores = await _load_active_chores(db, family_id=family_id)
+    now = datetime.now(timezone.utc)
+    chores = await _load_active_chores(db)
 
     for chore in chores:
         rules = await _load_active_rules(db, chore.id)
@@ -108,7 +107,7 @@ async def generate_daily_assignments(db: AsyncSession, today: date, *, family_id
                 ):
                     continue
 
-                await _create_if_missing(db, chore.id, rule.user_id, today, family_id=chore.family_id)
+                await _create_if_missing(db, chore.id, rule.user_id, today)
         else:
             # Legacy: chore-level recurrence
             if chore.recurrence == Recurrence.once:
@@ -129,7 +128,7 @@ async def generate_daily_assignments(db: AsyncSession, today: date, *, family_id
                 user_ids = await _get_legacy_user_ids(db, chore.id)
 
             for uid in user_ids:
-                await _create_if_missing(db, chore.id, uid, today, family_id=chore.family_id)
+                await _create_if_missing(db, chore.id, uid, today)
 
 
 # ---------------------------------------------------------------------------
@@ -137,13 +136,8 @@ async def generate_daily_assignments(db: AsyncSession, today: date, *, family_id
 # ---------------------------------------------------------------------------
 
 
-async def _load_active_chores(
-    db: AsyncSession, *, family_id: int | None = None,
-) -> list[Chore]:
-    stmt = select(Chore).where(Chore.is_active == True)
-    if family_id is not None:
-        stmt = stmt.where(Chore.family_id == family_id)
-    result = await db.execute(stmt)
+async def _load_active_chores(db: AsyncSession) -> list[Chore]:
+    result = await db.execute(select(Chore).where(Chore.is_active == True))
     return list(result.scalars().all())
 
 
@@ -169,16 +163,14 @@ async def _load_rotation(
 
 
 async def _load_exclusion_set(
-    db: AsyncSession, start: date, end: date,
-    *, family_id: int | None = None,
+    db: AsyncSession, start: date, end: date
 ) -> set[tuple[int, int, date]]:
-    stmt = select(ChoreExclusion).where(
-        ChoreExclusion.date >= start,
-        ChoreExclusion.date <= end,
+    result = await db.execute(
+        select(ChoreExclusion).where(
+            ChoreExclusion.date >= start,
+            ChoreExclusion.date <= end,
+        )
     )
-    if family_id is not None:
-        stmt = stmt.where(ChoreExclusion.family_id == family_id)
-    result = await db.execute(stmt)
     return {
         (e.chore_id, e.user_id, e.date) for e in result.scalars().all()
     }
@@ -195,8 +187,7 @@ async def _get_legacy_user_ids(db: AsyncSession, chore_id: int) -> list[int]:
 
 
 async def _create_if_missing(
-    db: AsyncSession, chore_id: int, user_id: int, day: date,
-    *, family_id: int | None = None,
+    db: AsyncSession, chore_id: int, user_id: int, day: date
 ) -> bool:
     """Create a pending assignment if one doesn't already exist.
 
@@ -212,7 +203,6 @@ async def _create_if_missing(
     if existing.scalar_one_or_none() is None:
         db.add(
             ChoreAssignment(
-                family_id=family_id,
                 chore_id=chore_id,
                 user_id=user_id,
                 date=day,
@@ -258,7 +248,7 @@ async def _generate_from_rules(
             if (chore.id, rule.user_id, day) in exclusion_set:
                 continue
 
-            await _create_if_missing(db, chore.id, rule.user_id, day, family_id=chore.family_id)
+            await _create_if_missing(db, chore.id, rule.user_id, day)
 
 
 def _collect_active_weekdays(
@@ -320,4 +310,4 @@ async def _generate_legacy(
         for user_id in user_ids:
             if (chore.id, user_id, day) in exclusion_set:
                 continue
-            await _create_if_missing(db, chore.id, user_id, day, family_id=chore.family_id)
+            await _create_if_missing(db, chore.id, user_id, day)

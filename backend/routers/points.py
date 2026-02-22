@@ -8,8 +8,6 @@ from backend.database import get_db
 from backend.models import (
     User,
     UserRole,
-    Family,
-    FamilyMember,
     PointTransaction,
     PointType,
     AuditLog,
@@ -22,11 +20,11 @@ from backend.schemas import (
     PointTransactionResponse,
     UserResponse,
 )
-from backend.dependencies import get_current_user, require_parent, require_admin, resolve_family, require_subscription
+from backend.dependencies import get_current_user, require_parent, require_admin
 from backend.achievements import check_achievements
 from backend.websocket_manager import ws_manager
 
-router = APIRouter(prefix="/api/points", tags=["points"], dependencies=[Depends(require_subscription)])
+router = APIRouter(prefix="/api/points", tags=["points"])
 
 
 @router.get("/{user_id}", response_model=dict)
@@ -75,7 +73,6 @@ async def award_bonus(
     body: BonusRequest,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_parent),
-    family: Family = Depends(resolve_family),
 ):
     """Award bonus XP to a user (Parent+)."""
     result = await db.execute(select(User).where(User.id == user_id))
@@ -111,7 +108,7 @@ async def award_bonus(
     await db.refresh(tx)
 
     # Check achievements after bonus
-    await check_achievements(db, user, family_id=family.id)
+    await check_achievements(db, user)
 
     # WebSocket notification
     await ws_manager.send_to_user(user.id, {
@@ -133,20 +130,12 @@ async def adjust_points(
     request: Request,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_admin),
-    family: Family = Depends(resolve_family),
 ):
     """Admin point adjustment (can be negative).
 
     Creates both a PointTransaction and an AuditLog entry for accountability.
     """
-    result = await db.execute(
-        select(User).where(
-            User.id.in_(
-                select(FamilyMember.user_id).where(FamilyMember.family_id == family.id)
-            ),
-            User.id == user_id,
-        )
-    )
+    result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
@@ -165,7 +154,6 @@ async def adjust_points(
 
     # Create the point transaction
     tx = PointTransaction(
-        family_id=family.id,
         user_id=user.id,
         amount=body.amount,
         type=PointType.adjustment,
