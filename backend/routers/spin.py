@@ -13,13 +13,14 @@ from backend.models import (
     User,
     PointTransaction,
     PointType,
+    Family,
 )
 from backend.schemas import SpinResultResponse, SpinAvailabilityResponse
-from backend.dependencies import get_current_user
+from backend.dependencies import get_current_user, resolve_family, require_subscription
 from backend.achievements import check_achievements
 from backend.websocket_manager import ws_manager
 
-router = APIRouter(prefix="/api/spin", tags=["spin"])
+router = APIRouter(prefix="/api/spin", tags=["spin"], dependencies=[Depends(require_subscription)])
 
 SPIN_MIN = 1
 SPIN_MAX = 25
@@ -29,7 +30,7 @@ SPIN_MAX = 25
 WHEEL_VALUES = [1, 5, 2, 10, 3, 15, 1, 25, 2, 5, 3, 10]
 
 
-async def _can_spin_today(db: AsyncSession, user: User) -> tuple[bool, int | None, str | None]:
+async def _can_spin_today(db: AsyncSession, user: User, family: Family) -> tuple[bool, int | None, str | None]:
     """
     Determine if the user is eligible to spin today.
 
@@ -47,7 +48,7 @@ async def _can_spin_today(db: AsyncSession, user: User) -> tuple[bool, int | Non
     last_result: int | None = None
     last_spin_query = await db.execute(
         select(SpinResult)
-        .where(SpinResult.user_id == user.id)
+        .where(SpinResult.user_id == user.id, SpinResult.family_id == family.id)
         .order_by(SpinResult.created_at.desc())
         .limit(1)
     )
@@ -59,6 +60,7 @@ async def _can_spin_today(db: AsyncSession, user: User) -> tuple[bool, int | Non
     result = await db.execute(
         select(SpinResult).where(
             SpinResult.user_id == user.id,
+            SpinResult.family_id == family.id,
             SpinResult.spin_date == today,
         )
     )
@@ -71,6 +73,7 @@ async def _can_spin_today(db: AsyncSession, user: User) -> tuple[bool, int | Non
     result = await db.execute(
         select(ChoreAssignment).where(
             ChoreAssignment.user_id == user.id,
+            ChoreAssignment.family_id == family.id,
             ChoreAssignment.date == today,
         )
     )
@@ -99,9 +102,10 @@ async def _can_spin_today(db: AsyncSession, user: User) -> tuple[bool, int | Non
 async def check_availability(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
+    family: Family = Depends(resolve_family),
 ):
     """Check if the user can spin today."""
-    can_spin, last_result, reason = await _can_spin_today(db, user)
+    can_spin, last_result, reason = await _can_spin_today(db, user, family)
     return SpinAvailabilityResponse(can_spin=can_spin, last_result=last_result, reason=reason)
 
 
@@ -110,9 +114,10 @@ async def check_availability(
 async def execute_spin(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
+    family: Family = Depends(resolve_family),
 ):
     """Execute the daily spin. Validates eligibility, generates random XP, awards points."""
-    can_spin, _, reason = await _can_spin_today(db, user)
+    can_spin, _, reason = await _can_spin_today(db, user, family)
     if not can_spin:
         raise HTTPException(
             status_code=400,
@@ -126,6 +131,7 @@ async def execute_spin(
     # Create spin result
     spin_result = SpinResult(
         user_id=user.id,
+        family_id=family.id,
         points_won=points_won,
         spin_date=today,
     )
@@ -134,6 +140,7 @@ async def execute_spin(
     # Award XP via PointTransaction
     transaction = PointTransaction(
         user_id=user.id,
+        family_id=family.id,
         amount=points_won,
         type=PointType.spin,
         description=f"Daily spin: won {points_won} XP",
@@ -151,7 +158,7 @@ async def execute_spin(
 
     # Check achievements (non-blocking on failure)
     try:
-        await check_achievements(db, user)
+        await check_achievements(db, user, family_id=family.id)
     except Exception:
         pass
 

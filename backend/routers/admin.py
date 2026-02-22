@@ -9,7 +9,7 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.database import get_db
-from backend.models import User, ApiKey, InviteCode, AuditLog, AppSetting
+from backend.models import User, ApiKey, InviteCode, AuditLog, AppSetting, Family, FamilyMember
 from backend.schemas import (
     UserResponse,
     AdminUserUpdate,
@@ -22,7 +22,7 @@ from backend.schemas import (
     SettingsUpdate,
 )
 from backend.auth import hash_password
-from backend.dependencies import require_admin
+from backend.dependencies import require_admin, resolve_family
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -36,9 +36,15 @@ router = APIRouter(prefix="/api/admin", tags=["admin"])
 async def list_users(
     db: AsyncSession = Depends(get_db),
     _admin: User = Depends(require_admin),
+    family: Family = Depends(resolve_family),
 ):
-    """List all users."""
-    result = await db.execute(select(User).order_by(User.id))
+    """List users in the admin's family."""
+    result = await db.execute(
+        select(User)
+        .join(FamilyMember, FamilyMember.user_id == User.id)
+        .where(FamilyMember.family_id == family.id)
+        .order_by(User.id)
+    )
     users = result.scalars().all()
     return [UserResponse.model_validate(u) for u in users]
 
@@ -50,9 +56,14 @@ async def update_user(
     body: AdminUserUpdate,
     db: AsyncSession = Depends(get_db),
     _admin: User = Depends(require_admin),
+    family: Family = Depends(resolve_family),
 ):
-    """Update user role and/or active status."""
-    result = await db.execute(select(User).where(User.id == user_id))
+    """Update user role and/or active status (must be in same family)."""
+    result = await db.execute(
+        select(User)
+        .join(FamilyMember, FamilyMember.user_id == User.id)
+        .where(User.id == user_id, FamilyMember.family_id == family.id)
+    )
     user = result.scalar_one_or_none()
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
@@ -62,7 +73,7 @@ async def update_user(
     if body.is_active is not None:
         user.is_active = body.is_active
 
-    user.updated_at = datetime.now(timezone.utc)
+    user.updated_at = datetime.utcnow()
     await db.commit()
     await db.refresh(user)
     return UserResponse.model_validate(user)
@@ -74,15 +85,20 @@ async def deactivate_user(
     user_id: int,
     db: AsyncSession = Depends(get_db),
     _admin: User = Depends(require_admin),
+    family: Family = Depends(resolve_family),
 ):
-    """Deactivate a user (set is_active=false)."""
-    result = await db.execute(select(User).where(User.id == user_id))
+    """Deactivate a user (set is_active=false). Must be in same family."""
+    result = await db.execute(
+        select(User)
+        .join(FamilyMember, FamilyMember.user_id == User.id)
+        .where(User.id == user_id, FamilyMember.family_id == family.id)
+    )
     user = result.scalar_one_or_none()
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
 
     user.is_active = False
-    user.updated_at = datetime.now(timezone.utc)
+    user.updated_at = datetime.utcnow()
     await db.commit()
     return {"detail": "User deactivated"}
 
@@ -94,15 +110,20 @@ async def reset_user_password(
     body: AdminResetPasswordRequest,
     db: AsyncSession = Depends(get_db),
     _admin: User = Depends(require_admin),
+    family: Family = Depends(resolve_family),
 ):
-    """Admin reset of a user's password."""
-    result = await db.execute(select(User).where(User.id == user_id))
+    """Admin reset of a user's password. Must be in same family."""
+    result = await db.execute(
+        select(User)
+        .join(FamilyMember, FamilyMember.user_id == User.id)
+        .where(User.id == user_id, FamilyMember.family_id == family.id)
+    )
     user = result.scalar_one_or_none()
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
 
     user.password_hash = hash_password(body.new_password)
-    user.updated_at = datetime.now(timezone.utc)
+    user.updated_at = datetime.utcnow()
     await db.commit()
     return {"detail": f"Password reset for {user.username}"}
 
@@ -189,9 +210,14 @@ def _generate_invite_code(length: int = 8) -> str:
 async def list_invite_codes(
     db: AsyncSession = Depends(get_db),
     _admin: User = Depends(require_admin),
+    family: Family = Depends(resolve_family),
 ):
-    """List all invite codes."""
-    result = await db.execute(select(InviteCode).order_by(InviteCode.created_at.desc()))
+    """List invite codes for the family."""
+    result = await db.execute(
+        select(InviteCode)
+        .where(InviteCode.family_id == family.id)
+        .order_by(InviteCode.created_at.desc())
+    )
     codes = result.scalars().all()
     return [InviteCodeResponse.model_validate(c) for c in codes]
 
@@ -202,6 +228,7 @@ async def create_invite_code(
     body: InviteCodeCreate,
     db: AsyncSession = Depends(get_db),
     admin: User = Depends(require_admin),
+    family: Family = Depends(resolve_family),
 ):
     """Create a new invite code with a random 8-char alphanumeric string."""
     code = _generate_invite_code()
@@ -221,6 +248,7 @@ async def create_invite_code(
         max_uses=body.max_uses,
         expires_at=body.expires_at,
         created_by=admin.id,
+        family_id=family.id,
     )
     db.add(invite)
     await db.commit()
@@ -234,9 +262,15 @@ async def delete_invite_code(
     code_id: int,
     db: AsyncSession = Depends(get_db),
     _admin: User = Depends(require_admin),
+    family: Family = Depends(resolve_family),
 ):
     """Delete an invite code."""
-    result = await db.execute(select(InviteCode).where(InviteCode.id == code_id))
+    result = await db.execute(
+        select(InviteCode).where(
+            InviteCode.id == code_id,
+            InviteCode.family_id == family.id,
+        )
+    )
     invite = result.scalar_one_or_none()
     if invite is None:
         raise HTTPException(status_code=404, detail="Invite code not found")
@@ -306,7 +340,7 @@ async def update_settings(
         existing = result.scalar_one_or_none()
         if existing:
             existing.value = value
-            existing.updated_at = datetime.now(timezone.utc)
+            existing.updated_at = datetime.utcnow()
         else:
             new_setting = AppSetting(key=key, value=value)
             db.add(new_setting)

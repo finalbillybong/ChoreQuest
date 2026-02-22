@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
@@ -7,7 +7,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.config import settings
 from backend.database import get_db
-from backend.models import User, UserRole, RefreshToken, InviteCode, AuditLog
+from backend.models import (
+    User,
+    UserRole,
+    RefreshToken,
+    InviteCode,
+    AuditLog,
+    Family,
+    FamilyMember,
+    FamilyMemberRole,
+)
 from backend.seed import seed_database
 from backend.schemas import (
     RegisterRequest,
@@ -104,6 +113,7 @@ async def register(
         role = body.role
 
     # Check invite code requirement for non-first users
+    invite_family_id: int | None = None
     if not is_first_user and not settings.REGISTRATION_ENABLED:
         if not body.invite_code:
             raise HTTPException(
@@ -116,12 +126,13 @@ async def register(
         invite = result.scalar_one_or_none()
         if invite is None:
             raise HTTPException(status_code=400, detail="Invalid invite code")
-        if invite.expires_at and invite.expires_at < datetime.now(timezone.utc):
+        if invite.expires_at and invite.expires_at < datetime.utcnow():
             raise HTTPException(status_code=400, detail="Invite code has expired")
         if invite.times_used >= invite.max_uses:
             raise HTTPException(status_code=400, detail="Invite code has been fully used")
-        # Use the invite code's role if the user is not the first
+        # Use the invite code's role and family
         role = invite.role
+        invite_family_id = invite.family_id
         invite.times_used += 1
 
     # Check duplicate username
@@ -137,6 +148,50 @@ async def register(
     )
     db.add(user)
     await db.flush()
+
+    # Create Family and FamilyMember
+    trial_end = (
+        datetime.utcnow() + timedelta(days=settings.TRIAL_DAYS)
+        if settings.APP_MODE == "saas" else None
+    )
+
+    if is_first_user:
+        family = Family(
+            name="Default Family",
+            owner_user_id=user.id,
+            trial_ends_at=trial_end,
+        )
+        db.add(family)
+        await db.flush()
+        db.add(FamilyMember(
+            family_id=family.id,
+            user_id=user.id,
+            role=FamilyMemberRole.parent,
+        ))
+    else:
+        # Subsequent user: add to family from invite, or default family if no invite
+        if invite_family_id is not None:
+            family_id = invite_family_id
+        else:
+            fam_result = await db.execute(select(Family).limit(1))
+            default_family = fam_result.scalar_one_or_none()
+            if default_family is None:
+                new_family = Family(
+                    name="Default Family",
+                    owner_user_id=user.id,
+                    trial_ends_at=trial_end,
+                )
+                db.add(new_family)
+                await db.flush()
+                family_id = new_family.id
+            else:
+                family_id = default_family.id
+        fm_role = FamilyMemberRole.parent if role in (UserRole.admin, UserRole.parent) else FamilyMemberRole.child
+        db.add(FamilyMember(
+            family_id=family_id,
+            user_id=user.id,
+            role=fm_role,
+        ))
 
     # Audit log
     audit = AuditLog(
@@ -323,7 +378,7 @@ async def update_me(
     if body.avatar_config is not None:
         user.avatar_config = body.avatar_config
 
-    user.updated_at = datetime.now(timezone.utc)
+    user.updated_at = datetime.utcnow()
     await db.commit()
     await db.refresh(user)
     await ws_manager.broadcast({"type": "data_changed", "data": {"entity": "user"}}, exclude_user=user.id)
@@ -342,7 +397,7 @@ async def change_password(
         raise HTTPException(status_code=400, detail="Current password is incorrect")
 
     user.password_hash = hash_password(body.new_password)
-    user.updated_at = datetime.now(timezone.utc)
+    user.updated_at = datetime.utcnow()
 
     # Invalidate all refresh tokens
     result = await db.execute(
@@ -375,6 +430,6 @@ async def set_pin(
     user: User = Depends(get_current_user),
 ):
     user.pin_hash = hash_pin(body.pin)
-    user.updated_at = datetime.now(timezone.utc)
+    user.updated_at = datetime.utcnow()
     await db.commit()
     return {"detail": "PIN set successfully"}

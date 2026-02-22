@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from backend.database import get_db
-from backend.models import WishlistItem, Reward, User, UserRole
+from backend.models import WishlistItem, Reward, User, UserRole, Family
 from backend.schemas import (
     WishlistCreate,
     WishlistUpdate,
@@ -14,10 +14,10 @@ from backend.schemas import (
     WishlistConvertRequest,
     RewardResponse,
 )
-from backend.dependencies import get_current_user, require_parent
+from backend.dependencies import get_current_user, require_parent, resolve_family, require_subscription
 from backend.websocket_manager import ws_manager
 
-router = APIRouter(prefix="/api/wishlist", tags=["wishlist"])
+router = APIRouter(prefix="/api/wishlist", tags=["wishlist"], dependencies=[Depends(require_subscription)])
 
 
 # ---------- GET / ----------
@@ -54,10 +54,12 @@ async def add_wishlist_item(
     body: WishlistCreate,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
+    family: Family = Depends(resolve_family),
 ):
     """Add a new wishlist item (typically by a kid)."""
     item = WishlistItem(
         user_id=user.id,
+        family_id=family.id,
         title=body.title,
         url=body.url,
         image_url=body.image_url,
@@ -77,9 +79,15 @@ async def update_wishlist_item(
     body: WishlistUpdate,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
+    family: Family = Depends(resolve_family),
 ):
     """Update a wishlist item (owner only)."""
-    result = await db.execute(select(WishlistItem).where(WishlistItem.id == item_id))
+    result = await db.execute(
+        select(WishlistItem).where(
+            WishlistItem.id == item_id,
+            WishlistItem.family_id == family.id,
+        )
+    )
     item = result.scalar_one_or_none()
     if item is None:
         raise HTTPException(status_code=404, detail="Wishlist item not found")
@@ -96,7 +104,7 @@ async def update_wishlist_item(
     if body.notes is not None:
         item.notes = body.notes
 
-    item.updated_at = datetime.now(timezone.utc)
+    item.updated_at = datetime.utcnow()
     await db.commit()
     await db.refresh(item)
     await ws_manager.broadcast({"type": "data_changed", "data": {"entity": "wishlist"}}, exclude_user=user.id)
@@ -109,9 +117,15 @@ async def delete_wishlist_item(
     item_id: int,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
+    family: Family = Depends(resolve_family),
 ):
     """Remove a wishlist item (owner or parent/admin)."""
-    result = await db.execute(select(WishlistItem).where(WishlistItem.id == item_id))
+    result = await db.execute(
+        select(WishlistItem).where(
+            WishlistItem.id == item_id,
+            WishlistItem.family_id == family.id,
+        )
+    )
     item = result.scalar_one_or_none()
     if item is None:
         raise HTTPException(status_code=404, detail="Wishlist item not found")
@@ -135,9 +149,15 @@ async def convert_to_reward(
     body: WishlistConvertRequest,
     db: AsyncSession = Depends(get_db),
     parent: User = Depends(require_parent),
+    family: Family = Depends(resolve_family),
 ):
     """Convert a wishlist item to a reward (parent+ only). Creates a Reward and links it."""
-    result = await db.execute(select(WishlistItem).where(WishlistItem.id == item_id))
+    result = await db.execute(
+        select(WishlistItem).where(
+            WishlistItem.id == item_id,
+            WishlistItem.family_id == family.id,
+        )
+    )
     item = result.scalar_one_or_none()
     if item is None:
         raise HTTPException(status_code=404, detail="Wishlist item not found")
@@ -153,6 +173,7 @@ async def convert_to_reward(
         stock=1,
         is_active=True,
         created_by=parent.id,
+        family_id=family.id,
     )
     db.add(reward)
     await db.flush()

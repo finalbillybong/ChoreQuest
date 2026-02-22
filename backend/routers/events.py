@@ -5,12 +5,20 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.database import get_db
-from backend.models import SeasonalEvent, User, UserRole, Notification, NotificationType
+from backend.models import (
+    SeasonalEvent,
+    User,
+    UserRole,
+    Notification,
+    NotificationType,
+    Family,
+    FamilyMember,
+)
 from backend.schemas import EventCreate, EventUpdate, EventResponse
-from backend.dependencies import get_current_user, require_parent
+from backend.dependencies import get_current_user, require_parent, resolve_family, require_subscription
 from backend.websocket_manager import ws_manager
 
-router = APIRouter(prefix="/api/events", tags=["events"])
+router = APIRouter(prefix="/api/events", tags=["events"], dependencies=[Depends(require_subscription)])
 
 
 def _make_aware(dt: datetime) -> datetime:
@@ -20,7 +28,7 @@ def _make_aware(dt: datetime) -> datetime:
 
 def _event_to_response(event: SeasonalEvent) -> dict:
     """Build an EventResponse dict with computed is_active based on date range + DB flag."""
-    now = datetime.now(timezone.utc)
+    now = datetime.utcnow()
     in_range = _make_aware(event.start_date) <= now <= _make_aware(event.end_date)
     data = EventResponse.model_validate(event).model_dump()
     data["is_active"] = event.is_active and in_range
@@ -32,9 +40,14 @@ def _event_to_response(event: SeasonalEvent) -> dict:
 async def list_events(
     db: AsyncSession = Depends(get_db),
     _user=Depends(get_current_user),
+    family: Family = Depends(resolve_family),
 ):
     """List all seasonal events with computed is_active based on current date range."""
-    result = await db.execute(select(SeasonalEvent).order_by(SeasonalEvent.start_date.desc()))
+    result = await db.execute(
+        select(SeasonalEvent)
+        .where(SeasonalEvent.family_id == family.id)
+        .order_by(SeasonalEvent.start_date.desc())
+    )
     events = result.scalars().all()
     return [_event_to_response(e) for e in events]
 
@@ -45,6 +58,7 @@ async def create_event(
     body: EventCreate,
     db: AsyncSession = Depends(get_db),
     parent=Depends(require_parent),
+    family: Family = Depends(resolve_family),
 ):
     """Create a new seasonal event (parent+ only)."""
     if body.end_date <= body.start_date:
@@ -58,18 +72,26 @@ async def create_event(
         end_date=body.end_date,
         is_active=True,
         created_by=parent.id,
+        family_id=family.id,
     )
     db.add(event)
     await db.flush()
 
-    # Notify all kids about the new event
+    # Notify all kids in the family about the new event
     kid_result = await db.execute(
-        select(User.id).where(User.role == UserRole.kid, User.is_active == True)
+        select(User.id)
+        .join(FamilyMember, FamilyMember.user_id == User.id)
+        .where(
+            FamilyMember.family_id == family.id,
+            User.role == UserRole.kid,
+            User.is_active == True,
+        )
     )
     for (kid_id,) in kid_result.all():
         multiplier_pct = int((event.multiplier - 1) * 100)
         db.add(Notification(
             user_id=kid_id,
+            family_id=family.id,
             type=NotificationType.bonus_points,
             title="Bonus Event Started!",
             message=f"'{event.title}' is live — earn {multiplier_pct}% bonus XP on all quests!",
@@ -90,9 +112,15 @@ async def update_event(
     body: EventUpdate,
     db: AsyncSession = Depends(get_db),
     _parent=Depends(require_parent),
+    family: Family = Depends(resolve_family),
 ):
     """Update an existing seasonal event (parent+ only)."""
-    result = await db.execute(select(SeasonalEvent).where(SeasonalEvent.id == event_id))
+    result = await db.execute(
+        select(SeasonalEvent).where(
+            SeasonalEvent.id == event_id,
+            SeasonalEvent.family_id == family.id,
+        )
+    )
     event = result.scalar_one_or_none()
     if event is None:
         raise HTTPException(status_code=404, detail="Event not found")
@@ -124,9 +152,15 @@ async def end_event(
     event_id: int,
     db: AsyncSession = Depends(get_db),
     _parent=Depends(require_parent),
+    family: Family = Depends(resolve_family),
 ):
     """End a seasonal event early (parent+ only)."""
-    result = await db.execute(select(SeasonalEvent).where(SeasonalEvent.id == event_id))
+    result = await db.execute(
+        select(SeasonalEvent).where(
+            SeasonalEvent.id == event_id,
+            SeasonalEvent.family_id == family.id,
+        )
+    )
     event = result.scalar_one_or_none()
     if event is None:
         raise HTTPException(status_code=404, detail="Event not found")
@@ -144,9 +178,15 @@ async def delete_event(
     event_id: int,
     db: AsyncSession = Depends(get_db),
     _parent=Depends(require_parent),
+    family: Family = Depends(resolve_family),
 ):
     """Delete a seasonal event (parent+ only)."""
-    result = await db.execute(select(SeasonalEvent).where(SeasonalEvent.id == event_id))
+    result = await db.execute(
+        select(SeasonalEvent).where(
+            SeasonalEvent.id == event_id,
+            SeasonalEvent.family_id == family.id,
+        )
+    )
     event = result.scalar_one_or_none()
     if event is None:
         raise HTTPException(status_code=404, detail="Event not found")

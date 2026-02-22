@@ -91,11 +91,46 @@ class AvatarAcquiredVia(str, enum.Enum):
     milestone = "milestone"
 
 
+class FamilyMemberRole(str, enum.Enum):
+    parent = "parent"
+    child = "child"
+
+
 class RotationCadence(str, enum.Enum):
     daily = "daily"
     weekly = "weekly"
     fortnightly = "fortnightly"
     monthly = "monthly"
+
+
+class Family(Base):
+    __tablename__ = "families"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    owner_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    stripe_customer_id: Mapped[str | None] = mapped_column(String(255), unique=True, nullable=True)
+    stripe_subscription_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    subscription_status: Mapped[str] = mapped_column(String(20), default="none", server_default="none")
+    subscription_current_period_end: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    trial_ends_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+    owner = relationship("User", foreign_keys=[owner_user_id])
+    members = relationship("FamilyMember", back_populates="family")
+
+
+class FamilyMember(Base):
+    __tablename__ = "family_members"
+    __table_args__ = (UniqueConstraint("family_id", "user_id"),)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    family_id: Mapped[int] = mapped_column(ForeignKey("families.id"), nullable=False)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    role: Mapped[FamilyMemberRole] = mapped_column(Enum(FamilyMemberRole), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    family = relationship("Family", back_populates="members")
+    user = relationship("User")
 
 
 class RefreshToken(Base):
@@ -117,6 +152,7 @@ class User(Base):
     display_name: Mapped[str] = mapped_column(String(100), nullable=False)
     password_hash: Mapped[str] = mapped_column(String, nullable=False)
     pin_hash: Mapped[str | None] = mapped_column(String, nullable=True)
+    firebase_uid: Mapped[str | None] = mapped_column(String(128), unique=True, nullable=True)
     role: Mapped[UserRole] = mapped_column(Enum(UserRole), nullable=False)
     points_balance: Mapped[int] = mapped_column(Integer, default=0)
     total_points_earned: Mapped[int] = mapped_column(Integer, default=0)
@@ -136,16 +172,20 @@ class User(Base):
 class ChoreCategory(Base):
     __tablename__ = "chore_categories"
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    family_id: Mapped[int | None] = mapped_column(ForeignKey("families.id"), nullable=True)
     name: Mapped[str] = mapped_column(String(50), nullable=False)
     icon: Mapped[str] = mapped_column(String(50), nullable=False)
     colour: Mapped[str] = mapped_column(String(7), nullable=False)
     is_default: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
+    family = relationship("Family", foreign_keys=[family_id])
+
 
 class Chore(Base):
     __tablename__ = "chores"
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    family_id: Mapped[int | None] = mapped_column(ForeignKey("families.id"), nullable=True)
     title: Mapped[str] = mapped_column(String(200), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     points: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -169,6 +209,7 @@ class ChoreAssignment(Base):
     __tablename__ = "chore_assignments"
     __table_args__ = (UniqueConstraint("chore_id", "user_id", "date"),)
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    family_id: Mapped[int | None] = mapped_column(ForeignKey("families.id"), nullable=True)
     chore_id: Mapped[int] = mapped_column(ForeignKey("chores.id"), nullable=False)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     date: Mapped[date] = mapped_column(Date, nullable=False)
@@ -188,6 +229,7 @@ class ChoreAssignment(Base):
 class ChoreRotation(Base):
     __tablename__ = "chore_rotations"
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    family_id: Mapped[int | None] = mapped_column(ForeignKey("families.id"), nullable=True)
     chore_id: Mapped[int] = mapped_column(ForeignKey("chores.id"), nullable=False)
     kid_ids: Mapped[list] = mapped_column(JSON, nullable=False)
     cadence: Mapped[RotationCadence] = mapped_column(Enum(RotationCadence), nullable=False)
@@ -205,6 +247,7 @@ class ChoreExclusion(Base):
     __tablename__ = "chore_exclusions"
     __table_args__ = (UniqueConstraint("chore_id", "user_id", "date"),)
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    family_id: Mapped[int | None] = mapped_column(ForeignKey("families.id"), nullable=True)
     chore_id: Mapped[int] = mapped_column(ForeignKey("chores.id"), nullable=False)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     date: Mapped[date] = mapped_column(Date, nullable=False)
@@ -216,6 +259,7 @@ class ChoreAssignmentRule(Base):
     __tablename__ = "chore_assignment_rules"
     __table_args__ = (UniqueConstraint("chore_id", "user_id"),)
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    family_id: Mapped[int | None] = mapped_column(ForeignKey("families.id"), nullable=True)
     chore_id: Mapped[int] = mapped_column(ForeignKey("chores.id"), nullable=False)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     recurrence: Mapped[Recurrence] = mapped_column(Enum(Recurrence), nullable=False)
@@ -244,6 +288,7 @@ class QuestTemplate(Base):
 class Reward(Base):
     __tablename__ = "rewards"
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    family_id: Mapped[int | None] = mapped_column(ForeignKey("families.id"), nullable=True)
     title: Mapped[str] = mapped_column(String(200), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     point_cost: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -261,6 +306,7 @@ class Reward(Base):
 class RewardRedemption(Base):
     __tablename__ = "reward_redemptions"
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    family_id: Mapped[int | None] = mapped_column(ForeignKey("families.id"), nullable=True)
     reward_id: Mapped[int] = mapped_column(ForeignKey("rewards.id"), nullable=False)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     points_spent: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -280,6 +326,7 @@ class RewardRedemption(Base):
 class PointTransaction(Base):
     __tablename__ = "point_transactions"
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    family_id: Mapped[int | None] = mapped_column(ForeignKey("families.id"), nullable=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     amount: Mapped[int] = mapped_column(Integer, nullable=False)
     type: Mapped[PointType] = mapped_column(Enum(PointType), nullable=False)
@@ -319,6 +366,7 @@ class UserAchievement(Base):
 class WishlistItem(Base):
     __tablename__ = "wishlist_items"
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    family_id: Mapped[int | None] = mapped_column(ForeignKey("families.id"), nullable=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     title: Mapped[str] = mapped_column(String(200), nullable=False)
     url: Mapped[str | None] = mapped_column(String(500), nullable=True)
@@ -335,6 +383,7 @@ class WishlistItem(Base):
 class SeasonalEvent(Base):
     __tablename__ = "seasonal_events"
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    family_id: Mapped[int | None] = mapped_column(ForeignKey("families.id"), nullable=True)
     title: Mapped[str] = mapped_column(String(200), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     multiplier: Mapped[float] = mapped_column(Float, nullable=False)
@@ -350,6 +399,7 @@ class SeasonalEvent(Base):
 class Notification(Base):
     __tablename__ = "notifications"
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    family_id: Mapped[int | None] = mapped_column(ForeignKey("families.id"), nullable=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     type: Mapped[NotificationType] = mapped_column(Enum(NotificationType), nullable=False)
     title: Mapped[str] = mapped_column(String(200), nullable=False)
@@ -366,6 +416,7 @@ class SpinResult(Base):
     __tablename__ = "spin_results"
     __table_args__ = (UniqueConstraint("user_id", "spin_date"),)
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    family_id: Mapped[int | None] = mapped_column(ForeignKey("families.id"), nullable=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     points_won: Mapped[int] = mapped_column(Integer, nullable=False)
     spin_date: Mapped[date] = mapped_column(Date, nullable=False)
@@ -422,6 +473,7 @@ class AppSetting(Base):
 class InviteCode(Base):
     __tablename__ = "invite_codes"
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    family_id: Mapped[int | None] = mapped_column(ForeignKey("families.id"), nullable=True)
     code: Mapped[str] = mapped_column(String(20), unique=True, nullable=False)
     role: Mapped[UserRole] = mapped_column(Enum(UserRole), nullable=False)
     max_uses: Mapped[int] = mapped_column(Integer, default=1)

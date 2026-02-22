@@ -8,7 +8,7 @@ from backend.models import (
 from backend.websocket_manager import ws_manager
 
 
-async def check_achievements(db: AsyncSession, user: User):
+async def check_achievements(db: AsyncSession, user: User, *, family_id: int | None = None):
     result = await db.execute(select(Achievement))
     all_achievements = result.scalars().all()
 
@@ -20,11 +20,11 @@ async def check_achievements(db: AsyncSession, user: User):
     for achievement in all_achievements:
         if achievement.id in unlocked_ids:
             continue
-        if await _check_criteria(db, user, achievement.criteria):
-            await _unlock_achievement(db, user, achievement)
+        if await _check_criteria(db, user, achievement.criteria, family_id=family_id):
+            await _unlock_achievement(db, user, achievement, family_id=family_id)
 
 
-async def _check_criteria(db: AsyncSession, user: User, criteria: dict) -> bool:
+async def _check_criteria(db: AsyncSession, user: User, criteria: dict, *, family_id: int | None = None) -> bool:
     ctype = criteria.get("type")
 
     if ctype == "total_completions":
@@ -114,7 +114,7 @@ async def _check_criteria(db: AsyncSession, user: User, criteria: dict) -> bool:
     return False
 
 
-async def _unlock_achievement(db: AsyncSession, user: User, achievement: Achievement):
+async def _unlock_achievement(db: AsyncSession, user: User, achievement: Achievement, *, family_id: int | None = None):
     ua = UserAchievement(user_id=user.id, achievement_id=achievement.id)
     db.add(ua)
 
@@ -123,6 +123,7 @@ async def _unlock_achievement(db: AsyncSession, user: User, achievement: Achieve
         user.points_balance += achievement.points_reward
         user.total_points_earned += achievement.points_reward
         tx = PointTransaction(
+            family_id=family_id,
             user_id=user.id,
             amount=achievement.points_reward,
             type=PointType.achievement,
@@ -133,6 +134,7 @@ async def _unlock_achievement(db: AsyncSession, user: User, achievement: Achieve
 
     # Create notification
     notif = Notification(
+        family_id=family_id,
         user_id=user.id,
         type=NotificationType.achievement_unlocked,
         title="Achievement Unlocked!",

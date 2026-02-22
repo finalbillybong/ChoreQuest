@@ -103,7 +103,9 @@ async def get_vapid_keys(db: AsyncSession) -> tuple[str, str]:
     If they don't match, the keys are regenerated.
     """
     if settings.VAPID_PRIVATE_KEY and settings.VAPID_PUBLIC_KEY:
-        return settings.VAPID_PRIVATE_KEY, settings.VAPID_PUBLIC_KEY
+        # Allow private key stored as one line with literal \n (e.g. in .env)
+        priv = settings.VAPID_PRIVATE_KEY.replace("\\n", "\n")
+        return priv, settings.VAPID_PUBLIC_KEY
 
     result = await db.execute(
         select(AppSetting).where(AppSetting.key.in_(["vapid_private_key", "vapid_public_key"]))

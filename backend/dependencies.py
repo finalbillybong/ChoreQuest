@@ -1,25 +1,92 @@
+from datetime import datetime, timezone
+
 from fastapi import Depends, HTTPException, Request
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from backend.config import settings
 from backend.database import get_db
-from backend.auth import decode_access_token
-from backend.models import User, UserRole
+from backend.models import User, UserRole, Family, FamilyMember, FamilyMemberRole
+from backend.providers.registry import auth_provider
 
 
 async def get_current_user(request: Request, db: AsyncSession = Depends(get_db)) -> User:
-    auth_header = request.headers.get("Authorization")
-    if not auth_header or not auth_header.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    token = auth_header.split(" ", 1)[1]
-    payload = decode_access_token(token)
-    if payload is None:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
-    user_id = int(payload["sub"])
-    result = await db.execute(select(User).where(User.id == user_id, User.is_active == True))
-    user = result.scalar_one_or_none()
-    if user is None:
-        raise HTTPException(status_code=401, detail="User not found or inactive")
-    return user
+    return await auth_provider.get_current_user(request, db)
+
+
+async def resolve_family(
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> Family:
+    """Resolve the current user's family.
+
+    In self-hosted mode there is exactly one family; in SaaS mode the
+    family is derived from the user's FamilyMember record (or from an
+    X-Family-Id header in a future multi-family extension).
+    """
+    result = await db.execute(
+        select(Family)
+        .join(FamilyMember, FamilyMember.family_id == Family.id)
+        .where(FamilyMember.user_id == user.id)
+        .limit(1)
+    )
+    family = result.scalar_one_or_none()
+    if family is None:
+        raise HTTPException(status_code=400, detail="User is not a member of any family")
+    return family
+
+
+def _family_has_active_subscription(family: Family) -> bool:
+    """Return True if the family has an active or trialing subscription,
+    or is still within its trial period."""
+    if family.subscription_status in ("active", "trialing"):
+        return True
+    if family.trial_ends_at and family.trial_ends_at > datetime.utcnow():
+        return True
+    return False
+
+
+async def require_subscription(
+    family: Family = Depends(resolve_family),
+    db: AsyncSession = Depends(get_db),
+) -> Family:
+    """Subscription gate for SaaS mode.
+
+    Counts children in the family.  If the count exceeds the free limit
+    and the family has no active subscription (or trial), raises a 402
+    with a structured error so the frontend can show an upgrade prompt.
+
+    In self-hosted mode this is a no-op pass-through.
+    """
+    if settings.APP_MODE != "saas":
+        return family
+
+    result = await db.execute(
+        select(func.count())
+        .select_from(FamilyMember)
+        .where(
+            FamilyMember.family_id == family.id,
+            FamilyMember.role == FamilyMemberRole.child,
+        )
+    )
+    child_count = result.scalar_one()
+
+    if child_count > settings.FREE_CHILD_LIMIT and not _family_has_active_subscription(family):
+        msg = (
+            "A subscription is required to add child accounts."
+            if settings.FREE_CHILD_LIMIT == 0
+            else f"A subscription is required for more than {settings.FREE_CHILD_LIMIT} child account(s)."
+        )
+        raise HTTPException(
+            status_code=402,
+            detail={
+                "error": "subscription_required",
+                "message": msg,
+                "child_count": child_count,
+                "free_limit": settings.FREE_CHILD_LIMIT,
+            },
+        )
+
+    return family
 
 
 async def require_parent(user: User = Depends(get_current_user)) -> User:

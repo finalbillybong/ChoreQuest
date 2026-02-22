@@ -16,6 +16,7 @@ from backend.models import (
     ChoreCategory,
     ChoreExclusion,
     ChoreRotation,
+    Family,
     QuestTemplate,
     User,
     UserRole,
@@ -41,7 +42,7 @@ from backend.schemas import (
     RotationResponse,
 )
 from backend.config import settings
-from backend.dependencies import get_current_user, require_parent
+from backend.dependencies import get_current_user, require_parent, resolve_family, require_subscription
 from backend.achievements import check_achievements
 from backend.websocket_manager import ws_manager
 from backend.services.recurrence import should_create_on_day
@@ -49,7 +50,7 @@ from backend.services.rotation import get_rotation_kid_for_day
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/chores", tags=["chores"])
+router = APIRouter(prefix="/api/chores", tags=["chores"], dependencies=[Depends(require_subscription)])
 
 _CHORE_CHANGED = {"type": "data_changed", "data": {"entity": "chore"}}
 _CATEGORY_CHANGED = {"type": "data_changed", "data": {"entity": "category"}}
@@ -62,12 +63,13 @@ _CATEGORY_CHANGED = {"type": "data_changed", "data": {"entity": "category"}}
 async def _get_chore_or_404(
     db: AsyncSession,
     chore_id: int,
+    family_id: int,
     *,
     active_only: bool = True,
     load_category: bool = False,
 ) -> Chore:
     """Load a chore by ID, raising 404 if not found."""
-    stmt = select(Chore).where(Chore.id == chore_id)
+    stmt = select(Chore).where(Chore.id == chore_id, Chore.family_id == family_id)
     if active_only:
         stmt = stmt.where(Chore.is_active == True)
     if load_category:
@@ -79,23 +81,28 @@ async def _get_chore_or_404(
     return chore
 
 
-async def _reload_chore_with_category(db: AsyncSession, chore_id: int) -> Chore:
+async def _reload_chore_with_category(
+    db: AsyncSession, chore_id: int, family_id: int
+) -> Chore:
     """Reload a chore with its category relationship eagerly loaded."""
     result = await db.execute(
         select(Chore)
-        .where(Chore.id == chore_id)
+        .where(Chore.id == chore_id, Chore.family_id == family_id)
         .options(selectinload(Chore.category))
     )
     return result.scalar_one()
 
 
 async def _reload_assignment_with_relations(
-    db: AsyncSession, assignment_id: int
+    db: AsyncSession, assignment_id: int, family_id: int
 ) -> ChoreAssignment:
     """Reload an assignment with chore (+ category) and user eagerly loaded."""
     result = await db.execute(
         select(ChoreAssignment)
-        .where(ChoreAssignment.id == assignment_id)
+        .where(
+            ChoreAssignment.id == assignment_id,
+            ChoreAssignment.family_id == family_id,
+        )
         .options(
             selectinload(ChoreAssignment.chore).selectinload(Chore.category),
             selectinload(ChoreAssignment.user),
@@ -104,10 +111,13 @@ async def _reload_assignment_with_relations(
     return result.scalar_one()
 
 
-def _quest_assigned_notification(user_id: int, chore: Chore) -> Notification:
+def _quest_assigned_notification(
+    user_id: int, chore: Chore, family_id: int
+) -> Notification:
     """Build a 'quest assigned' notification for the given user."""
     return Notification(
         user_id=user_id,
+        family_id=family_id,
         type=NotificationType.chore_assigned,
         title="New Quest Assigned!",
         message=f"You've been given a new quest: '{chore.title}' (+{chore.points} XP)",
@@ -124,8 +134,11 @@ def _quest_assigned_notification(user_id: int, chore: Chore) -> Notification:
 async def list_categories(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
+    family: Family = Depends(resolve_family),
 ):
-    result = await db.execute(select(ChoreCategory))
+    result = await db.execute(
+        select(ChoreCategory).where(ChoreCategory.family_id == family.id)
+    )
     return [CategoryResponse.model_validate(c) for c in result.scalars().all()]
 
 
@@ -134,9 +147,14 @@ async def create_category(
     body: CategoryCreate,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(require_parent),
+    family: Family = Depends(resolve_family),
 ):
     category = ChoreCategory(
-        name=body.name, icon=body.icon, colour=body.colour, is_default=False,
+        name=body.name,
+        icon=body.icon,
+        colour=body.colour,
+        is_default=False,
+        family_id=family.id,
     )
     db.add(category)
     await db.commit()
@@ -173,9 +191,13 @@ async def delete_category(
     category_id: int,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(require_parent),
+    family: Family = Depends(resolve_family),
 ):
     result = await db.execute(
-        select(ChoreCategory).where(ChoreCategory.id == category_id)
+        select(ChoreCategory).where(
+            ChoreCategory.id == category_id,
+            ChoreCategory.family_id == family.id,
+        )
     )
     category = result.scalar_one_or_none()
     if category is None:
@@ -198,11 +220,12 @@ async def list_chores(
     view: str | None = Query(None, description="library | active"),
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
+    family: Family = Depends(resolve_family),
 ):
     if user.role in (UserRole.parent, UserRole.admin):
         query = (
             select(Chore)
-            .where(Chore.is_active == True)
+            .where(Chore.is_active == True, Chore.family_id == family.id)
             .options(selectinload(Chore.category))
         )
 
@@ -212,6 +235,7 @@ async def list_chores(
                 and_(
                     ChoreAssignmentRule.chore_id == Chore.id,
                     ChoreAssignmentRule.is_active == True,
+                    ChoreAssignmentRule.family_id == family.id,
                 ),
             ).distinct()
 
@@ -230,6 +254,7 @@ async def list_chores(
                 .where(
                     ChoreAssignmentRule.chore_id.in_(chore_ids),
                     ChoreAssignmentRule.is_active == True,
+                    ChoreAssignmentRule.family_id == family.id,
                 )
                 .group_by(ChoreAssignmentRule.chore_id)
             )
@@ -243,17 +268,28 @@ async def list_chores(
         return enriched
     else:
         # Kids see only chores assigned to them
-        result = await db.execute(
-            select(Chore)
+        # Two-step to avoid DISTINCT on json column (custom_days)
+        id_result = await db.execute(
+            select(Chore.id)
             .join(ChoreAssignment, ChoreAssignment.chore_id == Chore.id)
             .where(
                 Chore.is_active == True,
+                Chore.family_id == family.id,
                 ChoreAssignment.user_id == user.id,
+                ChoreAssignment.family_id == family.id,
             )
-            .options(selectinload(Chore.category))
             .distinct()
         )
-        chores = result.scalars().all()
+        chore_ids_for_kid = [row[0] for row in id_result.all()]
+        if chore_ids_for_kid:
+            result = await db.execute(
+                select(Chore)
+                .where(Chore.id.in_(chore_ids_for_kid))
+                .options(selectinload(Chore.category))
+            )
+            chores = result.scalars().all()
+        else:
+            chores = []
 
         # Batch-load per-kid photo overrides (avoids N+1 per-chore rule queries)
         chore_ids = [c.id for c in chores]
@@ -264,6 +300,7 @@ async def list_chores(
                     ChoreAssignmentRule.chore_id.in_(chore_ids),
                     ChoreAssignmentRule.user_id == user.id,
                     ChoreAssignmentRule.is_active == True,
+                    ChoreAssignmentRule.family_id == family.id,
                 )
             )
             for rule in rule_result.scalars().all():
@@ -283,9 +320,13 @@ async def create_chore(
     body: ChoreCreate,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(require_parent),
+    family: Family = Depends(resolve_family),
 ):
     cat_result = await db.execute(
-        select(ChoreCategory).where(ChoreCategory.id == body.category_id)
+        select(ChoreCategory).where(
+            ChoreCategory.id == body.category_id,
+            ChoreCategory.family_id == family.id,
+        )
     )
     if cat_result.scalar_one_or_none() is None:
         raise HTTPException(status_code=404, detail="Category not found")
@@ -301,6 +342,7 @@ async def create_chore(
         custom_days=body.custom_days,
         requires_photo=body.requires_photo,
         created_by=user.id,
+        family_id=family.id,
     )
     db.add(chore)
     await db.flush()
@@ -310,11 +352,15 @@ async def create_chore(
         u_result = await db.execute(select(User).where(User.id == uid))
         if u_result.scalar_one_or_none() is None:
             raise HTTPException(status_code=400, detail=f"User {uid} not found")
-        db.add(ChoreAssignment(chore_id=chore.id, user_id=uid, date=today))
-        db.add(_quest_assigned_notification(uid, chore))
+        db.add(
+            ChoreAssignment(
+                chore_id=chore.id, user_id=uid, date=today, family_id=family.id
+            )
+        )
+        db.add(_quest_assigned_notification(uid, chore, family.id))
 
     await db.commit()
-    chore = await _reload_chore_with_category(db, chore.id)
+    chore = await _reload_chore_with_category(db, chore.id, family.id)
     await ws_manager.broadcast(_CHORE_CHANGED, exclude_user=user.id)
     return ChoreResponse.model_validate(chore)
 
@@ -323,6 +369,7 @@ async def create_chore(
 async def cleanup_all_stale(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(require_parent),
+    family: Family = Depends(resolve_family),
 ):
     """Remove ALL stale pending assignments and exclusions across every chore.
 
@@ -334,20 +381,28 @@ async def cleanup_all_stale(
     pending_count_result = await db.execute(
         select(func.count())
         .select_from(ChoreAssignment)
-        .where(ChoreAssignment.status == AssignmentStatus.pending)
+        .where(
+            ChoreAssignment.status == AssignmentStatus.pending,
+            ChoreAssignment.family_id == family.id,
+        )
     )
     pending_count = pending_count_result.scalar() or 0
     await db.execute(
         delete(ChoreAssignment).where(
-            ChoreAssignment.status == AssignmentStatus.pending
+            ChoreAssignment.status == AssignmentStatus.pending,
+            ChoreAssignment.family_id == family.id,
         )
     )
 
     excl_count_result = await db.execute(
-        select(func.count()).select_from(ChoreExclusion)
+        select(func.count())
+        .select_from(ChoreExclusion)
+        .where(ChoreExclusion.family_id == family.id)
     )
     excl_count = excl_count_result.scalar() or 0
-    await db.execute(delete(ChoreExclusion))
+    await db.execute(
+        delete(ChoreExclusion).where(ChoreExclusion.family_id == family.id)
+    )
 
     await db.commit()
 
@@ -363,8 +418,9 @@ async def get_chore(
     chore_id: int,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
+    family: Family = Depends(resolve_family),
 ):
-    chore = await _get_chore_or_404(db, chore_id, load_category=True)
+    chore = await _get_chore_or_404(db, chore_id, family.id, load_category=True)
     return ChoreResponse.model_validate(chore)
 
 
@@ -374,15 +430,16 @@ async def update_chore(
     body: ChoreUpdate,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(require_parent),
+    family: Family = Depends(resolve_family),
 ):
-    chore = await _get_chore_or_404(db, chore_id, load_category=True)
+    chore = await _get_chore_or_404(db, chore_id, family.id, load_category=True)
 
     update_data = body.model_dump(exclude_unset=True)
     assigned_user_ids = update_data.pop("assigned_user_ids", None)
 
     for field, value in update_data.items():
         setattr(chore, field, value)
-    chore.updated_at = datetime.now(timezone.utc)
+    chore.updated_at = datetime.utcnow()
 
     newly_assigned = []
     if assigned_user_ids is not None:
@@ -393,10 +450,18 @@ async def update_chore(
                     ChoreAssignment.chore_id == chore_id,
                     ChoreAssignment.user_id == uid,
                     ChoreAssignment.date == today,
+                    ChoreAssignment.family_id == family.id,
                 )
             )
             if existing.scalar_one_or_none() is None:
-                db.add(ChoreAssignment(chore_id=chore_id, user_id=uid, date=today))
+                db.add(
+                    ChoreAssignment(
+                        chore_id=chore_id,
+                        user_id=uid,
+                        date=today,
+                        family_id=family.id,
+                    )
+                )
                 newly_assigned.append(uid)
 
         # Remove pending assignments for kids no longer in the list
@@ -406,16 +471,17 @@ async def update_chore(
                 ChoreAssignment.date == today,
                 ChoreAssignment.status == AssignmentStatus.pending,
                 ChoreAssignment.user_id.notin_(assigned_user_ids),
+                ChoreAssignment.family_id == family.id,
             )
         )
         for old in stale.scalars().all():
             await db.delete(old)
 
     for uid in newly_assigned:
-        db.add(_quest_assigned_notification(uid, chore))
+        db.add(_quest_assigned_notification(uid, chore, family.id))
 
     await db.commit()
-    chore = await _reload_chore_with_category(db, chore.id)
+    chore = await _reload_chore_with_category(db, chore.id, family.id)
     await ws_manager.broadcast(_CHORE_CHANGED, exclude_user=user.id)
     return ChoreResponse.model_validate(chore)
 
@@ -425,10 +491,11 @@ async def delete_chore(
     chore_id: int,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(require_parent),
+    family: Family = Depends(resolve_family),
 ):
-    chore = await _get_chore_or_404(db, chore_id)
+    chore = await _get_chore_or_404(db, chore_id, family.id)
     chore.is_active = False
-    chore.updated_at = datetime.now(timezone.utc)
+    chore.updated_at = datetime.utcnow()
     await db.commit()
     await ws_manager.broadcast(_CHORE_CHANGED, exclude_user=user.id)
     return None
@@ -456,10 +523,15 @@ async def get_assignment_rules(
     chore_id: int,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(require_parent),
+    family: Family = Depends(resolve_family),
 ):
+    await _get_chore_or_404(db, chore_id, family.id)
     result = await db.execute(
         select(ChoreAssignmentRule)
-        .where(ChoreAssignmentRule.chore_id == chore_id)
+        .where(
+            ChoreAssignmentRule.chore_id == chore_id,
+            ChoreAssignmentRule.family_id == family.id,
+        )
         .options(selectinload(ChoreAssignmentRule.user))
     )
     return [AssignmentRuleResponse.model_validate(r) for r in result.scalars().all()]
@@ -470,9 +542,14 @@ async def get_chore_rotation(
     chore_id: int,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(require_parent),
+    family: Family = Depends(resolve_family),
 ):
+    await _get_chore_or_404(db, chore_id, family.id)
     result = await db.execute(
-        select(ChoreRotation).where(ChoreRotation.chore_id == chore_id)
+        select(ChoreRotation).where(
+            ChoreRotation.chore_id == chore_id,
+            ChoreRotation.family_id == family.id,
+        )
     )
     rotation = result.scalar_one_or_none()
     if rotation is None:
@@ -486,8 +563,9 @@ async def assign_chore(
     body: ChoreAssignRequest,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(require_parent),
+    family: Family = Depends(resolve_family),
 ):
-    chore = await _get_chore_or_404(db, chore_id)
+    chore = await _get_chore_or_404(db, chore_id, family.id)
 
     today = date.today()
     submitted_user_ids = {item.user_id for item in body.assignments}
@@ -497,6 +575,7 @@ async def assign_chore(
         select(ChoreAssignmentRule).where(
             ChoreAssignmentRule.chore_id == chore_id,
             ChoreAssignmentRule.is_active == True,
+            ChoreAssignmentRule.family_id == family.id,
         )
     )
     removed_user_ids = set()
@@ -514,6 +593,7 @@ async def assign_chore(
                 ChoreAssignment.date >= today,
                 ChoreAssignment.status == AssignmentStatus.pending,
                 ChoreAssignment.user_id.in_(removed_user_ids),
+                ChoreAssignment.family_id == family.id,
             )
         )
         for stale in stale_assignments.scalars().all():
@@ -526,7 +606,10 @@ async def assign_chore(
         and len(body.assignments) >= 2
     )
     rot_result = await db.execute(
-        select(ChoreRotation).where(ChoreRotation.chore_id == chore_id)
+        select(ChoreRotation).where(
+            ChoreRotation.chore_id == chore_id,
+            ChoreRotation.family_id == family.id,
+        )
     )
     existing_rotation = rot_result.scalar_one_or_none()
 
@@ -536,14 +619,15 @@ async def assign_chore(
             existing_rotation.kid_ids = kid_ids
             existing_rotation.cadence = body.rotation.cadence
             existing_rotation.current_index = 0
-            existing_rotation.last_rotated = datetime.now(timezone.utc)
+            existing_rotation.last_rotated = datetime.utcnow()
         else:
             existing_rotation = ChoreRotation(
                 chore_id=chore_id,
                 kid_ids=kid_ids,
                 cadence=body.rotation.cadence,
                 current_index=0,
-                last_rotated=datetime.now(timezone.utc),
+                last_rotated=datetime.utcnow(),
+                family_id=family.id,
             )
             db.add(existing_rotation)
             await db.flush()
@@ -567,6 +651,7 @@ async def assign_chore(
                 ChoreAssignment.chore_id == chore_id,
                 ChoreAssignment.date >= today,
                 ChoreAssignment.status == AssignmentStatus.pending,
+                ChoreAssignment.family_id == family.id,
             )
         )
         removed = 0
@@ -586,6 +671,7 @@ async def assign_chore(
             select(ChoreExclusion).where(
                 ChoreExclusion.chore_id == chore_id,
                 ChoreExclusion.date >= today,
+                ChoreExclusion.family_id == family.id,
             )
         )
         excl_count = 0
@@ -615,6 +701,7 @@ async def assign_chore(
             select(ChoreAssignmentRule).where(
                 ChoreAssignmentRule.chore_id == chore_id,
                 ChoreAssignmentRule.user_id == item.user_id,
+                ChoreAssignmentRule.family_id == family.id,
             )
         )
         rule = existing.scalar_one_or_none()
@@ -631,6 +718,7 @@ async def assign_chore(
                 custom_days=item.custom_days,
                 requires_photo=item.requires_photo,
                 is_active=True,
+                family_id=family.id,
             )
             db.add(rule)
 
@@ -650,16 +738,20 @@ async def assign_chore(
                     ChoreAssignment.chore_id == chore_id,
                     ChoreAssignment.user_id == item.user_id,
                     ChoreAssignment.date == today,
+                    ChoreAssignment.family_id == family.id,
                 )
             )
             existing_assignment = existing_assignment_result.scalar_one_or_none()
             if existing_assignment is None:
-                db.add(ChoreAssignment(
-                    chore_id=chore_id,
-                    user_id=item.user_id,
-                    date=today,
-                    status=AssignmentStatus.pending,
-                ))
+                db.add(
+                    ChoreAssignment(
+                        chore_id=chore_id,
+                        user_id=item.user_id,
+                        date=today,
+                        status=AssignmentStatus.pending,
+                        family_id=family.id,
+                    )
+                )
             elif existing_assignment.status in (
                 AssignmentStatus.completed,
                 AssignmentStatus.verified,
@@ -671,9 +763,9 @@ async def assign_chore(
                 existing_assignment.completed_at = None
                 existing_assignment.verified_at = None
                 existing_assignment.verified_by = None
-                existing_assignment.updated_at = datetime.now(timezone.utc)
+                existing_assignment.updated_at = datetime.utcnow()
 
-        db.add(_quest_assigned_notification(item.user_id, chore))
+        db.add(_quest_assigned_notification(item.user_id, chore, family.id))
 
     # Sync the chore-level recurrence with the assignment rules so the
     # quest list / detail pages display the correct schedule.
@@ -700,17 +792,24 @@ async def debug_chore(
     chore_id: int,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(require_parent),
+    family: Family = Depends(resolve_family),
 ):
     """Debug endpoint: show all DB state for a chore's rotation/assignments."""
-    chore = await _get_chore_or_404(db, chore_id, active_only=False)
+    chore = await _get_chore_or_404(db, chore_id, family.id, active_only=False)
 
     rot_result = await db.execute(
-        select(ChoreRotation).where(ChoreRotation.chore_id == chore_id)
+        select(ChoreRotation).where(
+            ChoreRotation.chore_id == chore_id,
+            ChoreRotation.family_id == family.id,
+        )
     )
     rotation = rot_result.scalar_one_or_none()
 
     rules_result = await db.execute(
-        select(ChoreAssignmentRule).where(ChoreAssignmentRule.chore_id == chore_id)
+        select(ChoreAssignmentRule).where(
+            ChoreAssignmentRule.chore_id == chore_id,
+            ChoreAssignmentRule.family_id == family.id,
+        )
     )
     rules = rules_result.scalars().all()
 
@@ -722,6 +821,7 @@ async def debug_chore(
         select(ChoreAssignment)
         .where(
             ChoreAssignment.chore_id == chore_id,
+            ChoreAssignment.family_id == family.id,
             ChoreAssignment.date >= week_start,
             ChoreAssignment.date <= week_end,
         )
@@ -732,6 +832,7 @@ async def debug_chore(
     excl_result = await db.execute(
         select(ChoreExclusion).where(
             ChoreExclusion.chore_id == chore_id,
+            ChoreExclusion.family_id == family.id,
             ChoreExclusion.date >= week_start,
             ChoreExclusion.date <= week_end,
         )
@@ -790,10 +891,14 @@ async def update_assignment_rule(
     body: AssignmentRuleUpdate,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(require_parent),
+    family: Family = Depends(resolve_family),
 ):
     result = await db.execute(
         select(ChoreAssignmentRule)
-        .where(ChoreAssignmentRule.id == rule_id)
+        .where(
+            ChoreAssignmentRule.id == rule_id,
+            ChoreAssignmentRule.family_id == family.id,
+        )
         .options(selectinload(ChoreAssignmentRule.user))
     )
     rule = result.scalar_one_or_none()
@@ -815,9 +920,13 @@ async def delete_assignment_rule(
     rule_id: int,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(require_parent),
+    family: Family = Depends(resolve_family),
 ):
     result = await db.execute(
-        select(ChoreAssignmentRule).where(ChoreAssignmentRule.id == rule_id)
+        select(ChoreAssignmentRule).where(
+            ChoreAssignmentRule.id == rule_id,
+            ChoreAssignmentRule.family_id == family.id,
+        )
     )
     rule = result.scalar_one_or_none()
     if not rule:
@@ -839,9 +948,10 @@ async def complete_chore(
     file: UploadFile | None = File(None),
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
+    family: Family = Depends(resolve_family),
 ):
     today = date.today()
-    now = datetime.now(timezone.utc)
+    now = datetime.utcnow()
 
     result = await db.execute(
         select(ChoreAssignment)
@@ -850,6 +960,7 @@ async def complete_chore(
             ChoreAssignment.user_id == user.id,
             ChoreAssignment.date == today,
             ChoreAssignment.status == AssignmentStatus.pending,
+            ChoreAssignment.family_id == family.id,
         )
         .options(selectinload(ChoreAssignment.chore))
     )
@@ -869,6 +980,7 @@ async def complete_chore(
             ChoreAssignmentRule.chore_id == chore_id,
             ChoreAssignmentRule.user_id == user.id,
             ChoreAssignmentRule.is_active == True,
+            ChoreAssignmentRule.family_id == family.id,
         )
     )
     rule = rule_result.scalar_one_or_none()
@@ -930,17 +1042,20 @@ async def complete_chore(
     )
 
     for pid in parent_ids:
-        db.add(Notification(
-            user_id=pid,
-            type=NotificationType.chore_completed,
-            title="Quest Awaiting Approval",
-            message=f"{user.display_name} completed '{chore.title}' - tap to approve (+{chore.points} XP)",
-            reference_type="chore_assignment",
-            reference_id=assignment.id,
-        ))
+        db.add(
+            Notification(
+                user_id=pid,
+                family_id=family.id,
+                type=NotificationType.chore_completed,
+                title="Quest Awaiting Approval",
+                message=f"{user.display_name} completed '{chore.title}' - tap to approve (+{chore.points} XP)",
+                reference_type="chore_assignment",
+                reference_id=assignment.id,
+            )
+        )
     await db.commit()
 
-    assignment = await _reload_assignment_with_relations(db, assignment.id)
+    assignment = await _reload_assignment_with_relations(db, assignment.id, family.id)
     return AssignmentResponse.model_validate(assignment)
 
 
@@ -949,9 +1064,10 @@ async def verify_chore(
     chore_id: int,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(require_parent),
+    family: Family = Depends(resolve_family),
 ):
     today = date.today()
-    now = datetime.now(timezone.utc)
+    now = datetime.utcnow()
 
     result = await db.execute(
         select(ChoreAssignment)
@@ -959,6 +1075,7 @@ async def verify_chore(
             ChoreAssignment.chore_id == chore_id,
             ChoreAssignment.date == today,
             ChoreAssignment.status == AssignmentStatus.completed,
+            ChoreAssignment.family_id == family.id,
         )
         .options(selectinload(ChoreAssignment.chore))
     )
@@ -982,6 +1099,7 @@ async def verify_chore(
     ev_result = await db.execute(
         select(SeasonalEvent).where(
             SeasonalEvent.is_active == True,
+            SeasonalEvent.family_id == family.id,
             SeasonalEvent.start_date <= now_naive,
             SeasonalEvent.end_date >= now_naive,
         )
@@ -993,26 +1111,32 @@ async def verify_chore(
         multiplier *= event.multiplier
 
     # Award base points
-    db.add(PointTransaction(
-        user_id=assignment.user_id,
-        amount=base_points,
-        type=PointType.chore_complete,
-        description=f"Completed: {chore.title}",
-        reference_id=assignment.id,
-    ))
+    db.add(
+        PointTransaction(
+            user_id=assignment.user_id,
+            family_id=family.id,
+            amount=base_points,
+            type=PointType.chore_complete,
+            description=f"Completed: {chore.title}",
+            reference_id=assignment.id,
+        )
+    )
     total_awarded = base_points
 
     if multiplier > 1.0:
         bonus_points = int(base_points * multiplier) - base_points
         if bonus_points > 0:
             event_names = ", ".join(e.title for e in active_events)
-            db.add(PointTransaction(
-                user_id=assignment.user_id,
-                amount=bonus_points,
-                type=PointType.event_multiplier,
-                description=f"Event bonus ({event_names}): {chore.title}",
-                reference_id=assignment.id,
-            ))
+            db.add(
+                PointTransaction(
+                    user_id=assignment.user_id,
+                    family_id=family.id,
+                    amount=bonus_points,
+                    type=PointType.event_multiplier,
+                    description=f"Event bonus ({event_names}): {chore.title}",
+                    reference_id=assignment.id,
+                )
+            )
             total_awarded += bonus_points
 
     # Update kid's points and streak
@@ -1037,16 +1161,19 @@ async def verify_chore(
     # Streak milestone notifications
     _STREAK_MILESTONES = (7, 30, 100)
     if kid.current_streak in _STREAK_MILESTONES:
-        db.add(Notification(
-            user_id=kid.id,
-            type=NotificationType.streak_milestone,
-            title=f"{kid.current_streak}-Day Streak!",
-            message=f"You've completed quests {kid.current_streak} days in a row! Keep it up!",
-            reference_type="streak",
-        ))
+        db.add(
+            Notification(
+                user_id=kid.id,
+                family_id=family.id,
+                type=NotificationType.streak_milestone,
+                title=f"{kid.current_streak}-Day Streak!",
+                message=f"You've completed quests {kid.current_streak} days in a row! Keep it up!",
+                reference_type="streak",
+            )
+        )
 
     await db.commit()
-    await check_achievements(db, kid)
+    await check_achievements(db, kid, family_id=family.id)
 
     # Deactivate assignment rule for one-time quests so they no longer
     # appear as assigned after completion.
@@ -1056,25 +1183,39 @@ async def verify_chore(
                 ChoreAssignmentRule.chore_id == chore_id,
                 ChoreAssignmentRule.user_id == assignment.user_id,
                 ChoreAssignmentRule.is_active == True,
+                ChoreAssignmentRule.family_id == family.id,
             )
         )
         one_time_rule = rule_result.scalar_one_or_none()
         if one_time_rule:
             one_time_rule.is_active = False
 
-    db.add(Notification(
-        user_id=assignment.user_id,
-        type=NotificationType.chore_verified,
-        title="Quest Approved!",
-        message=f"'{chore.title}' was approved! You earned {total_awarded} XP!",
-        reference_type="chore_assignment",
-        reference_id=assignment.id,
-    ))
+    db.add(
+        Notification(
+            user_id=assignment.user_id,
+            family_id=family.id,
+            type=NotificationType.chore_verified,
+            title="Quest Approved!",
+            message=f"'{chore.title}' was approved! You earned {total_awarded} XP!",
+            reference_type="chore_assignment",
+            reference_id=assignment.id,
+        )
+    )
+    # Delete photo proof now that the quest is verified
+    if assignment.photo_proof_path:
+        photo_path = os.path.join("/app/data/uploads", assignment.photo_proof_path)
+        try:
+            if os.path.isfile(photo_path):
+                os.remove(photo_path)
+        except OSError:
+            pass
+        assignment.photo_proof_path = None
+
     await db.commit()
 
     # Roll for quest drop avatar item
     from backend.routers.avatar import try_quest_drop
-    drop = await try_quest_drop(db, kid, chore.difficulty.value)
+    drop = await try_quest_drop(db, kid, chore.difficulty.value, family)
     if drop:
         await db.commit()
 
@@ -1092,7 +1233,7 @@ async def verify_chore(
         {"type": "chore_verified", "data": ws_data},
     )
 
-    assignment = await _reload_assignment_with_relations(db, assignment.id)
+    assignment = await _reload_assignment_with_relations(db, assignment.id, family.id)
     return AssignmentResponse.model_validate(assignment)
 
 
@@ -1101,9 +1242,10 @@ async def uncomplete_chore(
     chore_id: int,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(require_parent),
+    family: Family = Depends(resolve_family),
 ):
     today = date.today()
-    now = datetime.now(timezone.utc)
+    now = datetime.utcnow()
 
     result = await db.execute(
         select(ChoreAssignment).where(
@@ -1112,6 +1254,7 @@ async def uncomplete_chore(
             ChoreAssignment.status.in_(
                 [AssignmentStatus.completed, AssignmentStatus.verified]
             ),
+            ChoreAssignment.family_id == family.id,
         )
     )
     assignment = result.scalar_one_or_none()
@@ -1128,6 +1271,7 @@ async def uncomplete_chore(
         select(PointTransaction).where(
             PointTransaction.user_id == assigned_user_id,
             PointTransaction.reference_id == assignment.id,
+            PointTransaction.family_id == family.id,
             PointTransaction.type.in_(
                 [PointType.chore_complete, PointType.event_multiplier]
             ),
@@ -1157,7 +1301,7 @@ async def uncomplete_chore(
 
     await db.commit()
 
-    assignment = await _reload_assignment_with_relations(db, assignment.id)
+    assignment = await _reload_assignment_with_relations(db, assignment.id, family.id)
     await ws_manager.broadcast(_CHORE_CHANGED, exclude_user=user.id)
     return AssignmentResponse.model_validate(assignment)
 
@@ -1167,15 +1311,17 @@ async def skip_chore(
     chore_id: int,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(require_parent),
+    family: Family = Depends(resolve_family),
 ):
     today = date.today()
-    now = datetime.now(timezone.utc)
+    now = datetime.utcnow()
 
     result = await db.execute(
         select(ChoreAssignment).where(
             ChoreAssignment.chore_id == chore_id,
             ChoreAssignment.date == today,
             ChoreAssignment.status == AssignmentStatus.pending,
+            ChoreAssignment.family_id == family.id,
         )
     )
     assignment = result.scalar_one_or_none()
@@ -1191,5 +1337,5 @@ async def skip_chore(
 
     await ws_manager.broadcast(_CHORE_CHANGED, exclude_user=user.id)
 
-    assignment = await _reload_assignment_with_relations(db, assignment.id)
+    assignment = await _reload_assignment_with_relations(db, assignment.id, family.id)
     return AssignmentResponse.model_validate(assignment)

@@ -5,12 +5,12 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.database import get_db
-from backend.models import ChoreRotation
+from backend.models import ChoreRotation, Family
 from backend.schemas import RotationCreate, RotationUpdate, RotationResponse
-from backend.dependencies import require_parent
+from backend.dependencies import require_parent, resolve_family, require_subscription
 from backend.websocket_manager import ws_manager
 
-router = APIRouter(prefix="/api/rotations", tags=["rotations"])
+router = APIRouter(prefix="/api/rotations", tags=["rotations"], dependencies=[Depends(require_subscription)])
 
 
 # ---------- GET / ----------
@@ -18,9 +18,14 @@ router = APIRouter(prefix="/api/rotations", tags=["rotations"])
 async def list_rotations(
     db: AsyncSession = Depends(get_db),
     _parent=Depends(require_parent),
+    family: Family = Depends(resolve_family),
 ):
     """List all chore rotations (parent+ only)."""
-    result = await db.execute(select(ChoreRotation).order_by(ChoreRotation.id))
+    result = await db.execute(
+        select(ChoreRotation)
+        .where(ChoreRotation.family_id == family.id)
+        .order_by(ChoreRotation.id)
+    )
     rotations = result.scalars().all()
     return [RotationResponse.model_validate(r) for r in rotations]
 
@@ -31,6 +36,7 @@ async def create_rotation(
     body: RotationCreate,
     db: AsyncSession = Depends(get_db),
     _parent=Depends(require_parent),
+    family: Family = Depends(resolve_family),
 ):
     """Create a new chore rotation (parent+ only)."""
     if not body.kid_ids:
@@ -38,7 +44,10 @@ async def create_rotation(
 
     # Check for existing rotation on same chore
     result = await db.execute(
-        select(ChoreRotation).where(ChoreRotation.chore_id == body.chore_id)
+        select(ChoreRotation).where(
+            ChoreRotation.chore_id == body.chore_id,
+            ChoreRotation.family_id == family.id,
+        )
     )
     existing = result.scalar_one_or_none()
     if existing is not None:
@@ -46,6 +55,7 @@ async def create_rotation(
 
     rotation = ChoreRotation(
         chore_id=body.chore_id,
+        family_id=family.id,
         kid_ids=body.kid_ids,
         cadence=body.cadence,
         current_index=0,
@@ -64,10 +74,14 @@ async def update_rotation(
     body: RotationUpdate,
     db: AsyncSession = Depends(get_db),
     _parent=Depends(require_parent),
+    family: Family = Depends(resolve_family),
 ):
     """Update an existing chore rotation (parent+ only)."""
     result = await db.execute(
-        select(ChoreRotation).where(ChoreRotation.id == rotation_id)
+        select(ChoreRotation).where(
+            ChoreRotation.id == rotation_id,
+            ChoreRotation.family_id == family.id,
+        )
     )
     rotation = result.scalar_one_or_none()
     if rotation is None:
@@ -84,7 +98,7 @@ async def update_rotation(
     if body.cadence is not None:
         rotation.cadence = body.cadence
 
-    rotation.updated_at = datetime.now(timezone.utc)
+    rotation.updated_at = datetime.utcnow()
     await db.commit()
     await db.refresh(rotation)
     await ws_manager.broadcast({"type": "data_changed", "data": {"entity": "rotation"}})
@@ -97,10 +111,14 @@ async def delete_rotation(
     rotation_id: int,
     db: AsyncSession = Depends(get_db),
     _parent=Depends(require_parent),
+    family: Family = Depends(resolve_family),
 ):
     """Delete a chore rotation (parent+ only)."""
     result = await db.execute(
-        select(ChoreRotation).where(ChoreRotation.id == rotation_id)
+        select(ChoreRotation).where(
+            ChoreRotation.id == rotation_id,
+            ChoreRotation.family_id == family.id,
+        )
     )
     rotation = result.scalar_one_or_none()
     if rotation is None:
@@ -118,12 +136,16 @@ async def advance_rotation(
     rotation_id: int,
     db: AsyncSession = Depends(get_db),
     _parent=Depends(require_parent),
+    family: Family = Depends(resolve_family),
 ):
     """Manually advance a rotation to the next kid (parent+ only).
     Increments current_index, wrapping around the kid_ids length.
     """
     result = await db.execute(
-        select(ChoreRotation).where(ChoreRotation.id == rotation_id)
+        select(ChoreRotation).where(
+            ChoreRotation.id == rotation_id,
+            ChoreRotation.family_id == family.id,
+        )
     )
     rotation = result.scalar_one_or_none()
     if rotation is None:
@@ -133,8 +155,8 @@ async def advance_rotation(
         raise HTTPException(status_code=400, detail="Rotation has no kids to advance through")
 
     rotation.current_index = (rotation.current_index + 1) % len(rotation.kid_ids)
-    rotation.last_rotated = datetime.now(timezone.utc)
-    rotation.updated_at = datetime.now(timezone.utc)
+    rotation.last_rotated = datetime.utcnow()
+    rotation.updated_at = datetime.utcnow()
 
     await db.commit()
     await db.refresh(rotation)

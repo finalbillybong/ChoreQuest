@@ -3,9 +3,13 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './hooks/useAuth';
 import { useWebSocket } from './hooks/useWebSocket';
 import Layout from './components/Layout';
+import UpgradePrompt from './components/UpgradePrompt';
+import WelcomeModal from './components/WelcomeModal';
 
 const Login = lazy(() => import('./pages/Login'));
 const Register = lazy(() => import('./pages/Register'));
+const SaasLogin = lazy(() => import('./pages/SaasLogin'));
+const Onboarding = lazy(() => import('./pages/Onboarding'));
 const KidDashboard = lazy(() => import('./pages/KidDashboard'));
 const ParentDashboard = lazy(() => import('./pages/ParentDashboard'));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
@@ -29,10 +33,9 @@ function Loading() {
 }
 
 export default function App() {
-  const { user, loading, refreshSession } = useAuth();
+  const { user, family, loading, saas, refreshSession } = useAuth();
 
   const handleWsMessage = useCallback((msg) => {
-    // Refresh user object (points_balance, etc.) on every WS event
     refreshSession();
     window.dispatchEvent(new CustomEvent('ws:message', { detail: msg }));
   }, [refreshSession]);
@@ -41,7 +44,17 @@ export default function App() {
 
   if (loading) return <Loading />;
 
+  // --- Not logged in ---
   if (!user) {
+    if (saas) {
+      return (
+        <Suspense fallback={<Loading />}>
+          <Routes>
+            <Route path="*" element={<SaasLogin />} />
+          </Routes>
+        </Suspense>
+      );
+    }
     return (
       <Suspense fallback={<Loading />}>
         <Routes>
@@ -53,31 +66,44 @@ export default function App() {
     );
   }
 
+  // --- SaaS: logged in but no family yet -> onboarding ---
+  if (saas && family === null) {
+    return (
+      <Suspense fallback={<Loading />}>
+        <Onboarding />
+      </Suspense>
+    );
+  }
+
   const DashboardComponent = user.role === 'kid' ? KidDashboard
     : user.role === 'parent' ? ParentDashboard
     : ParentDashboard;
 
   return (
-    <Layout>
-      <Suspense fallback={<Loading />}>
-        <Routes>
-          <Route path="/" element={<DashboardComponent />} />
-          <Route path="/chores" element={<Chores />} />
-          <Route path="/chores/:id" element={<ChoreDetail />} />
-          <Route path="/rewards" element={<Rewards />} />
-          <Route path="/inventory" element={<Navigate to="/rewards?tab=inventory" replace />} />
-          <Route path="/wishlist" element={<Navigate to="/rewards?tab=wishlist" replace />} />
-          <Route path="/calendar" element={<Calendar />} />
-          <Route path="/party" element={<Party />} />
-          <Route path="/leaderboard" element={<Leaderboard />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/events" element={<Events />} />
-          <Route path="/kids/:kidId" element={<KidQuests />} />
-          <Route path="/settings" element={<Settings />} />
-          {user.role === 'admin' && <Route path="/admin" element={<AdminDashboard />} />}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </Suspense>
-    </Layout>
+    <>
+      <Layout>
+        <Suspense fallback={<Loading />}>
+          <Routes>
+            <Route path="/" element={<DashboardComponent />} />
+            <Route path="/chores" element={<Chores />} />
+            <Route path="/chores/:id" element={<ChoreDetail />} />
+            <Route path="/rewards" element={<Rewards />} />
+            <Route path="/inventory" element={<Navigate to="/rewards?tab=inventory" replace />} />
+            <Route path="/wishlist" element={<Navigate to="/rewards?tab=wishlist" replace />} />
+            <Route path="/calendar" element={<Calendar />} />
+            <Route path="/party" element={<Party />} />
+            <Route path="/leaderboard" element={<Leaderboard />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/events" element={<Events />} />
+            <Route path="/kids/:kidId" element={<KidQuests />} />
+            <Route path="/settings" element={<Settings />} />
+            {user.role === 'admin' && <Route path="/admin" element={<AdminDashboard />} />}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Suspense>
+      </Layout>
+      {saas && <UpgradePrompt />}
+      {saas && <WelcomeModal />}
+    </>
   );
 }
