@@ -5,18 +5,19 @@ import { TrendingUp, BarChart3, Loader2 } from 'lucide-react';
 function MiniBarChart({ data, dataKey, color, height = 80 }) {
   if (!data || data.length === 0) return null;
 
+  const padding = 4;
   const max = Math.max(...data.map((d) => d[dataKey]), 1);
   const barWidth = 100 / data.length;
 
   return (
-    <svg viewBox={`0 0 100 ${height}`} className="w-full" preserveAspectRatio="none">
+    <svg viewBox={`0 0 100 ${height}`} className="w-full" style={{ overflow: 'hidden', display: 'block' }} preserveAspectRatio="none">
       {data.map((d, i) => {
-        const barH = (d[dataKey] / max) * (height - 4);
+        const barH = Math.min((d[dataKey] / max) * (height - padding * 2), height - padding * 2);
         return (
           <rect
             key={i}
             x={i * barWidth + barWidth * 0.15}
-            y={height - barH}
+            y={height - padding - barH}
             width={barWidth * 0.7}
             height={Math.max(barH, 0.5)}
             rx="1"
@@ -32,17 +33,19 @@ function MiniBarChart({ data, dataKey, color, height = 80 }) {
 function SparkLine({ data, dataKey, color, height = 60 }) {
   if (!data || data.length === 0) return null;
 
+  const padding = 4;
   const max = Math.max(...data.map((d) => d[dataKey]), 1);
+  const drawHeight = height - padding * 2;
   const points = data.map((d, i) => {
     const x = (i / (data.length - 1)) * 100;
-    const y = height - (d[dataKey] / max) * (height - 8);
+    const y = padding + drawHeight - (d[dataKey] / max) * drawHeight;
     return `${x},${y}`;
   });
 
-  const areaPoints = `0,${height} ${points.join(' ')} 100,${height}`;
+  const areaPoints = `0,${height - padding} ${points.join(' ')} 100,${height - padding}`;
 
   return (
-    <svg viewBox={`0 0 100 ${height}`} className="w-full" preserveAspectRatio="none">
+    <svg viewBox={`0 0 100 ${height}`} className="w-full" style={{ overflow: 'hidden', display: 'block' }} preserveAspectRatio="none">
       <polygon points={areaPoints} fill={color} opacity="0.15" />
       <polyline
         points={points.join(' ')}
@@ -115,7 +118,7 @@ export default function ProgressCharts() {
           <TrendingUp size={12} className="text-gold" />
           XP Earned (30 days)
         </h3>
-        <div className="h-16">
+        <div className="h-16 overflow-hidden">
           <SparkLine data={days} dataKey="xp" color="#f59e0b" />
         </div>
         <div className="flex justify-between mt-1">
@@ -130,7 +133,7 @@ export default function ProgressCharts() {
           <BarChart3 size={12} className="text-emerald" />
           Daily Quests Completed
         </h3>
-        <div className="h-16">
+        <div className="h-16 overflow-hidden">
           <MiniBarChart data={days} dataKey="completed" color="#10b981" />
         </div>
         <div className="flex justify-between mt-1">
@@ -145,7 +148,7 @@ export default function ProgressCharts() {
           <BarChart3 size={12} className="text-sky" />
           Completion Rate
         </h3>
-        <div className="h-16">
+        <div className="h-16 overflow-hidden">
           <SparkLine data={days} dataKey="rate" color="#3b82f6" height={60} />
         </div>
         <div className="flex justify-between mt-1">
