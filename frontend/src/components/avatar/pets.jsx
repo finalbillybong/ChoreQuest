@@ -193,7 +193,7 @@ const BIG_PETS = new Set(['dragon', 'phoenix']);
  * @param {object} colors - multi-part color object
  * @param {string} position - position id
  */
-export function renderPetExtras(petStyle, level, colors, position) {
+export function renderPetExtras(petStyle, level, colors, position, config = {}) {
   if (!petStyle || petStyle === 'none' || level < 2) return null;
   const isBig = BIG_PETS.has(petStyle);
   const offsets = isBig
@@ -272,6 +272,18 @@ export function renderPetExtras(petStyle, level, colors, position) {
   }
 
   if (extras.length === 0) return null;
+
+  // Custom position: mirror the same transform logic as renderPet
+  if (position === 'custom' && config.pet_x != null && config.pet_y != null) {
+    const ccx = isBig ? 25 : 26;
+    const ccy = isBig ? 19 : 20;
+    const flip = config.pet_x < 16;
+    const t = flip
+      ? `translate(${config.pet_x},${config.pet_y}) scale(-1,1) translate(${-ccx},${-ccy})`
+      : `translate(${config.pet_x - ccx},${config.pet_y - ccy})`;
+    return <g transform={t}>{extras}</g>;
+  }
+
   return <g transform={offsets}>{extras}</g>;
 }
 
