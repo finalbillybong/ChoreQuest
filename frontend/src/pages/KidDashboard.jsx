@@ -23,7 +23,7 @@ import SpinWheel from '../components/SpinWheel';
 import ConfettiAnimation from '../components/ConfettiAnimation';
 import RankBadge from '../components/RankBadge';
 import PetLevelBadge from '../components/PetLevelBadge';
-import { QuestBoardOverlay, QuestBoardDecorations, QuestBoardTitle, BOARD_THEMES } from '../components/QuestBoardTheme';
+import { QuestBoardOverlay, QuestBoardPageGlow, QuestBoardParticles, QuestBoardDecorations, QuestBoardTitle, BOARD_THEMES, getTheme } from '../components/QuestBoardTheme';
 
 // ---------- helpers ----------
 
@@ -169,8 +169,13 @@ export default function KidDashboard() {
   const totalCount = assignments.length;
   const progressPct = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
+  const activeTheme = getTheme(boardTheme);
+
   return (
-    <div className="max-w-2xl mx-auto space-y-5">
+    <div className={`max-w-2xl mx-auto space-y-5 quest-board-${boardTheme}`}>
+      {/* ── Page-level ambient glow ── */}
+      <QuestBoardPageGlow themeId={boardTheme} />
+
       {/* ── Confetti overlay ── */}
       <AnimatePresence>
         {showConfetti && (
@@ -181,6 +186,7 @@ export default function KidDashboard() {
       {/* ── Header with stats ── */}
       <div className="game-panel p-5 relative overflow-hidden">
         <QuestBoardOverlay themeId={boardTheme} />
+        <QuestBoardParticles themeId={boardTheme} />
         <div className="relative z-10">
         <div className="flex items-center justify-between gap-2 flex-wrap mb-2">
           <div className="flex items-center gap-2">
@@ -298,6 +304,10 @@ export default function KidDashboard() {
                 <motion.div
                   key={assignment.id}
                   className="game-panel p-4 transition-all cursor-pointer hover:border-sky/40"
+                  style={activeTheme.cardAccent ? {
+                    borderColor: `${activeTheme.cardAccent}25`,
+                    boxShadow: `0 0 12px ${activeTheme.cardAccent}10, inset 0 1px 0 ${activeTheme.cardAccent}08`,
+                  } : undefined}
                   variants={cardVariants}
                   initial="hidden"
                   animate="visible"
