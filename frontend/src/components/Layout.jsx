@@ -18,6 +18,7 @@ import {
   ArrowLeft,
   Loader2,
   Users,
+  Trophy,
 } from 'lucide-react';
 import AvatarDisplay from './AvatarDisplay';
 
@@ -25,6 +26,7 @@ const ALL_NAV_ITEMS = [
   { label: 'Home', icon: Home, path: '/' },
   { label: 'Quests', icon: Swords, path: '/chores' },
   { label: 'Party', icon: Users, path: '/party' },
+  { label: 'Leaderboard', icon: Trophy, path: '/leaderboard', settingKey: 'leaderboard_enabled' },
   { label: 'Rewards', icon: Gift, path: '/rewards' },
   { label: 'Calendar', icon: CalendarDays, path: '/calendar' },
   { label: 'Events', icon: Sparkles, path: '/events', parentOnly: true },
@@ -45,7 +47,8 @@ export default function Layout({ children }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
-  const { chore_trading_enabled } = useSettings();
+  const settings = useSettings();
+  const { chore_trading_enabled } = settings;
   const { syncFromUser } = useTheme();
   const { notifications, unreadCount, markRead, markAllRead, refresh } = useNotifications();
 
@@ -82,7 +85,11 @@ export default function Layout({ children }) {
   }, [location.pathname]);
 
   const isParent = user?.role === 'parent' || user?.role === 'admin';
-  const navItems = ALL_NAV_ITEMS.filter((item) => !item.parentOnly || isParent);
+  const navItems = ALL_NAV_ITEMS.filter((item) => {
+    if (item.parentOnly && !isParent) return false;
+    if (item.settingKey && settings[item.settingKey] === false) return false;
+    return true;
+  });
   const isHome = location.pathname === '/';
 
   const isActive = (path) => path === '/' ? location.pathname === '/' : (location.pathname === path || location.pathname.startsWith(path + '/'));
