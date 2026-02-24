@@ -11,6 +11,7 @@ import {
   renderPet,
   renderPetExtras,
   buildPetColors,
+  renderPetAccessory,
 } from './avatar';
 
 const SIZES = {
@@ -245,6 +246,7 @@ function SvgAvatar({ config, size }) {
                 {renderPet(petStyle, petColors, petPosition, config)}
               </g>
               {renderPetExtras(petStyle, petLevel, petColors, petPosition === 'custom' ? 'right' : petPosition)}
+              {renderPetAccessory(petStyle, config.pet_accessory, petPosition === 'custom' ? 'right' : petPosition, config)}
             </>
           );
         })()}

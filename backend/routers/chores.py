@@ -39,6 +39,7 @@ from backend.schemas import (
     AssignmentRuleUpdate,
     QuestTemplateResponse,
     RotationResponse,
+    QuestFeedbackRequest,
 )
 from backend.config import settings
 from backend.dependencies import get_current_user, require_parent
@@ -1065,8 +1066,18 @@ async def verify_chore(
                 kid.current_streak += 1
                 kid.last_streak_date = today
             else:
-                kid.current_streak = 1
-                kid.last_streak_date = today
+                # Streak freeze: auto-use if available (1 per calendar month)
+                current_month = today.month + today.year * 12
+                freeze_month = kid.streak_freeze_month or 0
+                if kid.current_streak > 0 and freeze_month != current_month:
+                    # Use the freeze — preserve streak
+                    kid.streak_freezes_used = (kid.streak_freezes_used or 0) + 1
+                    kid.streak_freeze_month = current_month
+                    kid.current_streak += 1
+                    kid.last_streak_date = today
+                else:
+                    kid.current_streak = 1
+                    kid.last_streak_date = today
         else:
             kid.current_streak = 1
             kid.last_streak_date = today
@@ -1246,6 +1257,42 @@ async def skip_chore(
     await db.commit()
 
     await ws_manager.broadcast(_CHORE_CHANGED, exclude_user=user.id)
+
+    assignment = await _reload_assignment_with_relations(db, assignment.id)
+    return AssignmentResponse.model_validate(assignment)
+
+
+@router.post("/assignments/{assignment_id}/feedback", response_model=AssignmentResponse)
+async def add_quest_feedback(
+    assignment_id: int,
+    body: QuestFeedbackRequest,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_parent),
+):
+    """Add parent feedback/comment to a completed or verified assignment."""
+    result = await db.execute(
+        select(ChoreAssignment)
+        .where(ChoreAssignment.id == assignment_id)
+        .options(selectinload(ChoreAssignment.chore))
+    )
+    assignment = result.scalar_one_or_none()
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+
+    assignment.feedback = body.feedback
+    await db.commit()
+
+    # Notify the kid
+    chore_title = assignment.chore.title if assignment.chore else "a quest"
+    db.add(Notification(
+        user_id=assignment.user_id,
+        type=NotificationType.quest_feedback,
+        title="Quest Feedback",
+        message=f"{user.display_name} left feedback on \"{chore_title}\": {body.feedback}",
+        reference_type="chore_assignment",
+        reference_id=assignment.id,
+    ))
+    await db.commit()
 
     assignment = await _reload_assignment_with_relations(db, assignment.id)
     return AssignmentResponse.model_validate(assignment)

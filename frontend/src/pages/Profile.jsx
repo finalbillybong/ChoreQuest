@@ -30,6 +30,8 @@ import {
   Bell,
   BellOff,
   BarChart3,
+  Download,
+  Shield,
 } from 'lucide-react';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 
@@ -494,44 +496,108 @@ export default function Profile() {
             </p>
           ) : (
             <div className="space-y-2">
-              {achievements.map((a) => (
-                <div
-                  key={a.id}
-                  className={`flex items-center gap-3 p-3 rounded-lg border transition-opacity ${
-                    a.unlocked
-                      ? 'border-purple/30 bg-purple/5'
-                      : 'border-border bg-surface-raised/30 opacity-60'
-                  }`}
-                >
-                  <div
-                    className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                      a.unlocked
-                        ? 'bg-purple/20 border border-purple/40'
-                        : 'bg-surface-raised border border-border'
-                    }`}
-                  >
-                    {a.unlocked ? (
-                      <ChoreIcon name={a.icon} size={20} className="text-purple" />
-                    ) : (
-                      <Lock size={16} className="text-muted" />
+              {(() => {
+                const tierColors = {
+                  bronze: { border: 'border-amber-600/40', bg: 'bg-amber-600/10', text: 'text-amber-500', icon: 'text-amber-500', label: 'Bronze' },
+                  silver: { border: 'border-slate-300/40', bg: 'bg-slate-300/10', text: 'text-slate-300', icon: 'text-slate-300', label: 'Silver' },
+                  gold: { border: 'border-yellow-400/40', bg: 'bg-yellow-400/10', text: 'text-yellow-400', icon: 'text-yellow-400', label: 'Gold' },
+                };
+                // Group achievements by group_key, ungrouped come last
+                const grouped = [];
+                const seen = new Set();
+                const sorted = [...achievements].sort((a, b) => (a.sort_order ?? 99) - (b.sort_order ?? 99));
+                for (const a of sorted) {
+                  if (a.group_key && !seen.has(a.group_key)) {
+                    seen.add(a.group_key);
+                    grouped.push({ group: a.group_key, items: sorted.filter(x => x.group_key === a.group_key) });
+                  } else if (!a.group_key && !seen.has(a.id)) {
+                    seen.add(a.id);
+                    grouped.push({ group: null, items: [a] });
+                  }
+                }
+                return grouped.map(({ group, items }) => (
+                  <div key={group || items[0].id}>
+                    {group && items.length > 1 && (
+                      <p className="text-muted text-[10px] uppercase tracking-widest font-semibold mt-3 mb-1 px-1">
+                        {group.replace(/_/g, ' ')}
+                      </p>
                     )}
+                    {items.map((a) => {
+                      const tier = tierColors[a.tier] || null;
+                      return (
+                        <div
+                          key={a.id}
+                          className={`flex items-center gap-3 p-3 rounded-lg border transition-opacity mb-1.5 ${
+                            a.unlocked
+                              ? tier ? `${tier.border} ${tier.bg}` : 'border-purple/30 bg-purple/5'
+                              : 'border-border bg-surface-raised/30 opacity-60'
+                          }`}
+                        >
+                          <div
+                            className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                              a.unlocked
+                                ? tier ? `${tier.bg} border ${tier.border}` : 'bg-purple/20 border border-purple/40'
+                                : 'bg-surface-raised border border-border'
+                            }`}
+                          >
+                            {a.unlocked ? (
+                              <ChoreIcon name={a.icon} size={20} className={tier ? tier.icon : 'text-purple'} />
+                            ) : (
+                              <Lock size={16} className="text-muted" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className={`text-sm font-medium ${a.unlocked ? 'text-cream' : 'text-muted'}`}>
+                                {a.title}
+                              </p>
+                              {tier && (
+                                <span className={`text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full border ${tier.border} ${tier.bg} ${tier.text}`}>
+                                  {tier.label}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-muted text-xs mt-0.5">
+                              {a.description}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            {a.points_reward > 0 && (
+                              <div className="flex items-center gap-1">
+                                <Star size={12} className="text-gold fill-gold" />
+                                <span className="text-gold text-xs font-bold">{a.points_reward}</span>
+                              </div>
+                            )}
+                            {a.unlocked && (
+                              <button
+                                onClick={async (e) => {
+                                  e.stopPropagation();
+                                  try {
+                                    const res = await fetch(`/api/stats/achievements/${a.id}/badge`, {
+                                      credentials: 'include',
+                                    });
+                                    const blob = await res.blob();
+                                    const url = URL.createObjectURL(blob);
+                                    const link = document.createElement('a');
+                                    link.href = url;
+                                    link.download = `${a.title.replace(/\s+/g, '_')}_badge.svg`;
+                                    link.click();
+                                    URL.revokeObjectURL(url);
+                                  } catch { /* ignore */ }
+                                }}
+                                className="p-1 rounded hover:bg-surface-raised/60 transition-colors"
+                                title="Download badge"
+                              >
+                                <Download size={12} className="text-muted hover:text-cream" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className={`text-sm font-medium ${a.unlocked ? 'text-cream' : 'text-muted'}`}>
-                      {a.title}
-                    </p>
-                    <p className="text-muted text-xs mt-0.5">
-                      {a.description}
-                    </p>
-                  </div>
-                  {a.points_reward > 0 && (
-                    <div className="flex items-center gap-1 flex-shrink-0">
-                      <Star size={12} className="text-gold fill-gold" />
-                      <span className="text-gold text-xs font-bold">{a.points_reward}</span>
-                    </div>
-                  )}
-                </div>
-              ))}
+                ));
+              })()}
             </div>
           )}
         </div>

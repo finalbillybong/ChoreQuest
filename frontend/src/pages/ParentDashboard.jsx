@@ -12,6 +12,8 @@ import {
   Users,
   Sparkles,
   Camera,
+  MessageSquare,
+  Send,
 } from 'lucide-react';
 import { useTheme } from '../hooks/useTheme';
 import { themedTitle } from '../utils/questThemeText';
@@ -52,6 +54,10 @@ export default function ParentDashboard() {
   const [error, setError] = useState(null);
   const [actionLoading, setActionLoading] = useState({}); // { [id]: true }
   const [bonusModalOpen, setBonusModalOpen] = useState(false);
+
+  // feedback state
+  const [feedbackText, setFeedbackText] = useState({});
+  const [feedbackSending, setFeedbackSending] = useState({});
 
   // bonus form state
   const [bonusKidId, setBonusKidId] = useState('');
@@ -168,6 +174,22 @@ export default function ParentDashboard() {
       setBonusError(err.message || 'Failed to award bonus XP');
     } finally {
       setBonusSubmitting(false);
+    }
+  };
+
+  // Send feedback on a quest assignment
+  const handleSendFeedback = async (assignmentId) => {
+    const text = feedbackText[assignmentId]?.trim();
+    if (!text) return;
+    setFeedbackSending(prev => ({ ...prev, [assignmentId]: true }));
+    try {
+      await api(`/api/chores/assignments/${assignmentId}/feedback`, {
+        method: 'POST',
+        body: { feedback: text },
+      });
+      setFeedbackText(prev => ({ ...prev, [assignmentId]: '' }));
+    } catch { /* ignore */ } finally {
+      setFeedbackSending(prev => ({ ...prev, [assignmentId]: false }));
     }
   };
 
@@ -363,6 +385,36 @@ export default function ParentDashboard() {
                         className="rounded-lg max-h-48 object-cover border border-border"
                       />
                     </div>
+                  )}
+
+                  {/* Feedback input */}
+                  <div className="mt-3 flex items-center gap-2">
+                    <MessageSquare size={14} className="text-muted flex-shrink-0" />
+                    <input
+                      type="text"
+                      value={feedbackText[assignment.id] || ''}
+                      onChange={e => setFeedbackText(prev => ({ ...prev, [assignment.id]: e.target.value }))}
+                      placeholder="Leave feedback for this quest..."
+                      maxLength={500}
+                      className="field-input !py-1.5 !text-xs flex-1"
+                    />
+                    <button
+                      onClick={() => handleSendFeedback(assignment.id)}
+                      disabled={feedbackSending[assignment.id] || !feedbackText[assignment.id]?.trim()}
+                      className="game-btn game-btn-blue !py-1.5 !px-2 flex-shrink-0"
+                      title="Send feedback"
+                    >
+                      {feedbackSending[assignment.id] ? (
+                        <Loader2 size={12} className="animate-spin" />
+                      ) : (
+                        <Send size={12} />
+                      )}
+                    </button>
+                  </div>
+                  {assignment.feedback && (
+                    <p className="mt-1.5 ml-6 text-muted text-xs italic">
+                      Feedback: {assignment.feedback}
+                    </p>
                   )}
                 </div>
               );

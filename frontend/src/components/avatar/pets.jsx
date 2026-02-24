@@ -305,3 +305,87 @@ export function renderPet(style, color, position = 'right', config = {}) {
 
   return <Component colors={colors} position={position} />;
 }
+
+/**
+ * Render a pet accessory (hat/decoration) on top of the pet.
+ * Drawn in the same coordinate space as the pet.
+ */
+export function renderPetAccessory(petStyle, accessory, position = 'right', config = {}) {
+  if (!accessory || accessory === 'none' || !petStyle || petStyle === 'none') return null;
+  const isBig = BIG_PETS.has(petStyle);
+  const offsets = isBig
+    ? (BIG_PET_OFFSETS[position] || BIG_PET_OFFSETS.right)
+    : (PET_OFFSETS[position] || PET_OFFSETS.right);
+  const cx = isBig ? 4 : 3;
+  const cy = isBig ? 2 : 1.5;
+
+  let accessoryEl = null;
+  switch (accessory) {
+    case 'crown':
+      accessoryEl = (
+        <g>
+          <polygon points={`${cx-1.5},${cy-1} ${cx-0.8},${cy-2.2} ${cx},${cy-1.5} ${cx+0.8},${cy-2.2} ${cx+1.5},${cy-1}`} fill="#f59e0b" stroke="#d97706" strokeWidth="0.15" />
+          <circle cx={cx} cy={cy-2} r="0.25" fill="white" opacity="0.8" />
+        </g>
+      );
+      break;
+    case 'party_hat':
+      accessoryEl = (
+        <g>
+          <polygon points={`${cx-1.2},${cy-0.5} ${cx},${cy-2.5} ${cx+1.2},${cy-0.5}`} fill="#ec4899" stroke="#be185d" strokeWidth="0.15" />
+          <circle cx={cx} cy={cy-2.5} r="0.3" fill="#fbbf24" />
+          <line x1={cx-0.5} y1={cy-1.5} x2={cx+0.5} y2={cy-1.5} stroke="white" strokeWidth="0.2" opacity="0.5" />
+        </g>
+      );
+      break;
+    case 'bow':
+      accessoryEl = (
+        <g>
+          <ellipse cx={cx-0.6} cy={cy-1} rx="0.6" ry="0.4" fill="#ec4899" />
+          <ellipse cx={cx+0.6} cy={cy-1} rx="0.6" ry="0.4" fill="#ec4899" />
+          <circle cx={cx} cy={cy-1} r="0.2" fill="#be185d" />
+        </g>
+      );
+      break;
+    case 'bandana':
+      accessoryEl = (
+        <g>
+          <path d={`M${cx-1.5},${cy-0.3} Q${cx},${cy-0.8} ${cx+1.5},${cy-0.3}`} fill="#ef4444" stroke="#b91c1c" strokeWidth="0.15" />
+          <path d={`M${cx+1},${cy-0.3} L${cx+1.8},${cy+0.5} L${cx+1.5},${cy+0.6}`} fill="#ef4444" />
+        </g>
+      );
+      break;
+    case 'halo':
+      accessoryEl = (
+        <ellipse cx={cx} cy={cy-1.5} rx="1.5" ry="0.4" fill="none" stroke="#fbbf24" strokeWidth="0.3" opacity="0.7" />
+      );
+      break;
+    case 'flower':
+      accessoryEl = (
+        <g>
+          {[0, 72, 144, 216, 288].map((deg, i) => {
+            const rad = (deg * Math.PI) / 180;
+            const px = cx - 1 + Math.cos(rad) * 0.5;
+            const py = cy - 1 + Math.sin(rad) * 0.5;
+            return <circle key={i} cx={px} cy={py} r="0.3" fill="#f472b6" />;
+          })}
+          <circle cx={cx-1} cy={cy-1} r="0.2" fill="#fbbf24" />
+        </g>
+      );
+      break;
+    default:
+      return null;
+  }
+
+  if (position === 'custom' && config.pet_x != null && config.pet_y != null) {
+    const ccx = isBig ? 25 : 26;
+    const ccy = isBig ? 19 : 20;
+    const flip = config.pet_x < 16;
+    const t = flip
+      ? `translate(${config.pet_x},${config.pet_y}) scale(-1,1) translate(${-ccx},${-ccy})`
+      : `translate(${config.pet_x - ccx},${config.pet_y - ccy})`;
+    return <g transform={t}>{accessoryEl}</g>;
+  }
+
+  return <g transform={offsets}>{accessoryEl}</g>;
+}

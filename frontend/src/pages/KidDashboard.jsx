@@ -11,6 +11,10 @@ import {
   Loader2,
   AlertTriangle,
   ChevronRight,
+  Heart,
+  HandHeart,
+  Gamepad2,
+  ShieldOff,
 } from 'lucide-react';
 import { api } from '../api/client';
 import { useAuth } from '../hooks/useAuth';
@@ -91,6 +95,10 @@ export default function KidDashboard() {
   const [showConfetti, setShowConfetti] = useState(false);
   const [showThemePicker, setShowThemePicker] = useState(false);
 
+  // Pet interactions
+  const [petInteracting, setPetInteracting] = useState(null);
+  const [petMessage, setPetMessage] = useState('');
+
   // Board theme — stored in localStorage
   const [boardTheme, setBoardTheme] = useState(() =>
     localStorage.getItem('chorequest-board-theme') || 'default'
@@ -154,6 +162,25 @@ export default function KidDashboard() {
     return () => window.removeEventListener('ws:message', handler);
   }, [fetchData]);
 
+
+  // ---- pet interaction ----
+  const handlePetInteraction = async (action) => {
+    setPetInteracting(action);
+    setPetMessage('');
+    try {
+      const res = await api('/api/pets/interact', { method: 'POST', body: { action } });
+      const labels = { feed: 'Fed', pet: 'Petted', play: 'Played with' };
+      setPetMessage(`${labels[action]} your pet! +${res.xp_awarded} XP${res.levelup ? ' - LEVEL UP!' : ''} (${res.interactions_remaining} left today)`);
+      await fetchData();
+    } catch (err) {
+      setPetMessage(err.message || 'Could not interact with pet');
+    } finally {
+      setPetInteracting(null);
+      setTimeout(() => setPetMessage(''), 4000);
+    }
+  };
+
+  const hasPet = myStats?.pet && myStats.pet.type !== 'none';
 
   // ---- render ----
 
@@ -367,6 +394,57 @@ export default function KidDashboard() {
           </div>
         );
       })()}
+
+      {/* ── Pet Interactions ── */}
+      {hasPet && (
+        <div className="game-panel p-4">
+          <h3 className="text-cream text-sm font-bold mb-3 flex items-center gap-2">
+            <Heart size={14} className="text-crimson" />
+            Pet Care
+          </h3>
+          <div className="flex gap-2">
+            {[
+              { action: 'feed', icon: Heart, label: 'Feed', color: 'game-btn-red' },
+              { action: 'pet', icon: HandHeart, label: 'Pet', color: 'game-btn-blue' },
+              { action: 'play', icon: Gamepad2, label: 'Play', color: 'game-btn-purple' },
+            ].map(({ action, icon: Icon, label, color }) => (
+              <button
+                key={action}
+                onClick={() => handlePetInteraction(action)}
+                disabled={!!petInteracting}
+                className={`game-btn ${color} flex-1 flex items-center justify-center gap-1.5 !py-2 text-xs ${
+                  petInteracting === action ? 'opacity-60 cursor-wait' : ''
+                }`}
+              >
+                {petInteracting === action ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : (
+                  <Icon size={14} />
+                )}
+                {label}
+              </button>
+            ))}
+          </div>
+          {petMessage && (
+            <p className={`text-xs mt-2 text-center ${
+              petMessage.includes('Could not') ? 'text-crimson' : 'text-emerald'
+            }`}>
+              {petMessage}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* ── Streak Freeze Indicator ── */}
+      {myStats?.streak_freeze_available && (
+        <div className="game-panel p-3 flex items-center gap-3">
+          <ShieldOff size={16} className="text-sky flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-cream text-xs font-medium">Streak Freeze Available</p>
+            <p className="text-muted text-[10px]">Your streak will be saved once if you miss a day this month</p>
+          </div>
+        </div>
+      )}
 
       {/* ── Spin Wheel Section ── */}
       {spin_wheel_enabled && (

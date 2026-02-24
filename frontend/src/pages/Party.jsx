@@ -13,6 +13,11 @@ import {
   Sparkles,
   Swords,
   Loader2,
+  Megaphone,
+  Pin,
+  Plus,
+  Trash2,
+  Send,
 } from 'lucide-react';
 
 function timeAgo(dateStr) {
@@ -64,8 +69,24 @@ function ProgressRing({ completed, total, size = 72 }) {
 
 export default function Party() {
   const { user } = useAuth();
+  const isParent = user?.role === 'parent' || user?.role === 'admin';
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  // Bulletin board state
+  const [announcements, setAnnouncements] = useState([]);
+  const [showNewAnnouncement, setShowNewAnnouncement] = useState(false);
+  const [announcementForm, setAnnouncementForm] = useState({ title: '', message: '', is_pinned: false });
+  const [announcementSubmitting, setAnnouncementSubmitting] = useState(false);
+
+  const fetchAnnouncements = useCallback(async () => {
+    try {
+      const res = await api('/api/announcements');
+      setAnnouncements(Array.isArray(res) ? res : []);
+    } catch {
+      setAnnouncements([]);
+    }
+  }, []);
 
   const fetchParty = useCallback(async () => {
     try {
@@ -77,14 +98,34 @@ export default function Party() {
   }, []);
 
   useEffect(() => {
-    fetchParty().finally(() => setLoading(false));
-  }, [fetchParty]);
+    Promise.all([fetchParty(), fetchAnnouncements()]).finally(() => setLoading(false));
+  }, [fetchParty, fetchAnnouncements]);
 
   useEffect(() => {
-    const handler = () => fetchParty();
+    const handler = () => { fetchParty(); fetchAnnouncements(); };
     window.addEventListener('ws:message', handler);
     return () => window.removeEventListener('ws:message', handler);
-  }, [fetchParty]);
+  }, [fetchParty, fetchAnnouncements]);
+
+  const handlePostAnnouncement = async () => {
+    if (!announcementForm.title.trim() || !announcementForm.message.trim()) return;
+    setAnnouncementSubmitting(true);
+    try {
+      await api('/api/announcements', { method: 'POST', body: announcementForm });
+      setAnnouncementForm({ title: '', message: '', is_pinned: false });
+      setShowNewAnnouncement(false);
+      await fetchAnnouncements();
+    } catch { /* ignore */ } finally {
+      setAnnouncementSubmitting(false);
+    }
+  };
+
+  const handleDeleteAnnouncement = async (id) => {
+    try {
+      await api(`/api/announcements/${id}`, { method: 'DELETE' });
+      setAnnouncements(prev => prev.filter(a => a.id !== id));
+    } catch { /* ignore */ }
+  };
 
   if (loading) {
     return (
@@ -208,6 +249,107 @@ export default function Party() {
 
       {/* Shoutouts */}
       <ShoutoutPanel members={members} />
+
+      {/* Bulletin Board */}
+      <div className="game-panel p-4">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-cream text-sm font-bold flex items-center gap-2">
+            <Megaphone size={14} className="text-sky" />
+            Bulletin Board
+          </h2>
+          {isParent && (
+            <button
+              onClick={() => setShowNewAnnouncement(v => !v)}
+              className="text-sky text-xs hover:text-sky/80 flex items-center gap-1"
+            >
+              <Plus size={12} />
+              Post
+            </button>
+          )}
+        </div>
+
+        {/* New announcement form (parents only) */}
+        {isParent && showNewAnnouncement && (
+          <div className="mb-4 p-3 rounded-lg bg-surface-raised/40 border border-border space-y-2">
+            <input
+              type="text"
+              value={announcementForm.title}
+              onChange={e => setAnnouncementForm(f => ({ ...f, title: e.target.value }))}
+              placeholder="Announcement title"
+              maxLength={200}
+              className="field-input !text-sm"
+            />
+            <textarea
+              value={announcementForm.message}
+              onChange={e => setAnnouncementForm(f => ({ ...f, message: e.target.value }))}
+              placeholder="What's the news?"
+              maxLength={1000}
+              rows={2}
+              className="field-input !text-sm resize-none"
+            />
+            <div className="flex items-center justify-between">
+              <label className="flex items-center gap-2 text-muted text-xs cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={announcementForm.is_pinned}
+                  onChange={e => setAnnouncementForm(f => ({ ...f, is_pinned: e.target.checked }))}
+                  className="rounded border-border"
+                />
+                <Pin size={10} />
+                Pin to top
+              </label>
+              <button
+                onClick={handlePostAnnouncement}
+                disabled={announcementSubmitting || !announcementForm.title.trim()}
+                className="game-btn game-btn-blue !py-1.5 !px-3 flex items-center gap-1 text-xs"
+              >
+                <Send size={12} />
+                {announcementSubmitting ? 'Posting...' : 'Post'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {announcements.length === 0 ? (
+          <p className="text-muted text-sm text-center py-4">
+            No announcements yet.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {announcements.map(a => (
+              <div
+                key={a.id}
+                className={`px-3 py-2.5 rounded-lg border ${
+                  a.is_pinned ? 'border-sky/30 bg-sky/5' : 'border-border/50 bg-surface-raised/20'
+                }`}
+              >
+                <div className="flex items-start gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      {a.is_pinned && <Pin size={10} className="text-sky flex-shrink-0" />}
+                      <p className="text-cream text-sm font-medium truncate">{a.title}</p>
+                    </div>
+                    <p className="text-muted text-xs mt-1">{a.message}</p>
+                    <p className="text-muted/50 text-[10px] mt-1">
+                      {a.creator_name && <span>{a.creator_name} &middot; </span>}
+                      {timeAgo(a.created_at)}
+                    </p>
+                  </div>
+                  {isParent && (
+                    <button
+                      onClick={() => handleDeleteAnnouncement(a.id)}
+                      className="p-1 text-muted hover:text-crimson transition-colors flex-shrink-0"
+                      title="Delete"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Activity Feed */}
       <div className="game-panel p-4">

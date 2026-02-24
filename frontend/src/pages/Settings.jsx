@@ -265,15 +265,25 @@ export default function Settings() {
               </p>
             ) : (
               <div className="space-y-3">
-                {achievements.map((ach) => (
+                {achievements.map((ach) => {
+                  const tierColors = { bronze: 'text-amber-500 bg-amber-600/10 border-amber-600/30', silver: 'text-slate-300 bg-slate-300/10 border-slate-300/30', gold: 'text-yellow-400 bg-yellow-400/10 border-yellow-400/30' };
+                  const tierStyle = tierColors[ach.tier] || '';
+                  return (
                   <div
                     key={ach.id}
                     className="p-3 rounded-lg bg-surface-raised/30 border border-border space-y-2"
                   >
                     <div className="min-w-0">
-                      <p className="text-cream text-sm truncate">
-                        {ach.title || ach.name}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-cream text-sm truncate">
+                          {ach.title || ach.name}
+                        </p>
+                        {ach.tier && (
+                          <span className={`text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full border ${tierStyle}`}>
+                            {ach.tier}
+                          </span>
+                        )}
+                      </div>
                       {ach.description && (
                         <p className="text-muted text-xs">
                           {ach.description}
@@ -312,7 +322,8 @@ export default function Settings() {
                       </button>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

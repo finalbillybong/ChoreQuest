@@ -17,6 +17,7 @@ import {
   Gift,
   Star,
   Palette,
+  Filter,
 } from 'lucide-react';
 
 const emptyForm = {
@@ -25,6 +26,7 @@ const emptyForm = {
   point_cost: 50,
   icon: '',
   stock: '',
+  category: '',
 };
 
 const TABS = [
@@ -60,6 +62,7 @@ export default function Rewards() {
 
   const [redeemingId, setRedeemingId] = useState(null);
   const [redeemMessage, setRedeemMessage] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('all');
 
   const userXp = user?.points_balance ?? 0;
 
@@ -126,6 +129,7 @@ export default function Rewards() {
       point_cost: reward.point_cost ?? reward.cost ?? 50,
       icon: reward.icon || '',
       stock: reward.stock != null ? String(reward.stock) : '',
+      category: reward.category || '',
     });
     setFormError('');
     setShowModal(true);
@@ -159,6 +163,7 @@ export default function Rewards() {
       description: form.description.trim(),
       point_cost: Number(form.point_cost),
       icon: form.icon || undefined,
+      category: form.category.trim() || undefined,
     };
 
     if (form.stock !== '') {
@@ -275,6 +280,40 @@ export default function Rewards() {
         </div>
       )}
 
+      {/* Category Filter */}
+      {(() => {
+        const categories = [...new Set(rewards.map(r => r.category).filter(Boolean))];
+        if (categories.length === 0) return null;
+        return (
+          <div className="flex items-center gap-2 overflow-x-auto pb-1">
+            <Filter size={14} className="text-muted flex-shrink-0" />
+            <button
+              onClick={() => setCategoryFilter('all')}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors whitespace-nowrap ${
+                categoryFilter === 'all'
+                  ? 'bg-sky/15 text-sky border-sky/25'
+                  : 'text-muted border-border hover:text-cream'
+              }`}
+            >
+              All
+            </button>
+            {categories.map(cat => (
+              <button
+                key={cat}
+                onClick={() => setCategoryFilter(cat)}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors whitespace-nowrap ${
+                  categoryFilter === cat
+                    ? 'bg-sky/15 text-sky border-sky/25'
+                    : 'text-muted border-border hover:text-cream'
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+        );
+      })()}
+
       {/* Redeem Message */}
       {redeemMessage && (
         <div
@@ -301,7 +340,23 @@ export default function Rewards() {
       )}
 
       {/* Rewards Grid */}
-      {rewards.length === 0 ? (
+      {(() => {
+        const filtered = categoryFilter === 'all' ? rewards : rewards.filter(r => r.category === categoryFilter);
+        return filtered;
+      })().length === 0 && rewards.length > 0 ? (
+        <div className="game-panel p-10 text-center">
+          <Gift size={48} className="mx-auto text-cream/20 mb-4" />
+          <p className="text-muted text-sm">
+            No treasures in this category.
+          </p>
+          <button
+            onClick={() => setCategoryFilter('all')}
+            className="text-sky text-xs mt-2 hover:underline"
+          >
+            Show all
+          </button>
+        </div>
+      ) : rewards.length === 0 ? (
         <div className="game-panel p-10 text-center">
           <Gift size={48} className="mx-auto text-cream/20 mb-4" />
           <p className="text-muted text-sm">
@@ -319,7 +374,7 @@ export default function Rewards() {
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {rewards.map((reward) => {
+          {(categoryFilter === 'all' ? rewards : rewards.filter(r => r.category === categoryFilter)).map((reward) => {
             const outOfStock = isOutOfStock(reward);
             const affordable = canAfford(reward);
             const cost = reward.point_cost ?? reward.cost ?? 0;
@@ -352,10 +407,17 @@ export default function Rewards() {
                   </div>
                 </div>
 
-                {/* Cost */}
-                <div className="flex items-center gap-2">
-                  <Coins size={16} className="text-gold" />
-                  <span className="text-gold text-sm font-bold">{cost} XP</span>
+                {/* Cost + Category */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <div className="flex items-center gap-1">
+                    <Coins size={16} className="text-gold" />
+                    <span className="text-gold text-sm font-bold">{cost} XP</span>
+                  </div>
+                  {reward.category && (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-medium border border-purple/30 bg-purple/10 text-purple">
+                      {reward.category}
+                    </span>
+                  )}
                 </div>
 
                 {/* Stock indicator */}
@@ -504,6 +566,20 @@ export default function Rewards() {
               value={form.icon}
               onChange={(e) => updateForm('icon', e.target.value)}
               placeholder="e.g. trophy, star, gift"
+              className="field-input"
+            />
+          </div>
+
+          {/* Category */}
+          <div>
+            <label className="block text-cream text-sm font-medium mb-1 tracking-wide">
+              Category (Optional)
+            </label>
+            <input
+              type="text"
+              value={form.category}
+              onChange={(e) => updateForm('category', e.target.value)}
+              placeholder="e.g. Treats, Experiences, Toys"
               className="field-input"
             />
           </div>

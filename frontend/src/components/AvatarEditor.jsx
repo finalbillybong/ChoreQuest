@@ -144,6 +144,16 @@ const PET_POSITION_OPTIONS = [
   { id: 'custom', label: 'Custom' },
 ];
 
+const PET_ACCESSORY_OPTIONS = [
+  { id: 'none', label: 'None' },
+  { id: 'crown', label: 'Crown' },
+  { id: 'party_hat', label: 'Party Hat' },
+  { id: 'bow', label: 'Bow' },
+  { id: 'bandana', label: 'Bandana' },
+  { id: 'halo', label: 'Halo' },
+  { id: 'flower', label: 'Flower' },
+];
+
 const SKIN_COLORS = [
   '#ffe0bd', '#ffcc99', '#f5d6b8', '#f8d9c0',
   '#e8b88a', '#d4a373', '#c68642', '#a67c52',
@@ -228,6 +238,7 @@ const DEFAULT_CONFIG = {
   pet_position: 'right',
   pet_x: 26,
   pet_y: 20,
+  pet_accessory: 'none',
 };
 
 const CATEGORIES = [
@@ -560,6 +571,12 @@ function PetCustomiser({ config, set, locked, previewProps, petStats }) {
               selected={config.pet_color_accent || config.pet_color || '#8b4513'}
               onSelect={(v) => setPartColor('pet_color_accent', v)}
             />
+          </div>
+
+          {/* Pet Accessories */}
+          <div>
+            <p className="text-muted text-xs font-medium mb-2">Pet Accessory</p>
+            <ShapeSelector options={PET_ACCESSORY_OPTIONS} selected={config.pet_accessory || 'none'} onSelect={(v) => set('pet_accessory', v)} />
           </div>
         </>
       )}

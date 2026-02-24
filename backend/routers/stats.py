@@ -1,6 +1,7 @@
 from datetime import date, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import HTMLResponse
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -404,6 +405,8 @@ async def get_all_achievements(
             icon=a.icon,
             points_reward=a.points_reward,
             criteria=a.criteria,
+            tier=a.tier,
+            group_key=a.group_key,
             sort_order=a.sort_order,
             unlocked=a.id in unlocked_map,
             unlocked_at=unlocked_map.get(a.id),
@@ -591,3 +594,64 @@ def _build_kid_assignment(a: ChoreAssignment) -> dict:
             "recurrence": a.chore.recurrence.value if a.chore.recurrence else None,
         } if a.chore else None,
     }
+
+
+# ── Achievement Badge (Shareable SVG) ──
+
+TIER_COLORS = {
+    "bronze": ("#cd7f32", "#8b5e23"),
+    "silver": ("#c0c0c0", "#808080"),
+    "gold": ("#ffd700", "#b8860b"),
+}
+
+
+@router.get("/achievements/{achievement_id}/badge")
+async def get_achievement_badge(
+    achievement_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Generate a shareable SVG badge for an unlocked achievement."""
+    result = await db.execute(
+        select(Achievement).where(Achievement.id == achievement_id)
+    )
+    achievement = result.scalar_one_or_none()
+    if not achievement:
+        raise HTTPException(status_code=404, detail="Achievement not found")
+
+    # Check if user has unlocked it
+    result = await db.execute(
+        select(UserAchievement).where(
+            UserAchievement.user_id == current_user.id,
+            UserAchievement.achievement_id == achievement_id,
+        )
+    )
+    ua = result.scalar_one_or_none()
+    if not ua:
+        raise HTTPException(status_code=403, detail="Achievement not yet unlocked")
+
+    tier = achievement.tier or "bronze"
+    fg, border = TIER_COLORS.get(tier, TIER_COLORS["bronze"])
+    unlocked_date = ua.unlocked_at.strftime("%d %b %Y") if ua.unlocked_at else ""
+
+    svg = f"""<svg xmlns="http://www.w3.org/2000/svg" width="400" height="200" viewBox="0 0 400 200">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1a1a2e"/>
+      <stop offset="100%" stop-color="#16213e"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="200" rx="16" fill="url(#bg)" stroke="{border}" stroke-width="3"/>
+  <circle cx="70" cy="100" r="40" fill="none" stroke="{fg}" stroke-width="3"/>
+  <text x="70" y="108" text-anchor="middle" font-size="28" fill="{fg}">★</text>
+  <text x="140" y="70" font-family="sans-serif" font-size="11" fill="{fg}" font-weight="bold"
+    text-transform="uppercase" letter-spacing="2">{tier.upper()}</text>
+  <text x="140" y="100" font-family="sans-serif" font-size="20" fill="#ecf0f1"
+    font-weight="bold">{achievement.title}</text>
+  <text x="140" y="125" font-family="sans-serif" font-size="12" fill="#95a5a6">{achievement.description}</text>
+  <text x="140" y="155" font-family="sans-serif" font-size="11" fill="#7f8c8d">+{achievement.points_reward} XP</text>
+  <text x="140" y="175" font-family="sans-serif" font-size="10" fill="#5d6d7e">{current_user.display_name} · {unlocked_date}</text>
+  <text x="370" y="185" text-anchor="end" font-family="sans-serif" font-size="9" fill="#34495e">ChoreQuest</text>
+</svg>"""
+
+    return HTMLResponse(content=svg, media_type="image/svg+xml")
