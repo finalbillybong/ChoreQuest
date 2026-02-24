@@ -86,6 +86,13 @@ const BEHIND_ACCESSORY_SCALE = {
   broad:   { cape: 1.3, wings: 1.2 },
 };
 
+/* ── Horizontal scale for front-facing accessories per body shape ──
+   Scarf wraps the torso so it must match body width. */
+const FRONT_ACCESSORY_SCALE = {
+  slim:  { scarf: 0.71 },
+  broad: { scarf: 1.29 },
+};
+
 /* Scale horizontally around center x=16 */
 function scaleAroundCenter(s) {
   if (s === 1) return undefined;
@@ -191,9 +198,9 @@ function SvgAvatar({ config, size }) {
         {renderHat(hatStyle, hatColor)}
       </g>
 
-      {/* Accessories (front-facing, not cape/wings) — with sparkle overlay */}
+      {/* Accessories (front-facing, not cape/wings) — scaled to body width */}
       {accessoryStyle !== 'cape' && accessoryStyle !== 'wings' && accessoryStyle !== 'none' && (
-        <g className="avatar-accessory">
+        <g className="avatar-accessory" transform={scaleAroundCenter((FRONT_ACCESSORY_SCALE[bodyShape] || {})[accessoryStyle] || 1)}>
           {renderAccessory(accessoryStyle, accessoryColor)}
           <circle className="avatar-sparkle" cx="16" cy="23" r="0.6" fill="white" opacity="0" />
         </g>
