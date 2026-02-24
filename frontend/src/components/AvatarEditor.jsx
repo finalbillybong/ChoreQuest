@@ -662,21 +662,16 @@ function CategoryContent({ category, config, set, lockedByCategory, onPreview, o
         ? config.accessories
         : (config.accessory && config.accessory !== 'none' ? [config.accessory] : []);
       const toggleAccessory = (id) => {
-        setConfig((prev) => {
-          const cur = new Set(
-            Array.isArray(prev.accessories) && prev.accessories.length > 0
-              ? prev.accessories
-              : (prev.accessory && prev.accessory !== 'none' ? [prev.accessory] : [])
-          );
-          if (cur.has(id)) cur.delete(id); else cur.add(id);
-          const arr = [...cur];
-          return { ...prev, accessories: arr, accessory: arr.length > 0 ? arr[0] : 'none' };
-        });
-        setMsg('');
+        const cur = new Set(currentAccessories);
+        if (cur.has(id)) cur.delete(id); else cur.add(id);
+        const arr = [...cur];
+        // set() uses functional updates internally so sequential calls chain correctly
+        set('accessories', arr);
+        set('accessory', arr.length > 0 ? arr[0] : 'none');
       };
       const clearAll = () => {
-        setConfig((prev) => ({ ...prev, accessories: [], accessory: 'none' }));
-        setMsg('');
+        set('accessories', []);
+        set('accessory', 'none');
       };
       return (
         <div className="space-y-3">
