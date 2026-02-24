@@ -149,8 +149,8 @@ function SvgAvatar({ config, size }) {
       className="avatar-svg rounded-full"
       style={{ background: bgColor }}
     >
-      {/* Accessory behind body (cape, wings) — scaled to match body width */}
-      {(accessoryStyle === 'cape' || accessoryStyle === 'wings') && (
+      {/* Accessory behind body (cape, wings, sword) — scaled to match body width */}
+      {(accessoryStyle === 'cape' || accessoryStyle === 'wings' || accessoryStyle === 'sword') && (
         <g transform={scaleAroundCenter(behindScale[accessoryStyle] || 1)}>
           {renderAccessory(accessoryStyle, accessoryColor)}
         </g>
@@ -198,8 +198,8 @@ function SvgAvatar({ config, size }) {
         {renderHat(hatStyle, hatColor)}
       </g>
 
-      {/* Accessories (front-facing, not cape/wings) — scaled to body width */}
-      {accessoryStyle !== 'cape' && accessoryStyle !== 'wings' && accessoryStyle !== 'none' && (
+      {/* Accessories (front-facing, not cape/wings/sword) — scaled to body width */}
+      {accessoryStyle !== 'cape' && accessoryStyle !== 'wings' && accessoryStyle !== 'sword' && accessoryStyle !== 'none' && (
         <g className="avatar-accessory" transform={scaleAroundCenter((FRONT_ACCESSORY_SCALE[bodyShape] || {})[accessoryStyle] || 1)}>
           {renderAccessory(accessoryStyle, accessoryColor)}
           <circle className="avatar-sparkle" cx="16" cy="23" r="0.6" fill="white" opacity="0" />
