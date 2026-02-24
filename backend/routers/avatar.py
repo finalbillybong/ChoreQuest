@@ -158,7 +158,25 @@ async def save_avatar(
     user: User = Depends(get_current_user),
 ):
     """Save avatar configuration for the current user."""
-    user.avatar_config = body.config
+    new_config = body.config
+
+    # Preserve server-managed pet XP data — the frontend may send stale values
+    existing = user.avatar_config or {}
+    if "pet_xp_map" in existing:
+        new_config["pet_xp_map"] = existing["pet_xp_map"]
+    if "pet_xp" in existing:
+        new_config.setdefault("pet_xp", existing["pet_xp"])
+
+    # Keep pet_xp in sync with the current pet from pet_xp_map
+    pet = new_config.get("pet")
+    xp_map = new_config.get("pet_xp_map", {})
+    if pet and pet != "none" and pet in xp_map:
+        new_config["pet_xp"] = xp_map[pet]
+    elif pet and pet != "none" and "pet_xp" in existing:
+        # Switching to a pet that has no map entry yet — legacy migration
+        new_config["pet_xp"] = xp_map.get(pet, 0)
+
+    user.avatar_config = new_config
     user.updated_at = datetime.now(timezone.utc)
     await db.commit()
     await db.refresh(user)

@@ -40,3 +40,46 @@ def all_pet_levels() -> list[dict]:
         {"level": level, "name": name, "xp_threshold": xp}
         for xp, level, name in PET_LEVELS
     ]
+
+
+# ── Per-pet XP helpers ──
+
+def get_current_pet_xp(config: dict) -> int:
+    """Return the XP for the currently equipped pet, migrating legacy data."""
+    pet = config.get("pet")
+    if not pet or pet == "none":
+        return 0
+    xp_map = config.get("pet_xp_map", {})
+    if pet in xp_map:
+        return xp_map[pet]
+    # Migrate legacy single pet_xp to the current pet
+    return config.get("pet_xp", 0)
+
+
+def set_current_pet_xp(config: dict, xp: int) -> dict:
+    """Set XP for the currently equipped pet. Returns the mutated config."""
+    pet = config.get("pet")
+    if not pet or pet == "none":
+        return config
+    xp_map = config.get("pet_xp_map", {})
+    xp_map[pet] = xp
+    config["pet_xp_map"] = xp_map
+    # Keep legacy field in sync for backwards compat with frontend cache
+    config["pet_xp"] = xp
+    return config
+
+
+def migrate_pet_xp(config: dict) -> dict:
+    """One-time migration: move legacy pet_xp into per-pet pet_xp_map."""
+    if "pet_xp_map" in config:
+        return config
+    legacy_xp = config.get("pet_xp", 0)
+    if legacy_xp <= 0:
+        config["pet_xp_map"] = {}
+        return config
+    pet = config.get("pet")
+    if pet and pet != "none":
+        config["pet_xp_map"] = {pet: legacy_xp}
+    else:
+        config["pet_xp_map"] = {}
+    return config

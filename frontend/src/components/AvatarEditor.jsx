@@ -382,10 +382,18 @@ function TapToPlaceOverlay({ config, onPlace }) {
   );
 }
 
+/** Get XP for a specific pet from per-pet map, falling back to legacy */
+function getPetXpForPet(config, petType) {
+  if (!petType || petType === 'none') return 0;
+  const xpMap = config.pet_xp_map || {};
+  if (petType in xpMap) return xpMap[petType];
+  return config.pet_xp || 0;
+}
+
 /** Full pet customisation section */
 function PetCustomiser({ config, set, locked, previewProps, petStats }) {
   const hasPet = config.pet && config.pet !== 'none';
-  const petXp = config.pet_xp || 0;
+  const petXp = getPetXpForPet(config, config.pet);
   const levelInfo = getPetLevelInfo(petXp);
   const petColors = buildPetColors(config);
   const bodyColor = config.pet_color || '#8b4513';
@@ -785,7 +793,15 @@ export default function AvatarEditor({ isOpen, onClose }) {
   }
 
   const set = (key, value) => {
-    setConfig((prev) => ({ ...prev, [key]: value }));
+    setConfig((prev) => {
+      const next = { ...prev, [key]: value };
+      // When switching pets, update pet_xp to the new pet's XP from the map
+      if (key === 'pet') {
+        const xpMap = next.pet_xp_map || {};
+        next.pet_xp = (value && value !== 'none' && value in xpMap) ? xpMap[value] : 0;
+      }
+      return next;
+    });
     setMsg('');
   };
 

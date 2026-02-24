@@ -209,7 +209,11 @@ function SvgAvatar({ config, size }) {
       {/* Pet — wrapped for wiggle animation, grows with pet level */}
       <g className="avatar-pet">
         {(() => {
-          const petXp = config.pet_xp || 0;
+          // Per-pet XP: read from pet_xp_map for current pet, fallback to legacy
+          const xpMap = config.pet_xp_map || {};
+          const petXp = (petStyle && petStyle !== 'none' && petStyle in xpMap)
+            ? xpMap[petStyle]
+            : (config.pet_xp || 0);
           const thresholds = [0, 50, 150, 350, 700, 1200, 2000, 3500];
           let petLevel = 1;
           for (let i = 0; i < thresholds.length; i++) {

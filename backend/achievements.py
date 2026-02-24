@@ -111,6 +111,16 @@ async def _check_criteria(db: AsyncSession, user: User, criteria: dict) -> bool:
         # This would require tracking if chore was self-claimed
         return False
 
+    elif ctype == "pet_level_reached":
+        config = user.avatar_config or {}
+        pet = config.get("pet")
+        if not pet or pet == "none":
+            return False
+        from backend.services.pet_leveling import get_current_pet_xp, get_pet_level
+        pet_xp = get_current_pet_xp(config)
+        level = get_pet_level(pet_xp)["level"]
+        return level >= criteria["level"]
+
     return False
 
 

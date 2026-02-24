@@ -47,8 +47,14 @@ async def get_my_stats(
     )
 
     rank = get_rank(current_user.total_points_earned or 0)
-    pet_xp = (current_user.avatar_config or {}).get("pet_xp", 0)
-    pet_info = get_pet_level(pet_xp) if (current_user.avatar_config or {}).get("pet") not in (None, "none") else None
+    config = current_user.avatar_config or {}
+    has_pet = config.get("pet") not in (None, "none")
+    if has_pet:
+        from backend.services.pet_leveling import get_current_pet_xp
+        pet_xp = get_current_pet_xp(config)
+        pet_info = get_pet_level(pet_xp)
+    else:
+        pet_info = None
 
     return {
         "points_balance": current_user.points_balance,
@@ -181,8 +187,14 @@ async def get_party(
     members = []
     for u in all_users:
         rank = get_rank(u.total_points_earned or 0)
-        pet_xp = (u.avatar_config or {}).get("pet_xp", 0)
-        has_pet = (u.avatar_config or {}).get("pet") not in (None, "none")
+        u_config = u.avatar_config or {}
+        has_pet = u_config.get("pet") not in (None, "none")
+        if has_pet:
+            from backend.services.pet_leveling import get_current_pet_xp
+            pet_xp = get_current_pet_xp(u_config)
+            pet = get_pet_level(pet_xp)
+        else:
+            pet = None
         member = {
             "id": u.id,
             "display_name": u.display_name or u.username,
@@ -191,7 +203,7 @@ async def get_party(
             "current_streak": u.current_streak,
             "total_points_earned": u.total_points_earned,
             "rank": rank,
-            "pet": get_pet_level(pet_xp) if has_pet else None,
+            "pet": pet,
         }
         if u.role == UserRole.kid:
             member["points_balance"] = u.points_balance

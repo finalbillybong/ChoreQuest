@@ -35,6 +35,10 @@ DEFAULT_ACHIEVEMENTS = [
     {"key": "big_spender", "title": "Big Spender", "description": "Redeem 20 rewards from the Treasure Shop", "icon": "shopping-cart", "points_reward": 50, "criteria": {"type": "total_redemptions", "count": 20}, "sort_order": 12},
     {"key": "speed_demon", "title": "Speed Demon", "description": "Complete all daily assigned quests before noon", "icon": "timer", "points_reward": 20, "criteria": {"type": "all_daily_before_time", "hour": 12}, "sort_order": 13},
     {"key": "all_done", "title": "All Done!", "description": "Complete every assigned quest in a single day", "icon": "check-check", "points_reward": 15, "criteria": {"type": "all_daily_completed"}, "sort_order": 14},
+    {"key": "pet_youngling", "title": "Growing Bond", "description": "Raise a pet to Level 2 (Youngling)", "icon": "paw-print", "points_reward": 15, "criteria": {"type": "pet_level_reached", "level": 2}, "sort_order": 15},
+    {"key": "pet_loyal", "title": "Loyal Companion", "description": "Raise a pet to Level 4 (Loyal)", "icon": "paw-print", "points_reward": 30, "criteria": {"type": "pet_level_reached", "level": 4}, "sort_order": 16},
+    {"key": "pet_mighty", "title": "Mighty Beast", "description": "Raise a pet to Level 6 (Mighty)", "icon": "paw-print", "points_reward": 50, "criteria": {"type": "pet_level_reached", "level": 6}, "sort_order": 17},
+    {"key": "pet_legendary", "title": "Legendary Tamer", "description": "Raise a pet to Level 8 (Legendary)", "icon": "paw-print", "points_reward": 100, "criteria": {"type": "pet_level_reached", "level": 8}, "sort_order": 18},
 ]
 
 DEFAULT_SETTINGS = {
@@ -307,11 +311,15 @@ async def seed_database(db: AsyncSession):
             db.add(ChoreCategory(name=cat["name"], icon=cat["icon"], colour=cat["colour"], is_default=True))
         await db.commit()
 
-    # Seed achievements
-    result = await db.execute(select(Achievement).limit(1))
-    if result.scalar_one_or_none() is None:
-        for ach in DEFAULT_ACHIEVEMENTS:
+    # Seed achievements (add any missing by key)
+    existing_keys_result = await db.execute(select(Achievement.key))
+    existing_keys = {row[0] for row in existing_keys_result.all()}
+    added_achievements = 0
+    for ach in DEFAULT_ACHIEVEMENTS:
+        if ach["key"] not in existing_keys:
             db.add(Achievement(**ach))
+            added_achievements += 1
+    if added_achievements > 0:
         await db.commit()
 
     # Seed settings
