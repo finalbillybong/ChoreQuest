@@ -405,3 +405,26 @@ h1, h2, h3, h4, h5, h6 {
   --color-border: #e9d5ff;
   --color-border-light: #d8b4fe;
 }
+
+/* ── Hide scrollbar for horizontal category strip ── */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* ── Avatar idle animation ── */
+@keyframes avatar-breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+}
+
+.avatar-idle {
+  animation: avatar-breathe 3s ease-in-out infinite;
+}
+
+.avatar-idle .avatar-svg {
+  will-change: transform;
+}

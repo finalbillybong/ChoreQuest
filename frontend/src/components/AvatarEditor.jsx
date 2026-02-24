@@ -135,9 +135,20 @@ const PET_OPTIONS = [
   { id: 'phoenix', label: 'Phoenix' },
 ];
 
+const PET_POSITION_OPTIONS = [
+  { id: 'right', label: 'Right' },
+  { id: 'left', label: 'Left' },
+  { id: 'head', label: 'Head' },
+];
+
 const SKIN_COLORS = [
-  '#ffcc99', '#f5d6b8', '#d4a373', '#a67c52',
-  '#8d5524', '#6b3a2a', '#f8d9c0', '#c68642',
+  // Warm tones
+  '#ffe0bd', '#ffcc99', '#f5d6b8', '#f8d9c0',
+  '#e8b88a', '#d4a373', '#c68642', '#a67c52',
+  // Cool / deep tones
+  '#8d5524', '#6b3a2a', '#4a2912', '#3b1f0e',
+  // Rosy / olive undertones
+  '#f0c4a8', '#d4956a', '#b07848', '#8a6642',
 ];
 
 const HAIR_COLORS = [
@@ -186,7 +197,10 @@ const PET_COLORS = [
   '#c0c0c0', '#ff6b9d', '#06b6d4', '#f59e0b',
 ];
 
+const AVATAR_CONFIG_VERSION = 2;
+
 const DEFAULT_CONFIG = {
+  _v: AVATAR_CONFIG_VERSION,
   head: 'round',
   hair: 'short',
   eyes: 'normal',
@@ -206,6 +220,7 @@ const DEFAULT_CONFIG = {
   outfit_pattern: 'none',
   pet: 'none',
   pet_color: '#8b4513',
+  pet_position: 'right',
 };
 
 const CATEGORIES = [
@@ -242,7 +257,7 @@ function ColorSwatch({ colors, selected, onSelect }) {
   );
 }
 
-function ShapeSelector({ options, selected, onSelect, lockedItems }) {
+function ShapeSelector({ options, selected, onSelect, lockedItems, configKey, onPreview, onPreviewEnd }) {
   return (
     <div className="flex flex-wrap gap-2">
       {options.map((opt) => {
@@ -251,16 +266,18 @@ function ShapeSelector({ options, selected, onSelect, lockedItems }) {
           <button
             key={opt.id}
             onClick={() => !isLocked && onSelect(opt.id)}
-            disabled={isLocked}
+            onPointerDown={() => isLocked && configKey && onPreview?.(configKey, opt.id)}
+            onPointerUp={() => isLocked && onPreviewEnd?.()}
+            onPointerLeave={() => isLocked && onPreviewEnd?.()}
             className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-all flex items-center gap-1 ${
               isLocked
-                ? 'border-border/50 text-muted/40 cursor-not-allowed'
+                ? 'border-amber-500/30 text-muted/60 bg-amber-500/5'
                 : selected === opt.id
                 ? 'border-sky bg-sky/10 text-sky'
                 : 'border-border text-muted hover:border-border-light hover:text-cream'
             }`}
           >
-            {isLocked && <Lock size={10} />}
+            {isLocked && <Lock size={10} className="text-amber-500/60" />}
             {opt.label}
           </button>
         );
@@ -269,14 +286,15 @@ function ShapeSelector({ options, selected, onSelect, lockedItems }) {
   );
 }
 
-function CategoryContent({ category, config, set, lockedByCategory }) {
+function CategoryContent({ category, config, set, lockedByCategory, onPreview, onPreviewEnd }) {
   const locked = lockedByCategory[category] || new Set();
+  const previewProps = { onPreview, onPreviewEnd };
   switch (category) {
     case 'head':
       return (
         <div className="space-y-3">
           <p className="text-muted text-xs font-medium">Shape</p>
-          <ShapeSelector options={HEAD_OPTIONS} selected={config.head} onSelect={(v) => set('head', v)} lockedItems={locked} />
+          <ShapeSelector options={HEAD_OPTIONS} selected={config.head} onSelect={(v) => set('head', v)} lockedItems={locked} configKey="head" {...previewProps} />
         </div>
       );
     case 'skin':
@@ -290,7 +308,7 @@ function CategoryContent({ category, config, set, lockedByCategory }) {
       return (
         <div className="space-y-3">
           <p className="text-muted text-xs font-medium">Style</p>
-          <ShapeSelector options={HAIR_OPTIONS} selected={config.hair} onSelect={(v) => set('hair', v)} lockedItems={locked} />
+          <ShapeSelector options={HAIR_OPTIONS} selected={config.hair} onSelect={(v) => set('hair', v)} lockedItems={locked} configKey="hair" {...previewProps} />
           <p className="text-muted text-xs font-medium">Colour</p>
           <ColorSwatch colors={HAIR_COLORS} selected={config.hair_color} onSelect={(v) => set('hair_color', v)} />
         </div>
@@ -299,7 +317,7 @@ function CategoryContent({ category, config, set, lockedByCategory }) {
       return (
         <div className="space-y-3">
           <p className="text-muted text-xs font-medium">Style</p>
-          <ShapeSelector options={EYES_OPTIONS} selected={config.eyes} onSelect={(v) => set('eyes', v)} lockedItems={locked} />
+          <ShapeSelector options={EYES_OPTIONS} selected={config.eyes} onSelect={(v) => set('eyes', v)} lockedItems={locked} configKey="eyes" {...previewProps} />
           <p className="text-muted text-xs font-medium">Colour</p>
           <ColorSwatch colors={EYE_COLORS} selected={config.eye_color} onSelect={(v) => set('eye_color', v)} />
         </div>
@@ -308,7 +326,7 @@ function CategoryContent({ category, config, set, lockedByCategory }) {
       return (
         <div className="space-y-3">
           <p className="text-muted text-xs font-medium">Style</p>
-          <ShapeSelector options={MOUTH_OPTIONS} selected={config.mouth} onSelect={(v) => set('mouth', v)} lockedItems={locked} />
+          <ShapeSelector options={MOUTH_OPTIONS} selected={config.mouth} onSelect={(v) => set('mouth', v)} lockedItems={locked} configKey="mouth" {...previewProps} />
           <p className="text-muted text-xs font-medium">Colour</p>
           <ColorSwatch colors={MOUTH_COLORS} selected={config.mouth_color} onSelect={(v) => set('mouth_color', v)} />
         </div>
@@ -331,7 +349,7 @@ function CategoryContent({ category, config, set, lockedByCategory }) {
       return (
         <div className="space-y-3">
           <p className="text-muted text-xs font-medium">Pattern</p>
-          <ShapeSelector options={OUTFIT_PATTERN_OPTIONS} selected={config.outfit_pattern} onSelect={(v) => set('outfit_pattern', v)} lockedItems={locked} />
+          <ShapeSelector options={OUTFIT_PATTERN_OPTIONS} selected={config.outfit_pattern} onSelect={(v) => set('outfit_pattern', v)} lockedItems={locked} configKey="outfit_pattern" {...previewProps} />
         </div>
       );
     case 'background':
@@ -345,7 +363,7 @@ function CategoryContent({ category, config, set, lockedByCategory }) {
       return (
         <div className="space-y-3">
           <p className="text-muted text-xs font-medium">Style</p>
-          <ShapeSelector options={HAT_OPTIONS} selected={config.hat} onSelect={(v) => set('hat', v)} lockedItems={locked} />
+          <ShapeSelector options={HAT_OPTIONS} selected={config.hat} onSelect={(v) => set('hat', v)} lockedItems={locked} configKey="hat" {...previewProps} />
           <p className="text-muted text-xs font-medium">Colour</p>
           <ColorSwatch colors={HAT_COLORS} selected={config.hat_color} onSelect={(v) => set('hat_color', v)} />
         </div>
@@ -354,14 +372,14 @@ function CategoryContent({ category, config, set, lockedByCategory }) {
       return (
         <div className="space-y-3">
           <p className="text-muted text-xs font-medium">Extra</p>
-          <ShapeSelector options={FACE_EXTRA_OPTIONS} selected={config.face_extra} onSelect={(v) => set('face_extra', v)} lockedItems={locked} />
+          <ShapeSelector options={FACE_EXTRA_OPTIONS} selected={config.face_extra} onSelect={(v) => set('face_extra', v)} lockedItems={locked} configKey="face_extra" {...previewProps} />
         </div>
       );
     case 'accessory':
       return (
         <div className="space-y-3">
           <p className="text-muted text-xs font-medium">Gear</p>
-          <ShapeSelector options={ACCESSORY_OPTIONS} selected={config.accessory} onSelect={(v) => set('accessory', v)} lockedItems={locked} />
+          <ShapeSelector options={ACCESSORY_OPTIONS} selected={config.accessory} onSelect={(v) => set('accessory', v)} lockedItems={locked} configKey="accessory" {...previewProps} />
           <p className="text-muted text-xs font-medium">Colour</p>
           <ColorSwatch colors={ACCESSORY_COLORS} selected={config.accessory_color} onSelect={(v) => set('accessory_color', v)} />
         </div>
@@ -370,7 +388,13 @@ function CategoryContent({ category, config, set, lockedByCategory }) {
       return (
         <div className="space-y-3">
           <p className="text-muted text-xs font-medium">Companion</p>
-          <ShapeSelector options={PET_OPTIONS} selected={config.pet} onSelect={(v) => set('pet', v)} lockedItems={locked} />
+          <ShapeSelector options={PET_OPTIONS} selected={config.pet} onSelect={(v) => set('pet', v)} lockedItems={locked} configKey="pet" {...previewProps} />
+          {config.pet && config.pet !== 'none' && (
+            <>
+              <p className="text-muted text-xs font-medium">Position</p>
+              <ShapeSelector options={PET_POSITION_OPTIONS} selected={config.pet_position || 'right'} onSelect={(v) => set('pet_position', v)} />
+            </>
+          )}
           <p className="text-muted text-xs font-medium">Colour</p>
           <ColorSwatch colors={PET_COLORS} selected={config.pet_color} onSelect={(v) => set('pet_color', v)} />
         </div>
@@ -397,6 +421,8 @@ export default function AvatarEditor({ onConfigChange }) {
   const [msg, setMsg] = useState('');
   const [openCategory, setOpenCategory] = useState(null);
   const [lockedByCategory, setLockedByCategory] = useState({});
+  // Try-on preview: temporarily override a config key while holding a locked item
+  const [preview, setPreview] = useState(null); // { key, value }
 
   // Fetch avatar items to determine locks
   const fetchLocks = useCallback(async () => {
@@ -424,10 +450,14 @@ export default function AvatarEditor({ onConfigChange }) {
     }
   }, [user?.avatar_config]);
 
-  // Notify parent of config changes so the profile avatar updates live
+  // Notify parent of config changes (with preview overlay) so the profile avatar updates live
   useEffect(() => {
-    onConfigChange?.(config);
-  }, [config, onConfigChange]);
+    if (preview) {
+      onConfigChange?.({ ...config, [preview.key]: preview.value });
+    } else {
+      onConfigChange?.(config);
+    }
+  }, [config, preview, onConfigChange]);
 
   // Build locks mapped to editor category IDs
   const editorLocks = {};
@@ -441,6 +471,9 @@ export default function AvatarEditor({ onConfigChange }) {
     setConfig((prev) => ({ ...prev, [key]: value }));
     setMsg('');
   };
+
+  const handlePreview = useCallback((key, value) => setPreview({ key, value }), []);
+  const handlePreviewEnd = useCallback(() => setPreview(null), []);
 
   const save = async () => {
     setSaving(true);
@@ -462,37 +495,23 @@ export default function AvatarEditor({ onConfigChange }) {
   };
 
   return (
-    <div>
-      {/* Save bar */}
-      <div className="game-panel p-3 flex items-center justify-between gap-3 mb-3">
-        <h2 className="text-cream text-sm font-bold">
-          Customise Avatar
-        </h2>
-        <div className="flex items-center gap-2">
-          {msg && (
-            <p className={`text-xs ${msg.includes('!') ? 'text-emerald' : 'text-crimson'}`}>
-              {msg}
-            </p>
-          )}
-          <button
-            onClick={save}
-            disabled={saving}
-            className="game-btn game-btn-blue flex items-center gap-2 !py-2 !text-xs"
-          >
-            {saving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
-            {saving ? 'Saving...' : 'Save Avatar'}
-          </button>
-        </div>
+    <div className="relative pb-14">
+      {/* Header */}
+      <div className="game-panel p-3 mb-3">
+        <h2 className="text-cream text-sm font-bold">Customise Avatar</h2>
+        {preview && (
+          <p className="text-amber-400/80 text-[10px] mt-1">Hold to preview — release to revert</p>
+        )}
       </div>
 
-      {/* Category buttons + expandable options */}
-      <div className="game-panel p-4 space-y-3">
-        <div className="flex flex-wrap gap-2">
+      {/* Horizontal scrollable category strip */}
+      <div className="game-panel p-3 mb-3">
+        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
           {CATEGORIES.map((cat) => (
             <button
               key={cat.id}
               onClick={() => toggleCategory(cat.id)}
-              className={`flex items-center justify-center gap-1 px-3 py-2 rounded-lg border text-xs font-medium transition-all ${
+              className={`flex-shrink-0 flex items-center gap-1 px-3 py-2 rounded-lg border text-xs font-medium transition-all ${
                 openCategory === cat.id
                   ? 'border-sky bg-sky/15 text-sky'
                   : 'border-border text-muted hover:border-border-light hover:text-cream'
@@ -506,13 +525,32 @@ export default function AvatarEditor({ onConfigChange }) {
             </button>
           ))}
         </div>
+      </div>
 
-        {/* Expanded options panel */}
-        {openCategory && (
-          <div className="pt-2 pb-1 border-t border-border/50">
-            <CategoryContent category={openCategory} config={config} set={set} lockedByCategory={editorLocks} />
-          </div>
-        )}
+      {/* Expanded options panel */}
+      {openCategory && (
+        <div className="game-panel p-4">
+          <CategoryContent
+            category={openCategory}
+            config={config}
+            set={set}
+            lockedByCategory={editorLocks}
+            onPreview={handlePreview}
+            onPreviewEnd={handlePreviewEnd}
+          />
+        </div>
+      )}
+
+      {/* Sticky save button */}
+      <div className="sticky bottom-20 z-30 flex justify-center mt-3">
+        <button
+          onClick={save}
+          disabled={saving}
+          className="game-btn game-btn-blue flex items-center gap-2 !py-2.5 !px-5 !text-xs shadow-lg shadow-sky/20"
+        >
+          {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+          {saving ? 'Saving...' : msg || 'Save Avatar'}
+        </button>
       </div>
     </div>
   );

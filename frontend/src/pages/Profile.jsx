@@ -329,6 +329,7 @@ export default function Profile() {
             config={showEditor && editorConfig ? editorConfig : user?.avatar_config}
             size="lg"
             name={user?.display_name || user?.username}
+            animate
           />
           <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-sky flex items-center justify-center border-2 border-surface shadow-lg">
             <Pencil size={14} className="text-white" />
