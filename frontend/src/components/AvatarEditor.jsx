@@ -99,7 +99,6 @@ const HAT_OPTIONS = [
 ];
 
 const ACCESSORY_OPTIONS = [
-  { id: 'none', label: 'None' },
   { id: 'scarf', label: 'Scarf' },
   { id: 'necklace', label: 'Necklace' },
   { id: 'bow_tie', label: 'Bow Tie' },
@@ -216,6 +215,7 @@ const DEFAULT_CONFIG = {
   hat: 'none',
   hat_color: '#f39c12',
   accessory: 'none',
+  accessories: [],
   accessory_color: '#3b82f6',
   face_extra: 'none',
   outfit_pattern: 'none',
@@ -282,6 +282,41 @@ function ShapeSelector({ options, selected, onSelect, lockedItems, configKey, on
               isLocked
                 ? 'border-amber-500/30 text-muted/60 bg-amber-500/5'
                 : selected === opt.id
+                ? 'border-sky bg-sky/10 text-sky'
+                : 'border-border text-muted hover:border-border-light hover:text-cream'
+            }`}
+            style={isLocked ? { WebkitTouchCallout: 'none', touchAction: 'manipulation' } : undefined}
+          >
+            {isLocked && <Lock size={10} className="text-amber-500/60" />}
+            {opt.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function MultiShapeSelector({ options, selected, onToggle, lockedItems, configKey, onPreview, onPreviewEnd }) {
+  // selected is an array of ids
+  const selectedSet = new Set(selected || []);
+  return (
+    <div className="flex flex-wrap gap-2">
+      {options.map((opt) => {
+        const isLocked = lockedItems && lockedItems.has(opt.id);
+        const isActive = selectedSet.has(opt.id);
+        return (
+          <button
+            key={opt.id}
+            onClick={() => !isLocked && onToggle(opt.id)}
+            onMouseEnter={() => isLocked && configKey && onPreview?.(configKey, opt.id)}
+            onMouseLeave={() => isLocked && onPreviewEnd?.()}
+            onTouchStart={() => isLocked && configKey && onPreview?.(configKey, opt.id)}
+            onTouchEnd={() => isLocked && onPreviewEnd?.()}
+            onTouchCancel={() => isLocked && onPreviewEnd?.()}
+            className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-all flex items-center gap-1 select-none ${
+              isLocked
+                ? 'border-amber-500/30 text-muted/60 bg-amber-500/5'
+                : isActive
                 ? 'border-sky bg-sky/10 text-sky'
                 : 'border-border text-muted hover:border-border-light hover:text-cream'
             }`}
@@ -382,10 +417,18 @@ function TapToPlaceOverlay({ config, onPlace }) {
   );
 }
 
+/** Get XP for a specific pet from per-pet map, falling back to legacy */
+function getPetXpForPet(config, petType) {
+  if (!petType || petType === 'none') return 0;
+  const xpMap = config.pet_xp_map || {};
+  if (petType in xpMap) return xpMap[petType];
+  return config.pet_xp || 0;
+}
+
 /** Full pet customisation section */
 function PetCustomiser({ config, set, locked, previewProps, petStats }) {
   const hasPet = config.pet && config.pet !== 'none';
-  const petXp = config.pet_xp || 0;
+  const petXp = getPetXpForPet(config, config.pet);
   const levelInfo = getPetLevelInfo(petXp);
   const petColors = buildPetColors(config);
   const bodyColor = config.pet_color || '#8b4513';
@@ -439,25 +482,31 @@ function PetCustomiser({ config, set, locked, previewProps, petStats }) {
               </div>
             )}
 
-            {/* Next Level Preview */}
-            <div className="flex items-center gap-3 mt-2">
-              <div className="text-center">
-                <p className="text-muted text-[9px] mb-1">Current</p>
-                <PetPreviewSvg petType={config.pet} colors={petColors} level={levelInfo.level} />
+            {/* All Level Previews */}
+            <div className="overflow-x-auto -mx-1 px-1 mt-2">
+              <div className="flex gap-2" style={{ minWidth: 'max-content' }}>
+                {PET_LEVEL_NAMES.slice(1).map((name, i) => {
+                  const lv = i + 1;
+                  const isCurrent = lv === levelInfo.level;
+                  const isPast = lv < levelInfo.level;
+                  const isFuture = lv > levelInfo.level;
+                  return (
+                    <div
+                      key={lv}
+                      className={`text-center flex-shrink-0 rounded-lg p-1 ${
+                        isCurrent ? 'bg-sky/10 ring-1 ring-sky/40' : ''
+                      }`}
+                      style={{ opacity: isFuture ? 0.35 : isPast ? 0.55 : 1 }}
+                    >
+                      <p className="text-[9px] font-medium mb-0.5" style={{ color: PET_LEVEL_COLORS[lv] }}>
+                        {isCurrent ? '▸ ' : ''}Lv{lv}
+                      </p>
+                      <PetPreviewSvg petType={config.pet} colors={petColors} level={lv} />
+                      <p className="text-muted text-[8px] mt-0.5">{name}</p>
+                    </div>
+                  );
+                })}
               </div>
-              {levelInfo.nextThreshold ? (
-                <div className="text-center opacity-50">
-                  <p className="text-muted text-[9px] mb-1">Lv{levelInfo.level + 1}</p>
-                  <PetPreviewSvg petType={config.pet} colors={petColors} level={levelInfo.level + 1} />
-                </div>
-              ) : (
-                <div className="text-center">
-                  <p className="text-gold text-[9px] mb-1 font-bold">MAX</p>
-                  <div className="w-12 h-12 rounded-lg bg-navy flex items-center justify-center">
-                    <Star size={20} className="text-gold fill-gold" />
-                  </div>
-                </div>
-              )}
             </div>
           </div>
 
@@ -607,15 +656,42 @@ function CategoryContent({ category, config, set, lockedByCategory, onPreview, o
           <ShapeSelector options={FACE_EXTRA_OPTIONS} selected={config.face_extra} onSelect={(v) => set('face_extra', v)} lockedItems={locked} configKey="face_extra" {...previewProps} />
         </div>
       );
-    case 'accessory':
+    case 'accessory': {
+      // Multi-accessory: read from accessories array, fall back to legacy single
+      const currentAccessories = Array.isArray(config.accessories) && config.accessories.length > 0
+        ? config.accessories
+        : (config.accessory && config.accessory !== 'none' ? [config.accessory] : []);
+      const toggleAccessory = (id) => {
+        setConfig((prev) => {
+          const cur = new Set(
+            Array.isArray(prev.accessories) && prev.accessories.length > 0
+              ? prev.accessories
+              : (prev.accessory && prev.accessory !== 'none' ? [prev.accessory] : [])
+          );
+          if (cur.has(id)) cur.delete(id); else cur.add(id);
+          const arr = [...cur];
+          return { ...prev, accessories: arr, accessory: arr.length > 0 ? arr[0] : 'none' };
+        });
+        setMsg('');
+      };
+      const clearAll = () => {
+        setConfig((prev) => ({ ...prev, accessories: [], accessory: 'none' }));
+        setMsg('');
+      };
       return (
         <div className="space-y-3">
-          <p className="text-muted text-xs font-medium">Gear</p>
-          <ShapeSelector options={ACCESSORY_OPTIONS} selected={config.accessory} onSelect={(v) => set('accessory', v)} lockedItems={locked} configKey="accessory" {...previewProps} />
+          <p className="text-muted text-xs font-medium">Gear <span className="text-muted/50">(select multiple)</span></p>
+          <MultiShapeSelector options={ACCESSORY_OPTIONS} selected={currentAccessories} onToggle={toggleAccessory} lockedItems={locked} configKey="accessory" {...previewProps} />
+          {currentAccessories.length > 0 && (
+            <button onClick={clearAll} className="text-[10px] text-crimson hover:text-crimson/80 transition-colors">
+              Clear all gear
+            </button>
+          )}
           <p className="text-muted text-xs font-medium">Colour</p>
           <ColorSwatch colors={ACCESSORY_COLORS} selected={config.accessory_color} onSelect={(v) => set('accessory_color', v)} />
         </div>
       );
+    }
     case 'pet':
       return <PetCustomiser config={config} set={set} locked={locked} previewProps={previewProps} />;
     default:
@@ -785,7 +861,15 @@ export default function AvatarEditor({ isOpen, onClose }) {
   }
 
   const set = (key, value) => {
-    setConfig((prev) => ({ ...prev, [key]: value }));
+    setConfig((prev) => {
+      const next = { ...prev, [key]: value };
+      // When switching pets, update pet_xp to the new pet's XP from the map
+      if (key === 'pet') {
+        const xpMap = next.pet_xp_map || {};
+        next.pet_xp = (value && value !== 'none' && value in xpMap) ? xpMap[value] : 0;
+      }
+      return next;
+    });
     setMsg('');
   };
 

@@ -1022,14 +1022,17 @@ async def verify_chore(
     kid.points_balance += total_awarded
     kid.total_points_earned += total_awarded
 
-    # Pet XP — award the same amount as quest XP
+    # Pet XP — award the same amount as quest XP (per-pet tracking)
     config = kid.avatar_config or {}
     if config.get("pet") and config["pet"] != "none":
-        from backend.services.pet_leveling import get_pet_level
-        old_pet_xp = config.get("pet_xp", 0)
+        from backend.services.pet_leveling import (
+            get_pet_level, get_current_pet_xp, set_current_pet_xp, migrate_pet_xp,
+        )
+        config = migrate_pet_xp(config)
+        old_pet_xp = get_current_pet_xp(config)
         old_level = get_pet_level(old_pet_xp)["level"]
         new_pet_xp = old_pet_xp + total_awarded
-        config["pet_xp"] = new_pet_xp
+        set_current_pet_xp(config, new_pet_xp)
         kid.avatar_config = {**config}  # trigger mutation detection
         new_level = get_pet_level(new_pet_xp)["level"]
         if new_level > old_level:
@@ -1185,6 +1188,19 @@ async def uncomplete_chore(
     # Note: do NOT decrement total_points_earned — it tracks lifetime XP
     # earned and is used for milestone unlocks (avatar items, achievements).
     # Deducting it would cause kids to lose unlocks when quests are undone.
+
+    # Reverse pet XP for the currently equipped pet
+    if total_deducted > 0:
+        config = assigned_user.avatar_config or {}
+        if config.get("pet") and config["pet"] != "none":
+            from backend.services.pet_leveling import (
+                get_current_pet_xp, set_current_pet_xp, migrate_pet_xp,
+            )
+            config = migrate_pet_xp(config)
+            old_pet_xp = get_current_pet_xp(config)
+            new_pet_xp = max(0, old_pet_xp - total_deducted)
+            set_current_pet_xp(config, new_pet_xp)
+            assigned_user.avatar_config = {**config}
 
     for tx in transactions:
         await db.delete(tx)

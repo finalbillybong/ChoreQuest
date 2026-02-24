@@ -30,8 +30,11 @@ export function renderAccessory(style, color) {
     case 'cape':
       return (
         <g opacity="0.7">
-          <path d="M9,22 Q7,28 9,32 L23,32 Q25,28 23,22" fill={color} />
-          <path d="M10,23 Q12,25 11,28" stroke="white" strokeWidth="0.3" fill="none" opacity="0.1" />
+          {/* Cape drapes from shoulder seams and tapers outward */}
+          <path d="M11,21 Q9,26 8,32 L24,32 Q23,26 21,21" fill={color} />
+          {/* Subtle fabric folds */}
+          <path d="M13,22 Q12,27 10,31" stroke="white" strokeWidth="0.3" fill="none" opacity="0.12" />
+          <path d="M19,22 Q20,27 22,31" stroke="black" strokeWidth="0.3" fill="none" opacity="0.06" />
         </g>
       );
     case 'wings':
@@ -54,16 +57,16 @@ export function renderAccessory(style, color) {
       );
     case 'sword':
       return (
-        <g transform="rotate(30, 20, 22)">
+        <g transform="rotate(30, 20, 25)">
           {/* Blade — upper part visible, lower hidden behind body */}
-          <rect x="19.4" y="14" width="1.2" height="14" rx="0.3" fill="#c0c0c0" />
-          <line x1="19.7" y1="15" x2="19.7" y2="27" stroke="white" strokeWidth="0.2" opacity="0.3" />
+          <rect x="19.4" y="17" width="1.2" height="14" rx="0.3" fill="#c0c0c0" />
+          <line x1="19.7" y1="18" x2="19.7" y2="30" stroke="white" strokeWidth="0.2" opacity="0.3" />
           {/* Crossguard */}
-          <rect x="17.5" y="13" width="5" height="1.5" rx="0.5" fill={color} />
+          <rect x="17.5" y="16" width="5" height="1.5" rx="0.5" fill={color} />
           {/* Grip */}
-          <rect x="19.4" y="8.5" width="1.2" height="5" rx="0.3" fill={color} />
+          <rect x="19.4" y="11.5" width="1.2" height="5" rx="0.3" fill={color} />
           {/* Pommel */}
-          <circle cx="20" cy="8.5" r="1" fill={color} />
+          <circle cx="20" cy="11.5" r="1" fill={color} />
         </g>
       );
     case 'none':
