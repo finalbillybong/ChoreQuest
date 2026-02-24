@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from backend.database import get_db
 from backend.models import Announcement, User, UserRole, Notification, NotificationType
@@ -19,6 +20,7 @@ async def list_announcements(
     """List all announcements, newest first. Pinned announcements first."""
     result = await db.execute(
         select(Announcement)
+        .options(selectinload(Announcement.creator))
         .order_by(Announcement.is_pinned.desc(), Announcement.created_at.desc())
         .limit(50)
     )

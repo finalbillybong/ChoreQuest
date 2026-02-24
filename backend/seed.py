@@ -321,14 +321,22 @@ async def seed_database(db: AsyncSession):
             db.add(ChoreCategory(name=cat["name"], icon=cat["icon"], colour=cat["colour"], is_default=True))
         await db.commit()
 
-    # Seed achievements (add any missing by key)
-    existing_keys_result = await db.execute(select(Achievement.key))
-    existing_keys = {row[0] for row in existing_keys_result.all()}
+    # Seed achievements (add any missing by key, update tier/group_key/sort_order)
+    existing_result = await db.execute(select(Achievement))
+    existing_map = {a.key: a for a in existing_result.scalars().all()}
     added_achievements = 0
     for ach in DEFAULT_ACHIEVEMENTS:
-        if ach["key"] not in existing_keys:
+        if ach["key"] not in existing_map:
             db.add(Achievement(**ach))
             added_achievements += 1
+        else:
+            # Backfill tier/group_key/sort_order on existing achievements
+            existing = existing_map[ach["key"]]
+            if existing.tier != ach.get("tier") or existing.group_key != ach.get("group_key") or existing.sort_order != ach.get("sort_order", 0):
+                existing.tier = ach.get("tier")
+                existing.group_key = ach.get("group_key")
+                existing.sort_order = ach.get("sort_order", 0)
+                added_achievements += 1
     if added_achievements > 0:
         await db.commit()
 
