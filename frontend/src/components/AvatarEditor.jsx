@@ -316,11 +316,15 @@ function getPetLevelInfo(petXp) {
 function PetPreviewSvg({ petType, colors, level = 1 }) {
   if (!petType || petType === 'none') return null;
   const sc = 1 + (level - 1) * 0.04;
+  // Pet center in avatar coords after PET_OFFSETS.right / BIG_PET_OFFSETS.right
+  const isBig = ['dragon', 'phoenix'].includes(petType);
+  const cx = isBig ? 25 : 26;
+  const cy = isBig ? 19 : 20;
   const glowColor = level >= 7 ? '#f59e0b' : level >= 5 ? '#a855f7' : null;
   return (
     <svg width={48} height={48} viewBox="0 0 12 12" className="rounded-lg" style={{ background: '#111827' }}>
-      <g transform={`translate(6,6) scale(${sc * 1.3}) translate(-3,-3)`}>
-        {glowColor && <circle cx={3} cy={3} r={4} fill={glowColor} opacity="0.2" />}
+      <g transform={`translate(6,6) scale(${sc * 1.3}) translate(${-cx},${-cy})`}>
+        {glowColor && <circle cx={cx} cy={cy} r={4} fill={glowColor} opacity="0.2" />}
         {renderPet(petType, colors, 'right', {})}
       </g>
     </svg>
