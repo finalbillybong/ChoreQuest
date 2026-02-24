@@ -47,9 +47,9 @@ export function renderAccessory(style, color) {
       return (
         <g>
           {/* Heater shield held on left arm */}
-          <path d="M5,21 L11,21 L11,26 Q8,31 5,26 Z" fill={color} />
-          <line x1="8" y1="22" x2="8" y2="28" stroke="white" strokeWidth="0.5" opacity="0.35" />
-          <circle cx="8" cy="24.5" r="1.2" fill="white" opacity="0.15" />
+          <path d="M8,21 L14,21 L14,26 Q11,31 8,26 Z" fill={color} />
+          <line x1="11" y1="22" x2="11" y2="28" stroke="white" strokeWidth="0.5" opacity="0.35" />
+          <circle cx="11" cy="24.5" r="1.2" fill="white" opacity="0.15" />
         </g>
       );
     case 'sword':
