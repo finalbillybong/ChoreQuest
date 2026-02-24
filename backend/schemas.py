@@ -7,7 +7,7 @@ from backend.models import UserRole, Difficulty, Recurrence, AssignmentStatus, R
 class RegisterRequest(BaseModel):
     username: str = Field(min_length=2, max_length=50)
     password: str = Field(min_length=6)
-    display_name: str = Field(min_length=1, max_length=100)
+    display_name: str = Field(min_length=1, max_length=10)
     role: UserRole = UserRole.kid
     invite_code: str | None = None
 
@@ -32,7 +32,7 @@ class SetPinRequest(BaseModel):
 
 
 class UpdateProfileRequest(BaseModel):
-    display_name: str | None = None
+    display_name: str | None = Field(None, max_length=10)
     avatar_config: dict | None = None
 
 
