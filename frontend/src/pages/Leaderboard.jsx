@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../api/client';
 import { useAuth } from '../hooks/useAuth';
+import { useSettings } from '../hooks/useSettings';
 import AvatarDisplay from '../components/AvatarDisplay';
 import { motion } from 'framer-motion';
 import { Trophy, Loader2, Flame, Swords } from 'lucide-react';
@@ -9,6 +10,7 @@ const MEDALS = ['🥇', '🥈', '🥉'];
 
 export default function Leaderboard() {
   const { user } = useAuth();
+  const { leaderboard_enabled } = useSettings();
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -23,8 +25,12 @@ export default function Leaderboard() {
   }, []);
 
   useEffect(() => {
+    if (!leaderboard_enabled) {
+      setLoading(false);
+      return;
+    }
     fetchLeaderboard().finally(() => setLoading(false));
-  }, [fetchLeaderboard]);
+  }, [fetchLeaderboard, leaderboard_enabled]);
 
   // Live updates via WebSocket
   useEffect(() => {
@@ -45,22 +51,33 @@ export default function Leaderboard() {
         </h1>
       </div>
 
+      {/* Disabled by family settings */}
+      {!leaderboard_enabled && (
+        <div className="game-panel p-10 text-center">
+          <Trophy size={48} className="text-muted/20 mx-auto mb-4" />
+          <p className="text-cream text-lg font-bold">Leaderboard Disabled</p>
+          <p className="text-muted text-sm mt-2">
+            The leaderboard has been turned off in family settings.
+          </p>
+        </div>
+      )}
+
       {/* Error */}
-      {error && (
+      {leaderboard_enabled && error && (
         <div className="mb-4 p-3 rounded border-2 border-crimson/40 bg-crimson/10 text-crimson text-sm text-center">
           {error}
         </div>
       )}
 
       {/* Loading */}
-      {loading && (
+      {leaderboard_enabled && loading && (
         <div className="flex items-center justify-center py-20">
           <Loader2 size={32} className="text-sky animate-spin" />
         </div>
       )}
 
       {/* Empty state */}
-      {!loading && !error && entries.length === 0 && (
+      {leaderboard_enabled && !loading && !error && entries.length === 0 && (
         <div className="text-center py-16">
           <Trophy size={48} className="text-cream/10 mx-auto mb-4" />
           <p className="text-cream text-lg font-bold">
@@ -73,7 +90,7 @@ export default function Leaderboard() {
       )}
 
       {/* Podium - Top 3 */}
-      {!loading && entries.length > 0 && (
+      {leaderboard_enabled && !loading && entries.length > 0 && (
         <div className="space-y-3">
           {entries.slice(0, 3).map((entry, idx) => {
             const xp = entry.weekly_xp || entry.xp || 0;

@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { api } from '../api/client';
 import { useAuth } from '../hooks/useAuth';
+import { useSettings } from '../hooks/useSettings';
 import { useTheme } from '../hooks/useTheme';
 import { themedTitle } from '../utils/questThemeText';
 import PointCounter from '../components/PointCounter';
@@ -71,6 +72,7 @@ const completeButtonVariants = {
 
 export default function KidDashboard() {
   const { user, updateUser } = useAuth();
+  const { spin_wheel_enabled } = useSettings();
   const { colorTheme } = useTheme();
   const navigate = useNavigate();
 
@@ -92,11 +94,18 @@ export default function KidDashboard() {
       const monday = getMondayOfThisWeek();
       const today = todayISO();
 
-      const [choresRes, calendarRes, spinRes] = await Promise.all([
+      const promises = [
         api('/api/chores'),
         api(`/api/calendar?week_start=${monday}`),
-        api('/api/spin/availability'),
-      ]);
+      ];
+      if (spin_wheel_enabled) {
+        promises.push(api('/api/spin/availability'));
+      }
+
+      const results = await Promise.all(promises);
+      const choresRes = results[0];
+      const calendarRes = results[1];
+      const spinRes = spin_wheel_enabled ? results[2] : null;
 
       setChores(choresRes);
 
@@ -111,7 +120,7 @@ export default function KidDashboard() {
     } finally {
       setLoading(false);
     }
-  }, [user?.id]);
+  }, [user?.id, spin_wheel_enabled]);
 
   useEffect(() => {
     fetchData();
@@ -287,14 +296,16 @@ export default function KidDashboard() {
       })()}
 
       {/* ── Spin Wheel Section ── */}
-      <div className="pt-2">
-        <SpinWheel
-          availability={spinAvailability}
-          onSpinComplete={() => {
-            fetchData();
-          }}
-        />
-      </div>
+      {spin_wheel_enabled && (
+        <div className="pt-2">
+          <SpinWheel
+            availability={spinAvailability}
+            onSpinComplete={() => {
+              fetchData();
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 }

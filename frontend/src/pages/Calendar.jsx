@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
 import { useAuth } from '../hooks/useAuth';
+import { useSettings } from '../hooks/useSettings';
 import { useTheme } from '../hooks/useTheme';
 import { themedTitle } from '../utils/questThemeText';
 import Modal from '../components/Modal';
@@ -74,6 +75,7 @@ function statusStyle(assignment, dayStr) {
 export default function Calendar() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { chore_trading_enabled } = useSettings();
   const { colorTheme } = useTheme();
   const isKid = user?.role === 'kid';
 
@@ -372,7 +374,7 @@ export default function Calendar() {
                         </div>
 
                         {/* Trade button for kids */}
-                        {isKid && a.status === 'pending' && (
+                        {isKid && chore_trading_enabled && a.status === 'pending' && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
