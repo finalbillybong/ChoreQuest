@@ -433,10 +433,10 @@ h1, h2, h3, h4, h5, h6 {
   97% { transform: rotate(0deg) translateY(0); }
 }
 
-/* Eye blink — eyelid ovals flash over eyes */
+/* Eye blink — eyelid ovals cover eyes for ~400ms every 4s */
 @keyframes avatar-blink {
-  0%, 92%, 100% { opacity: 0; }
-  94%, 96% { opacity: 1; }
+  0%, 86%, 100% { opacity: 0; }
+  90%, 96% { opacity: 1; }
 }
 
 /* Mouth breathing — subtle stretch open/close */
