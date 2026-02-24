@@ -25,9 +25,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', async () => {
     try {
-      const reg = await navigator.serviceWorker.register('/sw.js', {
-        updateViaCache: 'none', // always fetch sw.js from network
-      });
+      const reg = await navigator.serviceWorker.register('/sw.js');
 
       // If a new SW is already waiting (e.g. installed while tab was idle)
       if (reg.waiting) {
@@ -45,9 +43,15 @@ if ('serviceWorker' in navigator) {
         });
       });
 
-      // Check for updates periodically (every 60s) and on tab re-focus
-      const check = () => reg.update().catch(() => {});
-      setInterval(check, 60_000);
+      // Check for updates every 30 minutes and on tab re-focus (debounced)
+      let lastCheck = Date.now();
+      const check = () => {
+        const now = Date.now();
+        if (now - lastCheck < 5 * 60_000) return; // at most once per 5 min
+        lastCheck = now;
+        reg.update().catch(() => {});
+      };
+      setInterval(check, 30 * 60_000);
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') check();
       });
