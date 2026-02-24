@@ -68,6 +68,8 @@ class NotificationType(str, enum.Enum):
     avatar_item_drop = "avatar_item_drop"
     shoutout = "shoutout"
     pet_levelup = "pet_levelup"
+    announcement = "announcement"
+    quest_feedback = "quest_feedback"
 
 
 class AvatarItemRarity(str, enum.Enum):
@@ -125,6 +127,8 @@ class User(Base):
     current_streak: Mapped[int] = mapped_column(Integer, default=0)
     longest_streak: Mapped[int] = mapped_column(Integer, default=0)
     last_streak_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    streak_freezes_used: Mapped[int] = mapped_column(Integer, default=0)
+    streak_freeze_month: Mapped[int | None] = mapped_column(Integer, nullable=True)
     avatar_config: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
@@ -179,6 +183,7 @@ class ChoreAssignment(Base):
     verified_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     verified_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     photo_proof_path: Mapped[str | None] = mapped_column(String, nullable=True)
+    feedback: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -250,6 +255,7 @@ class Reward(Base):
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     point_cost: Mapped[int] = mapped_column(Integer, nullable=False)
     icon: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    category: Mapped[str | None] = mapped_column(String(50), nullable=True)
     stock: Mapped[int | None] = mapped_column(Integer, nullable=True)
     auto_approve_threshold: Mapped[int | None] = mapped_column(Integer, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
@@ -302,6 +308,8 @@ class Achievement(Base):
     icon: Mapped[str] = mapped_column(String(50), nullable=False)
     points_reward: Mapped[int] = mapped_column(Integer, nullable=False)
     criteria: Mapped[dict] = mapped_column(JSON, nullable=False)
+    tier: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    group_key: Mapped[str | None] = mapped_column(String(50), nullable=True)
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
@@ -476,6 +484,20 @@ class Shoutout(Base):
 
     from_user = relationship("User", foreign_keys=[from_user_id])
     to_user = relationship("User", foreign_keys=[to_user_id])
+
+
+class Announcement(Base):
+    """Family-wide announcements posted by parents."""
+    __tablename__ = "announcements"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    message: Mapped[str] = mapped_column(Text, nullable=False)
+    icon: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    is_pinned: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_by: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    creator = relationship("User")
 
 
 class VacationPeriod(Base):

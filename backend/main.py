@@ -112,7 +112,7 @@ async def security_headers(request: Request, call_next):
 from backend.routers import (  # noqa: E402
     auth, chores, rewards, points, stats, calendar,
     notifications, admin, avatar, wishlist, events, spin, rotations, uploads, push,
-    shoutouts, vacation, progress, emotes,
+    shoutouts, vacation, progress, emotes, announcements, pets,
 )
 
 app.include_router(auth.router)
@@ -134,6 +134,8 @@ app.include_router(shoutouts.router)
 app.include_router(vacation.router)
 app.include_router(progress.router)
 app.include_router(emotes.router)
+app.include_router(announcements.router)
+app.include_router(pets.router)
 
 
 @app.get("/api/health")

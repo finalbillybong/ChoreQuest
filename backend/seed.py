@@ -21,24 +21,34 @@ DEFAULT_CATEGORIES = [
 ]
 
 DEFAULT_ACHIEVEMENTS = [
-    {"key": "first_steps", "title": "First Steps", "description": "Complete your first quest", "icon": "footprints", "points_reward": 10, "criteria": {"type": "total_completions", "count": 1}, "sort_order": 1},
-    {"key": "week_warrior", "title": "Week Warrior", "description": "Complete all assigned quests every day for 7 consecutive days", "icon": "shield", "points_reward": 50, "criteria": {"type": "consecutive_days_all_complete", "days": 7}, "sort_order": 2},
-    {"key": "piggy_bank", "title": "Piggy Bank", "description": "Earn 100 total lifetime XP", "icon": "piggy-bank", "points_reward": 10, "criteria": {"type": "total_points_earned", "amount": 100}, "sort_order": 3},
-    {"key": "money_bags", "title": "Money Bags", "description": "Earn 500 total lifetime XP", "icon": "banknote", "points_reward": 25, "criteria": {"type": "total_points_earned", "amount": 500}, "sort_order": 4},
-    {"key": "point_millionaire", "title": "Point Millionaire", "description": "Earn 1,000 total lifetime XP", "icon": "gem", "points_reward": 50, "criteria": {"type": "total_points_earned", "amount": 1000}, "sort_order": 5},
-    {"key": "early_bird", "title": "Early Bird", "description": "Complete a quest before 9:00 AM", "icon": "sunrise", "points_reward": 15, "criteria": {"type": "completion_before_time", "hour": 9}, "sort_order": 6},
-    {"key": "helping_hand", "title": "Helping Hand", "description": "Claim and complete a quest that was not assigned to you", "icon": "hand-helping", "points_reward": 20, "criteria": {"type": "unassigned_chore_completed"}, "sort_order": 7},
-    {"key": "on_fire", "title": "On Fire", "description": "Maintain a 7-day streak", "icon": "flame", "points_reward": 25, "criteria": {"type": "streak_reached", "days": 7}, "sort_order": 8},
-    {"key": "streak_master", "title": "Streak Master", "description": "Maintain a 30-day streak", "icon": "flame-kindling", "points_reward": 75, "criteria": {"type": "streak_reached", "days": 30}, "sort_order": 9},
-    {"key": "unstoppable", "title": "Unstoppable", "description": "Maintain a 100-day streak", "icon": "zap", "points_reward": 200, "criteria": {"type": "streak_reached", "days": 100}, "sort_order": 10},
-    {"key": "treat_yourself", "title": "Treat Yourself", "description": "Redeem 5 rewards from the Treasure Shop", "icon": "gift", "points_reward": 15, "criteria": {"type": "total_redemptions", "count": 5}, "sort_order": 11},
-    {"key": "big_spender", "title": "Big Spender", "description": "Redeem 20 rewards from the Treasure Shop", "icon": "shopping-cart", "points_reward": 50, "criteria": {"type": "total_redemptions", "count": 20}, "sort_order": 12},
-    {"key": "speed_demon", "title": "Speed Demon", "description": "Complete all daily assigned quests before noon", "icon": "timer", "points_reward": 20, "criteria": {"type": "all_daily_before_time", "hour": 12}, "sort_order": 13},
-    {"key": "all_done", "title": "All Done!", "description": "Complete every assigned quest in a single day", "icon": "check-check", "points_reward": 15, "criteria": {"type": "all_daily_completed"}, "sort_order": 14},
-    {"key": "pet_youngling", "title": "Growing Bond", "description": "Raise a pet to Level 2 (Youngling)", "icon": "paw-print", "points_reward": 15, "criteria": {"type": "pet_level_reached", "level": 2}, "sort_order": 15},
-    {"key": "pet_loyal", "title": "Loyal Companion", "description": "Raise a pet to Level 4 (Loyal)", "icon": "paw-print", "points_reward": 30, "criteria": {"type": "pet_level_reached", "level": 4}, "sort_order": 16},
-    {"key": "pet_mighty", "title": "Mighty Beast", "description": "Raise a pet to Level 6 (Mighty)", "icon": "paw-print", "points_reward": 50, "criteria": {"type": "pet_level_reached", "level": 6}, "sort_order": 17},
-    {"key": "pet_legendary", "title": "Legendary Tamer", "description": "Raise a pet to Level 8 (Legendary)", "icon": "paw-print", "points_reward": 100, "criteria": {"type": "pet_level_reached", "level": 8}, "sort_order": 18},
+    # ── Quest Completions (Bronze/Silver/Gold) ──
+    {"key": "first_steps", "title": "First Steps", "description": "Complete your first quest", "icon": "footprints", "points_reward": 10, "criteria": {"type": "total_completions", "count": 1}, "tier": "bronze", "group_key": "completions", "sort_order": 1},
+    {"key": "quest_veteran", "title": "Quest Veteran", "description": "Complete 50 quests", "icon": "footprints", "points_reward": 30, "criteria": {"type": "total_completions", "count": 50}, "tier": "silver", "group_key": "completions", "sort_order": 2},
+    {"key": "quest_legend", "title": "Quest Legend", "description": "Complete 200 quests", "icon": "footprints", "points_reward": 75, "criteria": {"type": "total_completions", "count": 200}, "tier": "gold", "group_key": "completions", "sort_order": 3},
+    # ── Consistency ──
+    {"key": "week_warrior", "title": "Week Warrior", "description": "Complete all assigned quests every day for 7 consecutive days", "icon": "shield", "points_reward": 50, "criteria": {"type": "consecutive_days_all_complete", "days": 7}, "sort_order": 4},
+    # ── Lifetime XP (Bronze/Silver/Gold) ──
+    {"key": "piggy_bank", "title": "Piggy Bank", "description": "Earn 100 total lifetime XP", "icon": "piggy-bank", "points_reward": 10, "criteria": {"type": "total_points_earned", "amount": 100}, "tier": "bronze", "group_key": "lifetime_xp", "sort_order": 5},
+    {"key": "money_bags", "title": "Money Bags", "description": "Earn 500 total lifetime XP", "icon": "banknote", "points_reward": 25, "criteria": {"type": "total_points_earned", "amount": 500}, "tier": "silver", "group_key": "lifetime_xp", "sort_order": 6},
+    {"key": "point_millionaire", "title": "Point Millionaire", "description": "Earn 1,000 total lifetime XP", "icon": "gem", "points_reward": 50, "criteria": {"type": "total_points_earned", "amount": 1000}, "tier": "gold", "group_key": "lifetime_xp", "sort_order": 7},
+    # ── Timing ──
+    {"key": "early_bird", "title": "Early Bird", "description": "Complete a quest before 9:00 AM", "icon": "sunrise", "points_reward": 15, "criteria": {"type": "completion_before_time", "hour": 9}, "sort_order": 8},
+    {"key": "helping_hand", "title": "Helping Hand", "description": "Claim and complete a quest that was not assigned to you", "icon": "hand-helping", "points_reward": 20, "criteria": {"type": "unassigned_chore_completed"}, "sort_order": 9},
+    # ── Streaks (Bronze/Silver/Gold) ──
+    {"key": "on_fire", "title": "On Fire", "description": "Maintain a 7-day streak", "icon": "flame", "points_reward": 25, "criteria": {"type": "streak_reached", "days": 7}, "tier": "bronze", "group_key": "streaks", "sort_order": 10},
+    {"key": "streak_master", "title": "Streak Master", "description": "Maintain a 30-day streak", "icon": "flame-kindling", "points_reward": 75, "criteria": {"type": "streak_reached", "days": 30}, "tier": "silver", "group_key": "streaks", "sort_order": 11},
+    {"key": "unstoppable", "title": "Unstoppable", "description": "Maintain a 100-day streak", "icon": "zap", "points_reward": 200, "criteria": {"type": "streak_reached", "days": 100}, "tier": "gold", "group_key": "streaks", "sort_order": 12},
+    # ── Redemptions (Bronze/Silver) ──
+    {"key": "treat_yourself", "title": "Treat Yourself", "description": "Redeem 5 rewards from the Treasure Shop", "icon": "gift", "points_reward": 15, "criteria": {"type": "total_redemptions", "count": 5}, "tier": "bronze", "group_key": "redemptions", "sort_order": 13},
+    {"key": "big_spender", "title": "Big Spender", "description": "Redeem 20 rewards from the Treasure Shop", "icon": "shopping-cart", "points_reward": 50, "criteria": {"type": "total_redemptions", "count": 20}, "tier": "silver", "group_key": "redemptions", "sort_order": 14},
+    # ── Daily challenges ──
+    {"key": "speed_demon", "title": "Speed Demon", "description": "Complete all daily assigned quests before noon", "icon": "timer", "points_reward": 20, "criteria": {"type": "all_daily_before_time", "hour": 12}, "sort_order": 15},
+    {"key": "all_done", "title": "All Done!", "description": "Complete every assigned quest in a single day", "icon": "check-check", "points_reward": 15, "criteria": {"type": "all_daily_completed"}, "sort_order": 16},
+    # ── Pet milestones (Bronze/Silver/Gold/Platinum) ──
+    {"key": "pet_youngling", "title": "Growing Bond", "description": "Raise a pet to Level 2 (Youngling)", "icon": "paw-print", "points_reward": 15, "criteria": {"type": "pet_level_reached", "level": 2}, "tier": "bronze", "group_key": "pets", "sort_order": 17},
+    {"key": "pet_loyal", "title": "Loyal Companion", "description": "Raise a pet to Level 4 (Loyal)", "icon": "paw-print", "points_reward": 30, "criteria": {"type": "pet_level_reached", "level": 4}, "tier": "silver", "group_key": "pets", "sort_order": 18},
+    {"key": "pet_mighty", "title": "Mighty Beast", "description": "Raise a pet to Level 6 (Mighty)", "icon": "paw-print", "points_reward": 50, "criteria": {"type": "pet_level_reached", "level": 6}, "tier": "gold", "group_key": "pets", "sort_order": 19},
+    {"key": "pet_legendary", "title": "Legendary Tamer", "description": "Raise a pet to Level 8 (Legendary)", "icon": "paw-print", "points_reward": 100, "criteria": {"type": "pet_level_reached", "level": 8}, "tier": "gold", "group_key": "pets", "sort_order": 20},
 ]
 
 DEFAULT_SETTINGS = {

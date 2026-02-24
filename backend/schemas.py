@@ -45,6 +45,8 @@ class UserResponse(BaseModel):
     total_points_earned: int
     current_streak: int
     longest_streak: int
+    streak_freezes_used: int = 0
+    streak_freeze_month: int | None = None
     avatar_config: dict | None
     is_active: bool
     created_at: datetime
@@ -130,6 +132,7 @@ class AssignmentResponse(BaseModel):
     verified_at: datetime | None
     verified_by: int | None
     photo_proof_path: str | None
+    feedback: str | None = None
     chore: ChoreResponse | None = None
     user: UserResponse | None = None
 
@@ -142,6 +145,7 @@ class RewardCreate(BaseModel):
     description: str | None = None
     point_cost: int = Field(gt=0)
     icon: str | None = None
+    category: str | None = None
     stock: int | None = None
     auto_approve_threshold: int | None = None
 
@@ -151,6 +155,7 @@ class RewardUpdate(BaseModel):
     description: str | None = None
     point_cost: int | None = None
     icon: str | None = None
+    category: str | None = None
     stock: int | None = None
     auto_approve_threshold: int | None = None
 
@@ -161,6 +166,7 @@ class RewardResponse(BaseModel):
     description: str | None
     point_cost: int
     icon: str | None
+    category: str | None = None
     stock: int | None
     auto_approve_threshold: int | None
     is_active: bool
@@ -219,6 +225,8 @@ class AchievementResponse(BaseModel):
     icon: str
     points_reward: int
     criteria: dict
+    tier: str | None = None
+    group_key: str | None = None
     sort_order: int
     unlocked: bool = False
     unlocked_at: datetime | None = None
@@ -496,3 +504,41 @@ class VacationResponse(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+# Announcements (Bulletin Board)
+class AnnouncementCreate(BaseModel):
+    title: str = Field(max_length=200)
+    message: str = Field(max_length=1000)
+    icon: str | None = None
+    is_pinned: bool = False
+
+
+class AnnouncementResponse(BaseModel):
+    id: int
+    title: str
+    message: str
+    icon: str | None
+    is_pinned: bool
+    created_by: int
+    creator_name: str | None = None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+# Quest Feedback
+class QuestFeedbackRequest(BaseModel):
+    feedback: str = Field(max_length=500)
+
+
+# Streak Freeze
+class StreakFreezeResponse(BaseModel):
+    used: bool
+    freezes_used_this_month: int
+    month: int
+
+
+# Pet Interaction
+class PetInteractionRequest(BaseModel):
+    action: str = Field(pattern=r"^(feed|pet|play)$")

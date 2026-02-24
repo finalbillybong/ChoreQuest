@@ -2,7 +2,7 @@
 
 > *Turn chores into quests, kids into heroes.*
 
-A gamified family chore management app with full RPG theming. Parents create quests, assign them to kids with per-child schedules, and kids earn XP by completing them. Progress is tracked through streaks, ranks, achievements, a leaderboard, a daily spin wheel, and a treasure shop where kids spend earned XP. Kids customise animated SVG avatars with pets that level up alongside them.
+A gamified family chore management app with full RPG theming. Parents create quests, assign them to kids with per-child schedules, and kids earn XP by completing them. Progress is tracked through streaks, ranks, tiered achievements (Bronze/Silver/Gold), a leaderboard, a daily spin wheel, and a treasure shop with categories where kids spend earned XP. Kids customise animated SVG avatars with pets that level up alongside them — feed, pet, and play with your companions for bonus XP. Stay connected with the family bulletin board and quest feedback system.
 
 ---
 
@@ -26,10 +26,10 @@ A gamified family chore management app with full RPG theming. Parents create que
 | 🗡️ **Quest Board** | Daily quest carousel with animated cards, themed boards, tap to complete or attach photo proof |
 | ⭐ **XP, Ranks & Streaks** | Earn XP per quest, climb 8 rank tiers from Apprentice to Mythic, build daily streaks |
 | 🎭 **Custom Avatars** | Full SVG editor: 9 head shapes, 20 hair styles, 15 eye styles, 14 mouths, 3 body shapes, 12 hats, 7 gear items (equip multiple at once), 7 face extras, 6 outfit patterns — with idle animations |
-| 🐾 **Pets** | 6 companion pets (cat, dog, dragon, owl, bunny, phoenix) that earn XP from all sources and level up through 8 tiers |
+| 🐾 **Pets** | 6 companion pets (cat, dog, dragon, owl, bunny, phoenix) that earn XP from all sources and level up through 8 tiers. Feed, pet, and play with your companions daily for bonus XP. Customise with pet accessories (crown, party hat, bow, bandana, halo, flower) |
 | 🛒 **Avatar Shop** | Unlock avatar items by spending XP, reaching streaks, earning lifetime XP, or random quest drops — with rarity tiers from common to legendary |
 | 🎰 **Daily Spin Wheel** | Animated bonus wheel (1–25 XP) unlocked by finishing all daily quests |
-| 🏪 **Treasure Shop** | Parents create rewards, kids redeem with XP — full approval workflow |
+| 🏪 **Treasure Shop** | Parents create categorised rewards, kids filter by category and redeem with XP — full approval workflow |
 | 📋 **Wishlist** | Kids add wishlist items with links & images; parents convert them into rewards |
 | 🔄 **Quest Trading** | Siblings propose quest swaps through the calendar, with real-time notifications |
 | 🏆 **Leaderboard** | Weekly XP rankings with quest counts, streak display, ranks, and pet levels |
@@ -37,7 +37,12 @@ A gamified family chore management app with full RPG theming. Parents create que
 | 🎉 **Seasonal Events** | Time-limited XP multiplier events that compound when overlapping |
 | 🏖️ **Vacation Mode** | Set vacation periods that pause quests and preserve streaks |
 | 📊 **Progress Charts** | 30-day daily charts showing XP earned, quests completed, and completion rates |
-| 🎊 **Party Page** | Family hub showing all members with avatars, ranks, pets, progress rings, shoutouts, and emotes |
+| 🐣 **Pet Interactions** | Feed, pet, or play with your companion up to 3 times daily for 1–3 bonus pet XP each |
+| 🎊 **Party Page** | Family hub with bulletin board, member avatars, ranks, pets, progress rings, shoutouts, and emotes |
+| 📢 **Bulletin Board** | Parents post announcements (with optional pinning) delivered via push notifications to all kids |
+| 💬 **Quest Feedback** | Parents leave feedback comments on completed quests, delivered as push notifications to kids |
+| 🏅 **Tiered Achievements** | Bronze, Silver, and Gold achievement tiers grouped by category — downloadable SVG badges for sharing |
+| ❄️ **Streak Freeze** | Automatic streak protection: miss a day and your streak is saved once per month |
 | 💬 **Shoutouts & Emotes** | Send kudos to family members or broadcast avatar emotes (dance, wave, cheer, flex, sparkle, high-five) |
 | 🎨 **Themes** | 8 colour themes (Quest Blue, Dragon Fire, Enchanted Forest, Arctic, Rose Gold, Galaxy, Sunshine, Fairy Dust), dark/light/auto mode, and 6 quest board skins |
 | 🔔 **Push Notifications** | Web Push (VAPID) — quest assigned, verified, achievements, trades, pet level-ups, and more |
@@ -114,7 +119,7 @@ Real-time updates delivered instantly while the app is open. The bell icon shows
 ### Push notifications (Web Push / VAPID)
 Notifications that arrive even when the app is closed — just like a native app. Supported on Android, desktop browsers, and iOS 16.4+ (when installed as a PWA).
 
-**14 notification types:** quest assigned, quest completed, quest verified, achievement unlocked, bonus XP, trade proposed/accepted/denied, streak milestone, reward approved/denied, avatar item drop, shoutout, pet level-up.
+**16 notification types:** quest assigned, quest completed, quest verified, achievement unlocked, bonus XP, trade proposed/accepted/denied, streak milestone, reward approved/denied, avatar item drop, shoutout, pet level-up, announcement, quest feedback.
 
 #### Setting up push notifications
 
@@ -144,8 +149,10 @@ Notifications that arrive even when the app is closed — just like a native app
 - **Daily quest board** — see today's assigned quests in an animated card carousel, mark them done with a single tap (or attach a photo if proof is required). Choose from 6 board themes: Classic, Haunted Dungeon, Winter Workshop, Space Station, Ocean Kingdom, and Enchanted Garden
 - **XP, ranks, and streaks** — earn XP for each verified quest. Climb through 8 rank tiers (Apprentice → Scout → Adventurer → Knight → Champion → Hero → Legend → Mythic) based on lifetime XP. Build a daily streak by completing quests — current and longest streaks are tracked. Vacation days preserve streaks automatically
 - **Daily spin wheel** — animated bonus wheel awarding 1–25 random XP once per day, unlocked only when all daily quests are completed/verified
-- **Achievements** — 18 unlockable achievements: First Steps, Week Warrior, On Fire (7-day streak), Streak Master (30-day), Unstoppable (100-day), Piggy Bank / Money Bags / Point Millionaire (100/500/1000 lifetime XP), Early Bird (complete before 9 AM), Speed Demon (all done before noon), All Done!, Helping Hand, Treat Yourself / Big Spender (5/20 redemptions), plus 4 pet milestones: Growing Bond (Lv2), Loyal Companion (Lv4), Mighty Beast (Lv6), Legendary Tamer (Lv8)
-- **Treasure Shop** — browse and redeem rewards using earned XP. See pending/approved/fulfilled status in an inventory view
+- **Tiered achievements** — 20 unlockable achievements with Bronze, Silver, and Gold tiers grouped by category (quest completions, lifetime XP, streaks, redemptions, pets). Each tier has unique visual styling. Unlocked achievements can be downloaded as shareable SVG badges
+- **Streak freeze** — if you miss a day, your streak is automatically preserved once per month
+- **Pet interactions** — feed, pet, or play with your companion up to 3 times per day for 1–3 bonus pet XP each interaction
+- **Treasure Shop** — browse and redeem categorised rewards using earned XP, filter by category. See pending/approved/fulfilled status in an inventory view
 - **Avatar Shop** — unlock new avatar items by spending XP, reaching streak milestones, earning lifetime XP totals, or through random quest drops. Items have rarity tiers: common, uncommon, rare, epic, and legendary
 - **Wishlist** — add items with URLs, images, and notes. Parents can see wishlists and convert items into shop rewards
 - **Quest trading** — propose quest swaps with siblings through the calendar. Target kid gets a notification and can accept or deny
@@ -159,10 +166,10 @@ Notifications that arrive even when the app is closed — just like a native app
   - **Gear** — 7 items equippable simultaneously: scarf, necklace, bow tie, cape, wings, shield, sword
   - **Face extras** — 7 options: freckles, blush, face paint, scar, bandage, stickers
   - **Outfit patterns** — 5 options: stripes, stars, camo, tie dye, plaid
-  - **Pets** — 6 companions: cat, dog, dragon, owl, bunny, phoenix (with customisable colours and positioning)
+  - **Pets** — 6 companions: cat, dog, dragon, owl, bunny, phoenix (with customisable colours, positioning, and accessories: crown, party hat, bow, bandana, halo, flower)
   - **Colour palettes** for skin, hair, eyes, mouth, body, background, hat, gear, and pet
 - **Pets** — companion pets earn XP from all sources (quest completion, bonus XP, achievements, spin wheel) and level up through 8 tiers: Hatchling → Youngling → Companion → Loyal → Brave → Mighty → Majestic → Legendary. Higher-level pets grow larger and gain visual effects (purple glow at level 5+, gold glow at level 7+). The avatar editor shows all 8 level previews for the equipped pet
-- **Party page** — family hub showing all members with their avatars, ranks, pet levels, daily progress rings, and a shoutout feed
+- **Party page** — family hub showing all members with their avatars, ranks, pet levels, daily progress rings, bulletin board, and a shoutout feed
 - **Emotes** — broadcast avatar reactions to the whole family: dance, wave, cheer, flex, sparkle, high-five
 - **Shoutouts** — send kudos with a custom message and emoji to any family member. Recent shoutouts appear in the Party feed
 - **Progress charts** — 30-day view of daily XP earned, quests completed vs assigned, and completion rates
@@ -178,16 +185,17 @@ Notifications that arrive even when the app is closed — just like a native app
   - Per-kid photo proof requirements
   - Optional kid rotation with cadence (daily, weekly, fortnightly, monthly)
 - **Active Quests tab** — view only quests that have active assignments, with hero count badges
-- **Verification queue** — review and approve/reject completed quests from the parent dashboard, including photo proof viewing
+- **Verification queue** — review and approve/reject completed quests from the parent dashboard, including photo proof viewing. Leave feedback comments on quests (delivered via push notification)
 - **Uncomplete / skip** — reverse a verification (deducting awarded XP) or skip a pending quest for the day
 - **Bonus XP** — award ad-hoc bonus XP to any kid with a description (also awards pet XP)
-- **Rewards management** — create rewards with XP costs, stock limits, icons, and auto-approval thresholds. Approve, deny, or fulfil redemption requests
+- **Bulletin board** — post announcements (with optional pinning) to the family Party page, automatically sent as push notifications to all kids
+- **Rewards management** — create categorised rewards with XP costs, stock limits, icons, and auto-approval thresholds. Approve, deny, or fulfil redemption requests
 - **Family overview** — dashboard with kid cards showing today's quest progress, points balance, and current streak
 - **Seasonal events** — create time-limited XP multiplier events (multipliers compound if multiple events are active)
 - **Vacation mode** — set vacation/blackout periods that pause quest assignments and preserve kids' streaks. Streaks are automatically maintained across vacation days
 - **Category management** — create, edit, and delete quest categories with custom icons and colours
 - **Chore rotations** — rotate a quest between kids on a set cadence (daily/weekly/fortnightly/monthly) with manual advance option
-- **Achievement management** — enable or disable individual achievements from Settings
+- **Achievement management** — enable or disable individual achievements from Settings, with tier badges (Bronze/Silver/Gold) shown inline
 
 ## 🛡️ For admins
 
@@ -225,7 +233,7 @@ Notifications that arrive even when the app is closed — just like a native app
 
 ### First run
 
-The database, default categories (9), achievements (18), quest templates (24), and app settings are created on first startup. The first user to register becomes the admin. After that, registration requires an invite code by default — generate them from the admin dashboard.
+The database, default categories (9), achievements (20), quest templates (24), and app settings are created on first startup. The first user to register becomes the admin. After that, registration requires an invite code by default — generate them from the admin dashboard.
 
 ### Data persistence
 
@@ -291,6 +299,8 @@ backend/
     progress.py      # 30-day progress chart data (XP, completions, rates)
     shoutouts.py     # Family shoutouts (kudos with messages)
     emotes.py        # Avatar emotes broadcast via WebSocket
+    announcements.py # Family bulletin board (CRUD with push notifications)
+    pets.py          # Pet interactions (feed/pet/play for bonus XP)
     admin.py         # Users, API keys, invite codes, audit log, settings
     uploads.py       # Photo proof upload/retrieval
 frontend/
@@ -354,6 +364,7 @@ Real-time updates are pushed to connected clients:
 | `emote` | Avatar emote broadcast (dance, wave, cheer, etc.) |
 | `shoutout` | Family member sends kudos |
 | `pet_levelup` | Pet reaches a new level tier |
+| `announcement` | Parent posts a bulletin board announcement |
 
 ---
 
