@@ -141,6 +141,10 @@ async def _unlock_achievement(db: AsyncSession, user: User, achievement: Achieve
         )
         db.add(tx)
 
+        # Award pet XP alongside user XP
+        from backend.services.pet_leveling import award_pet_xp
+        award_pet_xp(user, achievement.points_reward)
+
     # Create notification
     notif = Notification(
         user_id=user.id,
