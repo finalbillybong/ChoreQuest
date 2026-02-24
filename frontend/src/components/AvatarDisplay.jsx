@@ -99,8 +99,10 @@ function SvgAvatar({ config, size }) {
       {/* Face extras (under eyes) */}
       {renderFaceExtra(faceExtraStyle)}
 
-      {/* Eyes */}
-      <EyesComponent color={eyeColor} />
+      {/* Eyes — wrapped for blink animation */}
+      <g className="avatar-eyes">
+        <EyesComponent color={eyeColor} />
+      </g>
 
       {/* Mouth — pass mouthColor for items that need a tint (tongue, etc.) */}
       <MouthComponent color={mouthColor} mouthColor={mouthColor} />
@@ -114,8 +116,10 @@ function SvgAvatar({ config, size }) {
       {/* Accessories (front-facing, not cape/wings) */}
       {accessoryStyle !== 'cape' && accessoryStyle !== 'wings' && accessoryStyle !== 'none' && renderAccessory(accessoryStyle, accessoryColor)}
 
-      {/* Pet */}
-      {renderPet(petStyle, petColor, petPosition)}
+      {/* Pet — wrapped for wiggle animation */}
+      <g className="avatar-pet">
+        {renderPet(petStyle, petColor, petPosition)}
+      </g>
     </svg>
   );
 }

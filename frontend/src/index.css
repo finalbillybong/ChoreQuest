@@ -415,16 +415,40 @@ h1, h2, h3, h4, h5, h6 {
   display: none;
 }
 
-/* ── Avatar idle animation ── */
-@keyframes avatar-breathe {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.02); }
+/* ── Avatar idle animations ── */
+
+/* Gentle body sway — rocks the whole avatar left/right */
+@keyframes avatar-sway {
+  0%, 100% { transform: rotate(0deg); }
+  30% { transform: rotate(0.8deg); }
+  70% { transform: rotate(-0.8deg); }
 }
 
-.avatar-idle {
-  animation: avatar-breathe 3s ease-in-out infinite;
+/* Eye blink — briefly squishes eyes shut */
+@keyframes avatar-blink {
+  0%, 92%, 100% { transform: scaleY(1); }
+  94% { transform: scaleY(0.08); }
+  96% { transform: scaleY(1); }
+}
+
+/* Pet bounce — small hop up and down */
+@keyframes avatar-pet-bounce {
+  0%, 100% { transform: translateY(0); }
+  40% { transform: translateY(-0.6px); }
+  60% { transform: translateY(-0.6px); }
 }
 
 .avatar-idle .avatar-svg {
-  will-change: transform;
+  animation: avatar-sway 4s ease-in-out infinite;
+  transform-origin: 16px 28px; /* bottom-center of 32x32 viewBox */
+}
+
+.avatar-idle .avatar-eyes {
+  animation: avatar-blink 5s ease-in-out infinite;
+  transform-origin: 16px 14px; /* center of eye area */
+  transform-box: fill-box;
+}
+
+.avatar-idle .avatar-pet {
+  animation: avatar-pet-bounce 2s ease-in-out infinite;
 }
