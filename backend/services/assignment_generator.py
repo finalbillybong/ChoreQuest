@@ -186,6 +186,31 @@ async def _get_legacy_user_ids(db: AsyncSession, chore_id: int) -> list[int]:
     return list(result.scalars().all())
 
 
+async def _remove_stale_rotation_assignment(
+    db: AsyncSession, chore_id: int, user_id: int, day: date
+) -> None:
+    """Delete a pending assignment that shouldn't exist per the rotation.
+
+    Only removes assignments that are still pending — completed or
+    verified ones are never touched.
+    """
+    result = await db.execute(
+        select(ChoreAssignment).where(
+            ChoreAssignment.chore_id == chore_id,
+            ChoreAssignment.user_id == user_id,
+            ChoreAssignment.date == day,
+            ChoreAssignment.status == AssignmentStatus.pending,
+        )
+    )
+    stale = result.scalar_one_or_none()
+    if stale:
+        await db.delete(stale)
+        logger.debug(
+            "Removed stale rotation assignment: chore=%d user=%d day=%s",
+            chore_id, user_id, day,
+        )
+
+
 async def _create_if_missing(
     db: AsyncSession, chore_id: int, user_id: int, day: date
 ) -> bool:
@@ -223,8 +248,16 @@ async def _generate_from_rules(
     exclusion_set: set[tuple[int, int, date]],
 ) -> None:
     """Generate week assignments using per-kid assignment rules."""
-    today = date.today()
     active_weekdays = _collect_active_weekdays(rules, chore) if rotation else None
+
+    # Anchor the projection to when current_index was last set, NOT today.
+    # This keeps the calendar consistent regardless of whether the daily
+    # reset task has advanced the rotation yet (e.g. after container restart).
+    if rotation and rotation.last_rotated:
+        lr = rotation.last_rotated
+        reference_day = lr.date() if hasattr(lr, "date") else lr
+    else:
+        reference_day = date.today()
 
     for rule in rules:
         if rule.recurrence == Recurrence.once:
@@ -240,9 +273,14 @@ async def _generate_from_rules(
             # Rotation filtering
             if rotation and rotation.kid_ids:
                 expected_kid = get_rotation_kid_for_day(
-                    rotation, day, today, active_weekdays,
+                    rotation, day, reference_day, active_weekdays,
                 )
                 if int(rule.user_id) != expected_kid:
+                    # Clean up any stale pending assignment for the wrong kid
+                    # on this day (could have been created by a prior buggy run).
+                    await _remove_stale_rotation_assignment(
+                        db, chore.id, rule.user_id, day,
+                    )
                     continue
 
             if (chore.id, rule.user_id, day) in exclusion_set:
