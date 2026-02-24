@@ -614,8 +614,8 @@ export default function AvatarEditor({ isOpen, onClose }) {
             onClick={(e) => e.stopPropagation()}
           >
             {/* ─── Pinned top: close button + avatar preview ─── */}
-            <div className="flex-shrink-0 border-b border-border bg-surface-raised/50 px-4 pt-3 pb-4">
-              <div className="flex items-center justify-between mb-3">
+            <div className="flex-shrink-0 border-b border-border bg-surface-raised/50 px-4 pt-3 pb-5">
+              <div className="flex items-center justify-between mb-4">
                 <h2 className="font-heading text-cream text-lg font-bold">Customise Avatar</h2>
                 <button
                   onClick={onClose}
@@ -626,8 +626,8 @@ export default function AvatarEditor({ isOpen, onClose }) {
                 </button>
               </div>
               <div className="flex justify-center">
-                <div className={`avatar-idle rounded-2xl transition-shadow duration-300 ${preview ? 'shadow-[0_0_12px_rgba(245,158,11,0.4)]' : ''}`}>
-                  <AvatarDisplay config={displayConfig} size="lg" />
+                <div className={`avatar-idle rounded-2xl transition-shadow duration-300 ${preview ? 'shadow-[0_0_16px_rgba(245,158,11,0.45)]' : ''}`}>
+                  <AvatarDisplay config={displayConfig} size="xl" />
                 </div>
               </div>
             </div>
