@@ -1,6 +1,6 @@
 // The placeholder below is stamped by the Vite plugin at build time
 // (see vite.config.js) so the SW cache auto-bumps every production build.
-const CACHE_NAME = 'chorequest-mm0l70md';
+const CACHE_NAME = 'chorequest-mm0mw7au';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
@@ -10,7 +10,12 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS))
   );
-  self.skipWaiting();
+  // Don't call skipWaiting() automatically — wait for the app to signal
+  // via postMessage so we can show an "Update available" prompt first.
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data === 'SKIP_WAITING') self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
@@ -85,7 +90,21 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Cache-first for static assets
+  // Network-first for navigation requests (HTML) so users get fresh pages
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request).then((response) => {
+        if (response.ok) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+        }
+        return response;
+      }).catch(() => caches.match(request).then((cached) => cached || caches.match('/')))
+    );
+    return;
+  }
+
+  // Stale-while-revalidate for other static assets (JS, CSS, images)
   event.respondWith(
     caches.match(request).then((cached) => {
       const fetched = fetch(request).then((response) => {

@@ -101,6 +101,10 @@ async def security_headers(request: Request, call_next):
     )
     if settings.COOKIE_SECURE:
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    # Prevent browser caching of sw.js so updates are always detected
+    if request.url.path == "/sw.js":
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
     return response
 
 

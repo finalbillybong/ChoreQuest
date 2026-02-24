@@ -159,7 +159,6 @@ export default function Profile() {
   const { theme, mode, setMode, colorTheme, setColorTheme } = useTheme();
 
   const [showEditor, setShowEditor] = useState(false);
-  const [editorConfig, setEditorConfig] = useState(null);
 
   // Display name editing
   const [displayName, setDisplayName] = useState(user?.display_name || '');
@@ -316,17 +315,12 @@ export default function Profile() {
       {/* Avatar + Name + Role */}
       <div className="game-panel p-6 flex flex-col items-center gap-4">
         <button
-          onClick={() => {
-            setShowEditor((v) => {
-              if (v) setEditorConfig(null);
-              return !v;
-            });
-          }}
+          onClick={() => setShowEditor(true)}
           className="relative"
           aria-label="Customise avatar"
         >
           <AvatarDisplay
-            config={showEditor && editorConfig ? editorConfig : user?.avatar_config}
+            config={user?.avatar_config}
             size="lg"
             name={user?.display_name || user?.username}
             animate
@@ -374,8 +368,8 @@ export default function Profile() {
         </div>
       </div>
 
-      {/* Avatar Editor */}
-      {showEditor && <AvatarEditor onConfigChange={setEditorConfig} />}
+      {/* Avatar Editor Modal */}
+      <AvatarEditor isOpen={showEditor} onClose={() => setShowEditor(false)} />
 
       {/* Stats Summary (kids only) */}
       {isKid && (
