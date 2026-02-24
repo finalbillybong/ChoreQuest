@@ -47,23 +47,23 @@ export function renderAccessory(style, color) {
       return (
         <g>
           {/* Heater shield held on left arm */}
-          <path d="M5,21 L11,21 L11,26 Q8,31 5,26 Z" fill={color} />
-          <line x1="8" y1="22" x2="8" y2="28" stroke="white" strokeWidth="0.5" opacity="0.35" />
-          <circle cx="8" cy="24.5" r="1.2" fill="white" opacity="0.15" />
+          <path d="M8,21 L14,21 L14,26 Q11,31 8,26 Z" fill={color} />
+          <line x1="11" y1="22" x2="11" y2="28" stroke="white" strokeWidth="0.5" opacity="0.35" />
+          <circle cx="11" cy="24.5" r="1.2" fill="white" opacity="0.15" />
         </g>
       );
     case 'sword':
       return (
-        <g transform="rotate(20, 18, 22)">
-          {/* Blade — extends down behind the body */}
-          <rect x="17.4" y="14" width="1.2" height="14" rx="0.3" fill="#c0c0c0" />
-          <line x1="17.7" y1="15" x2="17.7" y2="27" stroke="white" strokeWidth="0.2" opacity="0.3" />
+        <g transform="rotate(30, 20, 22)">
+          {/* Blade — upper part visible, lower hidden behind body */}
+          <rect x="19.4" y="14" width="1.2" height="14" rx="0.3" fill="#c0c0c0" />
+          <line x1="19.7" y1="15" x2="19.7" y2="27" stroke="white" strokeWidth="0.2" opacity="0.3" />
           {/* Crossguard */}
-          <rect x="15.5" y="13" width="5" height="1.5" rx="0.5" fill={color} />
+          <rect x="17.5" y="13" width="5" height="1.5" rx="0.5" fill={color} />
           {/* Grip */}
-          <rect x="17.4" y="8.5" width="1.2" height="5" rx="0.3" fill={color} />
+          <rect x="19.4" y="8.5" width="1.2" height="5" rx="0.3" fill={color} />
           {/* Pommel */}
-          <circle cx="18" cy="8.5" r="1" fill={color} />
+          <circle cx="20" cy="8.5" r="1" fill={color} />
         </g>
       );
     case 'none':
