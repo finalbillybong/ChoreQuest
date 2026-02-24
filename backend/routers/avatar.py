@@ -93,8 +93,10 @@ AVATAR_PARTS = {
 # Curated colour palettes
 AVATAR_COLORS = {
     "head_color": [
-        "#ffcc99", "#f5d6b8", "#d4a373", "#a67c52",
-        "#8d5524", "#6b3a2a", "#f8d9c0", "#c68642",
+        "#ffe0bd", "#ffcc99", "#f5d6b8", "#f8d9c0",
+        "#e8b88a", "#d4a373", "#c68642", "#a67c52",
+        "#8d5524", "#6b3a2a", "#4a2912", "#3b1f0e",
+        "#f0c4a8", "#d4956a", "#b07848", "#8a6642",
     ],
     "hair_color": [
         "#4a3728", "#1a1a2e", "#8b4513", "#d4a017",
