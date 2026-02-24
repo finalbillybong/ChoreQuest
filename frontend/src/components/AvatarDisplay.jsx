@@ -63,17 +63,19 @@ const EYELID_MODE = {
 };
 
 /* ── Layout offsets per head shape ──
-   Shifts hair, hats, and facial features so they align with each head. */
+   Shifts hair, hats, and facial features so they align with each head.
+   `width`     — horizontal scale for hair & hats (relative to round head rx=7).
+   `faceWidth` — gentler horizontal scale for eyes, mouth & face extras. */
 const HEAD_OFFSETS = {
-  round:    { hair: 0,    hat: 0,    face: 0 },
-  oval:     { hair: -1,   hat: -1,   face: 0 },
-  long:     { hair: -3,   hat: -3,   face: -1 },
-  square:   { hair: 0,    hat: 0,    face: 0 },
-  diamond:  { hair: -1,   hat: -1,   face: 0 },
-  heart:    { hair: 0,    hat: 0,    face: 0 },
-  triangle: { hair: -1,   hat: -1,   face: 1.5 },
-  pear:     { hair: -0.5, hat: -0.5, face: 0.5 },
-  wide:     { hair: 1,    hat: 1,    face: 0 },
+  round:    { hair: 0,    hat: 0,    face: 0,   width: 1,    faceWidth: 1 },
+  oval:     { hair: -1,   hat: -1,   face: 0,   width: 0.84, faceWidth: 0.92 },
+  long:     { hair: -3,   hat: -3,   face: -1,  width: 0.84, faceWidth: 0.92 },
+  square:   { hair: 0,    hat: 0,    face: 0,   width: 1,    faceWidth: 1 },
+  diamond:  { hair: -1,   hat: -1,   face: 0,   width: 0.92, faceWidth: 0.96 },
+  heart:    { hair: 0,    hat: 0,    face: 0,   width: 1.06, faceWidth: 1 },
+  triangle: { hair: -1,   hat: -1,   face: 1.5, width: 0.82, faceWidth: 1.04 },
+  pear:     { hair: -0.5, hat: -0.5, face: 0.5, width: 0.88, faceWidth: 1.02 },
+  wide:     { hair: 1,    hat: 1,    face: 0,   width: 1.22, faceWidth: 1.1 },
 };
 
 /* ── Horizontal scale for behind-body accessories per body shape ──
@@ -84,10 +86,28 @@ const BEHIND_ACCESSORY_SCALE = {
   broad:   { cape: 1.3, wings: 1.2 },
 };
 
+/* ── Horizontal scale for front-facing accessories per body shape ──
+   Scarf wraps the torso so it must match body width. */
+const FRONT_ACCESSORY_SCALE = {
+  slim:  { scarf: 0.71 },
+  broad: { scarf: 1.29 },
+};
+
 /* Scale horizontally around center x=16 */
 function scaleAroundCenter(s) {
   if (s === 1) return undefined;
   return `translate(16, 0) scale(${s}, 1) translate(-16, 0)`;
+}
+
+/* Combine a vertical offset with a horizontal scale around x=16 */
+function headTransform(dy, sx) {
+  const hasDy = dy && dy !== 0;
+  const hasSx = sx && sx !== 1;
+  if (!hasDy && !hasSx) return undefined;
+  const parts = [];
+  if (hasDy) parts.push(`translate(0,${dy})`);
+  if (hasSx) parts.push(`translate(16,0) scale(${sx},1) translate(-16,0)`);
+  return parts.join(' ');
 }
 
 /* ── Main SVG avatar ── */
@@ -146,8 +166,8 @@ function SvgAvatar({ config, size }) {
       {/* Head */}
       <HeadComponent color={headColor} />
 
-      {/* Face features — shifted to align with head shape */}
-      <g transform={off.face ? `translate(0, ${off.face})` : undefined}>
+      {/* Face features — shifted & scaled to align with head shape */}
+      <g transform={headTransform(off.face, off.faceWidth)}>
         {/* Face extras (under eyes) */}
         {renderFaceExtra(faceExtraStyle)}
 
@@ -168,19 +188,19 @@ function SvgAvatar({ config, size }) {
         </g>
       </g>
 
-      {/* Hair — shifted to align with head shape */}
-      <g transform={off.hair ? `translate(0, ${off.hair})` : undefined}>
+      {/* Hair — shifted & scaled to align with head shape */}
+      <g transform={headTransform(off.hair, off.width)}>
         {renderHair(hairStyle, hairColor)}
       </g>
 
-      {/* Hat (on top of hair) — shifted to align with head shape */}
-      <g transform={off.hat ? `translate(0, ${off.hat})` : undefined}>
+      {/* Hat (on top of hair) — shifted & scaled to align with head shape */}
+      <g transform={headTransform(off.hat, off.width)}>
         {renderHat(hatStyle, hatColor)}
       </g>
 
-      {/* Accessories (front-facing, not cape/wings) — with sparkle overlay */}
+      {/* Accessories (front-facing, not cape/wings) — scaled to body width */}
       {accessoryStyle !== 'cape' && accessoryStyle !== 'wings' && accessoryStyle !== 'none' && (
-        <g className="avatar-accessory">
+        <g className="avatar-accessory" transform={scaleAroundCenter((FRONT_ACCESSORY_SCALE[bodyShape] || {})[accessoryStyle] || 1)}>
           {renderAccessory(accessoryStyle, accessoryColor)}
           <circle className="avatar-sparkle" cx="16" cy="23" r="0.6" fill="white" opacity="0" />
         </g>
