@@ -275,15 +275,6 @@ export function renderPetExtras(petStyle, level, colors, position) {
   return <g transform={offsets}>{extras}</g>;
 }
 
-// ── Custom position helpers ──
-
-function customTransform(petX, petY, isBig) {
-  // Center the pet on the tap point (offset by half the pet's local size)
-  const offsetX = isBig ? -4 : -3;
-  const offsetY = isBig ? -3.5 : -3;
-  return `translate(${petX + offsetX},${petY + offsetY})`;
-}
-
 // ── Main render function ──
 
 export function renderPet(style, color, position = 'right', config = {}) {
@@ -294,13 +285,19 @@ export function renderPet(style, color, position = 'right', config = {}) {
   // Build multi-part colors, supporting both old single-color and new multi-part
   const colors = typeof color === 'object' ? color : buildPetColors({ pet_color: color, ...config });
 
-  // Custom position
+  // Custom position — counter the Component's internal PET_OFFSETS so
+  // the pet center lands exactly at the tap point (pet_x, pet_y).
   if (position === 'custom' && config.pet_x != null && config.pet_y != null) {
     const isBig = BIG_PETS.has(style);
     const flip = config.pet_x < 16;
-    const t = customTransform(config.pet_x, config.pet_y, isBig);
+    // Pet center in parent coords after Component's internal offset
+    const cx = isBig ? 25 : 26;
+    const cy = isBig ? 19 : 20;
+    const t = flip
+      ? `translate(${config.pet_x},${config.pet_y}) scale(-1,1) translate(${-cx},${-cy})`
+      : `translate(${config.pet_x - cx},${config.pet_y - cy})`;
     return (
-      <g transform={flip ? `${t} scale(-1,1) translate(${isBig ? -8 : -6},0)` : t}>
+      <g transform={t}>
         <Component colors={colors} position="right" />
       </g>
     );
