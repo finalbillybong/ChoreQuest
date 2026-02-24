@@ -2,6 +2,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { api } from '../api/client';
 import { useAuth } from '../hooks/useAuth';
 import AvatarDisplay from '../components/AvatarDisplay';
+import RankBadge from '../components/RankBadge';
+import PetLevelBadge from '../components/PetLevelBadge';
+import ShoutoutPanel from '../components/ShoutoutPanel';
+import EmoteBar from '../components/EmoteBar';
 import {
   Users,
   Flame,
@@ -136,6 +140,11 @@ export default function Party() {
         )}
       </div>
 
+      {/* Emote Bar */}
+      <div className="game-panel p-3">
+        <EmoteBar />
+      </div>
+
       {/* Members */}
       <div className="game-panel p-4">
         <h2 className="text-cream text-sm font-bold mb-3">Heroes</h2>
@@ -157,6 +166,8 @@ export default function Party() {
                 <span className="text-cream text-sm font-medium text-center leading-tight">
                   {kid.display_name}
                 </span>
+                {/* Rank badge */}
+                {kid.rank && <RankBadge rank={kid.rank} size="sm" />}
                 <div className="flex flex-col items-center gap-0.5">
                   <span className="flex items-center gap-1 text-gold text-xs font-bold">
                     <Star size={10} className="fill-gold" />
@@ -171,6 +182,8 @@ export default function Party() {
                       {kid.current_streak}d streak
                     </span>
                   )}
+                  {/* Pet level */}
+                  {kid.pet && <PetLevelBadge pet={kid.pet} compact />}
                 </div>
               </div>
             );
@@ -192,6 +205,9 @@ export default function Party() {
           </>
         )}
       </div>
+
+      {/* Shoutouts */}
+      <ShoutoutPanel members={members} />
 
       {/* Activity Feed */}
       <div className="game-panel p-4">

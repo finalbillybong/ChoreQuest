@@ -1022,11 +1022,51 @@ async def verify_chore(
     kid.points_balance += total_awarded
     kid.total_points_earned += total_awarded
 
+    # Pet XP — award the same amount as quest XP
+    config = kid.avatar_config or {}
+    if config.get("pet") and config["pet"] != "none":
+        from backend.services.pet_leveling import get_pet_level
+        old_pet_xp = config.get("pet_xp", 0)
+        old_level = get_pet_level(old_pet_xp)["level"]
+        new_pet_xp = old_pet_xp + total_awarded
+        config["pet_xp"] = new_pet_xp
+        kid.avatar_config = {**config}  # trigger mutation detection
+        new_level = get_pet_level(new_pet_xp)["level"]
+        if new_level > old_level:
+            pet_name = get_pet_level(new_pet_xp)["name"]
+            db.add(Notification(
+                user_id=kid.id,
+                type=NotificationType.pet_levelup,
+                title="Pet Leveled Up!",
+                message=f"Your pet reached level {new_level} — {pet_name}!",
+                reference_type="pet",
+            ))
+
     if kid.last_streak_date == today:
         pass
-    elif kid.last_streak_date is not None and (today - kid.last_streak_date).days == 1:
-        kid.current_streak += 1
-        kid.last_streak_date = today
+    elif kid.last_streak_date is not None:
+        gap = (today - kid.last_streak_date).days
+        if gap == 1:
+            kid.current_streak += 1
+            kid.last_streak_date = today
+        elif gap > 1:
+            # Check if all gap days were vacation days (streak shouldn't break)
+            from backend.routers.vacation import is_vacation_day
+            all_vacation = True
+            for offset in range(1, gap):
+                gap_day = kid.last_streak_date + timedelta(days=offset)
+                if not await is_vacation_day(db, gap_day):
+                    all_vacation = False
+                    break
+            if all_vacation:
+                kid.current_streak += 1
+                kid.last_streak_date = today
+            else:
+                kid.current_streak = 1
+                kid.last_streak_date = today
+        else:
+            kid.current_streak = 1
+            kid.last_streak_date = today
     else:
         kid.current_streak = 1
         kid.last_streak_date = today

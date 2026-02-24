@@ -66,6 +66,8 @@ class NotificationType(str, enum.Enum):
     reward_approved = "reward_approved"
     reward_denied = "reward_denied"
     avatar_item_drop = "avatar_item_drop"
+    shoutout = "shoutout"
+    pet_levelup = "pet_levelup"
 
 
 class AvatarItemRarity(str, enum.Enum):
@@ -460,3 +462,30 @@ class UserAvatarItem(Base):
 
     user = relationship("User")
     avatar_item = relationship("AvatarItem")
+
+
+class Shoutout(Base):
+    """Kudos / shoutouts between family members."""
+    __tablename__ = "shoutouts"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    from_user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    to_user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    message: Mapped[str] = mapped_column(String(200), nullable=False)
+    emoji: Mapped[str] = mapped_column(String(10), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    from_user = relationship("User", foreign_keys=[from_user_id])
+    to_user = relationship("User", foreign_keys=[to_user_id])
+
+
+class VacationPeriod(Base):
+    """Family vacation / blackout periods that pause chore generation."""
+    __tablename__ = "vacation_periods"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    start_date: Mapped[date] = mapped_column(Date, nullable=False)
+    end_date: Mapped[date] = mapped_column(Date, nullable=False)
+    created_by: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    creator = relationship("User")

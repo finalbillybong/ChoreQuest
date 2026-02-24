@@ -6,6 +6,9 @@ import AvatarDisplay from '../components/AvatarDisplay';
 import AvatarEditor from '../components/AvatarEditor';
 import { useNavigate } from 'react-router-dom';
 import ChoreIcon from '../components/ChoreIcon';
+import RankBadge from '../components/RankBadge';
+import PetLevelBadge from '../components/PetLevelBadge';
+import ProgressCharts from '../components/ProgressCharts';
 import {
   UserCircle,
   Save,
@@ -26,6 +29,7 @@ import {
   ChevronRight,
   Bell,
   BellOff,
+  BarChart3,
 } from 'lucide-react';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 
@@ -174,6 +178,7 @@ export default function Profile() {
   const [achievements, setAchievements] = useState([]);
   const [achievementsLoading, setAchievementsLoading] = useState(false);
   const [showAchievements, setShowAchievements] = useState(false);
+  const [showProgress, setShowProgress] = useState(false);
 
   // PIN
   const [pin, setPin] = useState('');
@@ -330,14 +335,23 @@ export default function Profile() {
           </div>
         </button>
 
-        {/* Role badge */}
-        <span
-          className={`inline-block px-3 py-1 rounded-full border text-[10px] font-semibold uppercase tracking-wider ${
-            roleBadgeColors[user?.role] || 'border-border text-muted'
-          }`}
-        >
-          {user?.role}
-        </span>
+        {/* Role badge + Rank */}
+        <div className="flex items-center gap-2 flex-wrap justify-center">
+          <span
+            className={`inline-block px-3 py-1 rounded-full border text-[10px] font-semibold uppercase tracking-wider ${
+              roleBadgeColors[user?.role] || 'border-border text-muted'
+            }`}
+          >
+            {user?.role}
+          </span>
+          {stats?.rank && <RankBadge rank={stats.rank} size="sm" />}
+        </div>
+        {/* Pet level */}
+        {stats?.pet && (
+          <div className="mt-1">
+            <PetLevelBadge pet={stats.pet} />
+          </div>
+        )}
 
         {/* Editable display name */}
         <div className="w-full max-w-xs">
@@ -382,41 +396,70 @@ export default function Profile() {
               <Loader2 size={20} className="text-sky animate-spin" />
             </div>
           ) : stats ? (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <div className="text-center">
-                <Star size={18} className="text-gold mx-auto mb-1" />
-                <p className="text-gold text-sm font-bold">
-                  {stats.points_balance ?? stats.xp_balance ?? 0}
-                </p>
-                <p className="text-muted text-xs">XP Balance</p>
+            <>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="text-center">
+                  <Star size={18} className="text-gold mx-auto mb-1" />
+                  <p className="text-gold text-sm font-bold">
+                    {stats.points_balance ?? stats.xp_balance ?? 0}
+                  </p>
+                  <p className="text-muted text-xs">XP Balance</p>
+                </div>
+                <div className="text-center">
+                  <Award size={18} className="text-emerald mx-auto mb-1" />
+                  <p className="text-emerald text-sm font-bold">
+                    {stats.total_points_earned ?? stats.total_xp_earned ?? 0}
+                  </p>
+                  <p className="text-muted text-xs">Total Earned</p>
+                </div>
+                <div className="text-center">
+                  <Flame size={18} className="text-orange-400 mx-auto mb-1" />
+                  <p className="text-orange-400 text-sm font-bold">
+                    {stats.current_streak ?? stats.streak ?? 0}
+                  </p>
+                  <p className="text-muted text-xs">Streak</p>
+                </div>
+                <button
+                  className="text-center hover:bg-surface-raised/50 rounded-lg py-1 transition-colors"
+                  onClick={() => setShowAchievements((v) => !v)}
+                >
+                  <Trophy size={18} className="text-purple mx-auto mb-1" />
+                  <p className="text-purple text-sm font-bold">
+                    {stats.achievements_count ?? 0}
+                  </p>
+                  <p className="text-muted text-xs flex items-center justify-center gap-0.5">
+                    Achievements <ChevronRight size={10} />
+                  </p>
+                </button>
               </div>
-              <div className="text-center">
-                <Award size={18} className="text-emerald mx-auto mb-1" />
-                <p className="text-emerald text-sm font-bold">
-                  {stats.total_points_earned ?? stats.total_xp_earned ?? 0}
-                </p>
-                <p className="text-muted text-xs">Total Earned</p>
-              </div>
-              <div className="text-center">
-                <Flame size={18} className="text-orange-400 mx-auto mb-1" />
-                <p className="text-orange-400 text-sm font-bold">
-                  {stats.current_streak ?? stats.streak ?? 0}
-                </p>
-                <p className="text-muted text-xs">Streak</p>
-              </div>
+
+              {/* Rank progress */}
+              {stats.rank && stats.rank.next_threshold && (
+                <div className="mt-4 pt-3 border-t border-border/50">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-muted text-xs">Next rank: {stats.rank.next_title}</span>
+                    <span className="text-cream text-xs font-bold">
+                      {stats.total_points_earned}/{stats.rank.next_threshold} XP
+                    </span>
+                  </div>
+                  <div className="xp-bar">
+                    <div
+                      className="xp-bar-fill"
+                      style={{ width: `${Math.round(stats.rank.progress * 100)}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Progress Charts toggle */}
               <button
-                className="text-center hover:bg-surface-raised/50 rounded-lg py-1 transition-colors"
-                onClick={() => setShowAchievements((v) => !v)}
+                onClick={() => setShowProgress((v) => !v)}
+                className="mt-3 w-full flex items-center justify-center gap-2 py-2 rounded-lg bg-surface-raised/30 hover:bg-surface-raised/60 border border-border/50 text-muted hover:text-cream transition-colors text-xs font-medium"
               >
-                <Trophy size={18} className="text-purple mx-auto mb-1" />
-                <p className="text-purple text-sm font-bold">
-                  {stats.achievements_count ?? 0}
-                </p>
-                <p className="text-muted text-xs flex items-center justify-center gap-0.5">
-                  Achievements <ChevronRight size={10} />
-                </p>
+                <BarChart3 size={14} />
+                {showProgress ? 'Hide Charts' : 'View Progress Charts'}
               </button>
-            </div>
+            </>
           ) : (
             <p className="text-muted text-center text-sm">
               Stats not available yet. Complete quests to build your record!
@@ -488,6 +531,43 @@ export default function Profile() {
                   )}
                 </div>
               ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Progress Charts */}
+      {showProgress && (
+        <div className="game-panel p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-cream text-sm font-bold flex items-center gap-2">
+              <BarChart3 size={16} className="text-sky" />
+              Progress Charts
+            </h2>
+            <button
+              onClick={() => setShowProgress(false)}
+              className="text-muted text-xs hover:text-cream transition-colors"
+            >
+              Hide
+            </button>
+          </div>
+          <ProgressCharts />
+        </div>
+      )}
+
+      {/* Progress Charts for parents */}
+      {!isKid && (
+        <div className="game-panel p-5">
+          <button
+            onClick={() => setShowProgress((v) => !v)}
+            className="w-full flex items-center justify-center gap-2 py-2 text-muted hover:text-cream transition-colors text-xs font-medium"
+          >
+            <BarChart3 size={14} />
+            {showProgress ? 'Hide Family Progress Charts' : 'View Family Progress Charts'}
+          </button>
+          {showProgress && (
+            <div className="mt-4">
+              <ProgressCharts />
             </div>
           )}
         </div>
