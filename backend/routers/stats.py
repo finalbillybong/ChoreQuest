@@ -57,6 +57,11 @@ async def get_my_stats(
     else:
         pet_info = None
 
+    # Streak freeze: available once per calendar month
+    today = date.today()
+    current_month = today.month + today.year * 12
+    streak_freeze_available = (current_user.streak_freeze_month or 0) != current_month
+
     return {
         "points_balance": current_user.points_balance,
         "total_points_earned": current_user.total_points_earned,
@@ -66,6 +71,7 @@ async def get_my_stats(
         "completion_rate": rate_30d,
         "rank": rank,
         "pet": pet_info,
+        "streak_freeze_available": streak_freeze_available,
     }
 
 
