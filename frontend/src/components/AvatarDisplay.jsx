@@ -244,9 +244,9 @@ function SvgAvatar({ config, size }) {
               )}
               <g transform={sc !== 1 ? `translate(${px},${py}) scale(${sc}) translate(${-px},${-py})` : undefined}>
                 {renderPet(petStyle, petColors, petPosition, config)}
+                {renderPetExtras(petStyle, petLevel, petColors, petPosition, config)}
+                {renderPetAccessory(petStyle, config.pet_accessory, petPosition, config)}
               </g>
-              {renderPetExtras(petStyle, petLevel, petColors, petPosition === 'custom' ? 'right' : petPosition)}
-              {renderPetAccessory(petStyle, config.pet_accessory, petPosition === 'custom' ? 'right' : petPosition, config)}
             </>
           );
         })()}

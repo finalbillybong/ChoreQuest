@@ -180,7 +180,7 @@ export default function KidDashboard() {
     }
   };
 
-  const hasPet = myStats?.pet && myStats.pet.type !== 'none';
+  const hasPet = !!myStats?.pet;
 
   // ---- render ----
 
