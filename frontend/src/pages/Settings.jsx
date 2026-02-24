@@ -98,6 +98,7 @@ export default function Settings() {
     try {
       await api('/api/admin/settings', { method: 'PUT', body: { settings: stringifySettings(settings) } });
       setSaveMsg('Settings saved!');
+      window.dispatchEvent(new CustomEvent('settings:updated'));
     } catch (err) {
       setSaveMsg(err.message || 'Failed to save settings');
     } finally {

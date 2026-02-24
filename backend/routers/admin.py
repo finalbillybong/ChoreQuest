@@ -22,7 +22,7 @@ from backend.schemas import (
     SettingsUpdate,
 )
 from backend.auth import hash_password
-from backend.dependencies import require_admin
+from backend.dependencies import require_admin, require_parent, get_current_user
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -283,7 +283,7 @@ async def list_audit_log(
 @router.get("/settings")
 async def get_settings(
     db: AsyncSession = Depends(get_db),
-    _admin: User = Depends(require_admin),
+    _parent: User = Depends(require_parent),
 ):
     """Get all application settings as a key-value dict."""
     result = await db.execute(select(AppSetting))
@@ -291,12 +291,31 @@ async def get_settings(
     return {s.key: s.value for s in settings_list}
 
 
+# ---------- GET /settings/features ----------
+@router.get("/settings/features")
+async def get_feature_settings(
+    db: AsyncSession = Depends(get_db),
+    _user: User = Depends(get_current_user),
+):
+    """Get feature toggle settings (accessible by any authenticated user)."""
+    feature_keys = ["leaderboard_enabled", "spin_wheel_enabled", "chore_trading_enabled"]
+    result = await db.execute(
+        select(AppSetting).where(AppSetting.key.in_(feature_keys))
+    )
+    settings_list = result.scalars().all()
+    # Return with defaults for any missing keys
+    features = {k: "true" for k in feature_keys}
+    for s in settings_list:
+        features[s.key] = s.value
+    return features
+
+
 # ---------- PUT /settings ----------
 @router.put("/settings")
 async def update_settings(
     body: SettingsUpdate,
     db: AsyncSession = Depends(get_db),
-    _admin: User = Depends(require_admin),
+    _parent: User = Depends(require_parent),
 ):
     """Update application settings. Body: {"settings": {"key": "value"}}."""
     for key, value in body.settings.items():

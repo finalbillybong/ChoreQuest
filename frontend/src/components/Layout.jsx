@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { api } from '../api/client';
 import { useAuth } from '../hooks/useAuth';
+import { useSettings } from '../hooks/useSettings';
 import { useTheme } from '../hooks/useTheme';
 import { useNotifications } from '../hooks/useNotifications';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
@@ -44,6 +45,7 @@ export default function Layout({ children }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
+  const { chore_trading_enabled } = useSettings();
   const { syncFromUser } = useTheme();
   const { notifications, unreadCount, markRead, markAllRead, refresh } = useNotifications();
 
@@ -219,7 +221,7 @@ export default function Layout({ children }) {
                       </div>
                     ) : (
                       notifications.map((n) => {
-                        const isTrade = n.type === 'trade_proposed' && !n.is_read;
+                        const isTrade = chore_trading_enabled && n.type === 'trade_proposed' && !n.is_read;
                         return (
                           <div
                             key={n.id}
