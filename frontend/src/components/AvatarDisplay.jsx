@@ -9,6 +9,8 @@ import {
   renderHat,
   renderAccessory,
   renderPet,
+  renderPetExtras,
+  buildPetColors,
 } from './avatar';
 
 const SIZES = {
@@ -98,7 +100,7 @@ function SvgAvatar({ config, size }) {
   const bodyColor = config.body_color || hairColor;
   const hatColor = config.hat_color || '#f39c12';
   const accessoryColor = config.accessory_color || '#3b82f6';
-  const petColor = config.pet_color || '#8b4513';
+  const petColors = buildPetColors(config);
 
   const headShape = config.head || 'round';
   const hairStyle = config.hair || config.hair_style || 'short';
@@ -196,15 +198,26 @@ function SvgAvatar({ config, size }) {
           // Scale 1.0 at lv1 up to 1.28 at lv8
           const sc = 1 + (petLevel - 1) * 0.04;
           const glowColor = petLevel >= 7 ? '#f59e0b' : petLevel >= 5 ? '#a855f7' : null;
-          const px = petPosition === 'left' ? 3 : 26;
+
+          // Determine glow center based on position
+          let px, py;
+          if (petPosition === 'custom' && config.pet_x != null) {
+            px = config.pet_x;
+            py = config.pet_y ?? 20;
+          } else {
+            px = petPosition === 'left' ? 3 : petPosition === 'head' ? 16 : 26;
+            py = petPosition === 'head' ? 4 : 20;
+          }
+
           return (
             <>
               {glowColor && (
-                <circle cx={px} cy={20} r={4} fill={glowColor} opacity="0.15" />
+                <circle cx={px} cy={py} r={4} fill={glowColor} opacity="0.15" />
               )}
-              <g transform={sc !== 1 ? `translate(${px},20) scale(${sc}) translate(${-px},-20)` : undefined}>
-                {renderPet(petStyle, petColor, petPosition)}
+              <g transform={sc !== 1 ? `translate(${px},${py}) scale(${sc}) translate(${-px},${-py})` : undefined}>
+                {renderPet(petStyle, petColors, petPosition, config)}
               </g>
+              {renderPetExtras(petStyle, petLevel, petColors, petPosition === 'custom' ? 'right' : petPosition)}
             </>
           );
         })()}

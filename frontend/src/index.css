@@ -582,3 +582,40 @@ h1, h2, h3, h4, h5, h6 {
 .quest-board-enchanted .game-panel:hover {
   border-color: rgba(236, 72, 153, 0.35);
 }
+
+/* ═══════════════════════════════════════════
+   Pet Level Visual Effects
+   ═══════════════════════════════════════════ */
+
+@keyframes pet-sparkle-pulse {
+  0%, 100% { opacity: 0; transform: scale(0.5); }
+  50% { opacity: 0.8; transform: scale(1.2); }
+}
+
+@keyframes pet-shimmer-rotate {
+  0% { stroke-dashoffset: 20; }
+  100% { stroke-dashoffset: 0; }
+}
+
+.pet-sparkle {
+  animation: pet-sparkle-pulse 2.5s ease-in-out infinite;
+}
+
+.pet-sparkle-delay {
+  animation-delay: 1.2s;
+}
+
+.pet-shimmer {
+  stroke-dasharray: 2 3;
+  animation: pet-shimmer-rotate 3s linear infinite;
+}
+
+/* ── Tap-to-place crosshair in editor ── */
+@keyframes pet-place-pulse {
+  0%, 100% { r: 1.5; opacity: 0.6; }
+  50% { r: 2.2; opacity: 1; }
+}
+
+.pet-place-indicator {
+  animation: pet-place-pulse 1.5s ease-in-out infinite;
+}
