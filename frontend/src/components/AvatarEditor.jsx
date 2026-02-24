@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../api/client';
 import { useAuth } from '../hooks/useAuth';
 import AvatarDisplay from './AvatarDisplay';
-import { renderPet, buildPetColors } from './avatar/pets';
+import { renderPet, renderPetExtras, buildPetColors } from './avatar/pets';
 import { Save, Loader2, X, Lock, ChevronLeft, ChevronRight, Heart, Star, Crosshair } from 'lucide-react';
 
 const HEAD_OPTIONS = [
@@ -320,12 +320,14 @@ function PetPreviewSvg({ petType, colors, level = 1 }) {
   const isBig = ['dragon', 'phoenix'].includes(petType);
   const cx = isBig ? 25 : 26;
   const cy = isBig ? 19 : 20;
-  const glowColor = level >= 7 ? '#f59e0b' : level >= 5 ? '#a855f7' : null;
+  // Glow from Lv2+ in preview so progression is visible at small size
+  const glowColor = level >= 7 ? '#f59e0b' : level >= 5 ? '#a855f7' : level >= 2 ? '#3b82f6' : null;
   return (
     <svg width={48} height={48} viewBox="0 0 12 12" className="rounded-lg" style={{ background: '#111827' }}>
       <g transform={`translate(6,6) scale(${sc * 1.3}) translate(${-cx},${-cy})`}>
-        {glowColor && <circle cx={cx} cy={cy} r={4} fill={glowColor} opacity="0.2" />}
+        {glowColor && <circle cx={cx} cy={cy} r={4} fill={glowColor} opacity={level >= 5 ? 0.25 : 0.18} />}
         {renderPet(petType, colors, 'right', {})}
+        {renderPetExtras(petType, level, colors, 'right')}
       </g>
     </svg>
   );
