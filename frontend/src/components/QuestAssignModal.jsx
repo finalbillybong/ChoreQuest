@@ -316,6 +316,7 @@ export default function QuestAssignModal({
                         config={kid.avatar_config}
                         size="xs"
                         name={kid.display_name || kid.username}
+                        animate
                       />
                       <span className="text-cream text-sm font-medium truncate">
                         {kid.display_name || kid.username}
@@ -551,6 +552,7 @@ export default function QuestAssignModal({
                             config={kid.avatar_config}
                             size="xs"
                             name={kid.display_name || kid.username}
+                            animate
                           />
                           {kid.display_name || kid.username}
                         </button>

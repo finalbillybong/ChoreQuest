@@ -131,6 +131,7 @@ export default function KidQuests() {
             config={kid.avatar_config}
             size="md"
             name={kid.display_name}
+            animate
           />
           <div className="min-w-0 flex-1">
             <h1 className="font-heading text-cream text-base sm:text-xl font-extrabold truncate">

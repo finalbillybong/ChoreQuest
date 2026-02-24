@@ -151,7 +151,7 @@ export default function Party() {
                     size={ringSize}
                   />
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <AvatarDisplay config={kid.avatar_config} size="md" name={kid.display_name} />
+                    <AvatarDisplay config={kid.avatar_config} size="md" name={kid.display_name} animate />
                   </div>
                 </div>
                 <span className="text-cream text-sm font-medium text-center leading-tight">
@@ -183,7 +183,7 @@ export default function Party() {
             <div className="flex flex-wrap justify-center gap-4">
               {parents.map((p) => (
                 <div key={p.id} className="flex flex-col items-center gap-1.5">
-                  <AvatarDisplay config={p.avatar_config} size="md" name={p.display_name} />
+                  <AvatarDisplay config={p.avatar_config} size="md" name={p.display_name} animate />
                   <span className="text-cream text-sm font-medium">{p.display_name}</span>
                   <span className="text-muted text-[11px] capitalize">{p.role}</span>
                 </div>
