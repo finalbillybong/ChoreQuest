@@ -424,10 +424,25 @@ h1, h2, h3, h4, h5, h6 {
   70% { transform: rotate(-0.8deg); }
 }
 
-/* Eye blink — briefly squishes eyes shut */
+/* Idle fidget — every ~12s a bigger nod/shift breaks the loop */
+@keyframes avatar-fidget {
+  0%, 85%, 100% { transform: rotate(0deg) translateY(0); }
+  88% { transform: rotate(-1.5deg) translateY(-0.3px); }
+  91% { transform: rotate(1.2deg) translateY(0); }
+  94% { transform: rotate(-0.5deg) translateY(0.2px); }
+  97% { transform: rotate(0deg) translateY(0); }
+}
+
+/* Eye blink — eyelid ovals flash over eyes */
 @keyframes avatar-blink {
-  0%, 92%, 100% { transform: scaleY(1); }
-  94% { transform: scaleY(0.08); }
+  0%, 92%, 100% { opacity: 0; }
+  94%, 96% { opacity: 1; }
+}
+
+/* Mouth breathing — subtle stretch open/close */
+@keyframes avatar-mouth-move {
+  0%, 90%, 100% { transform: scaleY(1); }
+  93% { transform: scaleY(1.25); }
   96% { transform: scaleY(1); }
 }
 
@@ -438,17 +453,49 @@ h1, h2, h3, h4, h5, h6 {
   60% { transform: translateY(-0.6px); }
 }
 
+/* Pet tail wag — rotation back and forth */
+@keyframes avatar-tail-wag {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(12deg); }
+  75% { transform: rotate(-12deg); }
+}
+
+/* Accessory sparkle — brief flash of a highlight */
+@keyframes avatar-sparkle {
+  0%, 88%, 100% { opacity: 0; }
+  92% { opacity: 0.8; }
+  95% { opacity: 0; }
+  97% { opacity: 0.5; }
+}
+
+/* ── Apply animations when .avatar-idle is present ── */
+
 .avatar-idle .avatar-svg {
-  animation: avatar-sway 4s ease-in-out infinite;
+  animation:
+    avatar-sway 4s ease-in-out infinite,
+    avatar-fidget 12s ease-in-out infinite;
   transform-origin: 16px 28px; /* bottom-center of 32x32 viewBox */
 }
 
-.avatar-idle .avatar-eyes {
+.avatar-idle .avatar-eyelid {
   animation: avatar-blink 5s ease-in-out infinite;
-  transform-origin: 16px 14px; /* center of eye area */
-  transform-box: fill-box;
+}
+
+.avatar-idle .avatar-mouth {
+  animation: avatar-mouth-move 7s ease-in-out infinite;
+  transform-origin: 16px 18px; /* center of mouth area */
 }
 
 .avatar-idle .avatar-pet {
   animation: avatar-pet-bounce 2s ease-in-out infinite;
+}
+
+.avatar-idle .avatar-pet-tail {
+  animation: avatar-tail-wag 0.6s ease-in-out infinite;
+  transform-origin: center bottom;
+  transform-box: fill-box;
+}
+
+.avatar-idle .avatar-sparkle {
+  animation: avatar-sparkle 6s ease-in-out infinite;
 }
