@@ -47,6 +47,18 @@ function getColor(name) {
   return AVATAR_COLORS[hashString(name) % AVATAR_COLORS.length];
 }
 
+/* ── Eyelid config per eye style ──
+   'both' = two eyelids, 'left' = left eye only, null = no blink */
+const EYELID_MODE = {
+  normal: 'both', wide: 'both', angry: 'both', dot: 'both',
+  glasses: 'both', crying: 'both', heart_eyes: 'both',
+  wink: 'left',       // right eye already winking
+  eye_patch: 'left',  // right eye covered by patch
+  // These don't blink:
+  happy: null, sleepy: null, closed: null,
+  sunglasses: null, star: null, dizzy: null,
+};
+
 /* ── Main SVG avatar ── */
 function SvgAvatar({ config, size }) {
   const bgColor = config.bg_color || '#1a1a2e';
@@ -103,8 +115,12 @@ function SvgAvatar({ config, size }) {
       <EyesComponent color={eyeColor} />
 
       {/* Eyelids — head-colored ovals that briefly cover eyes to simulate blink */}
-      <ellipse className="avatar-eyelid" cx="12.75" cy="13.5" rx="2" ry="2" fill={headColor} />
-      <ellipse className="avatar-eyelid" cx="19.25" cy="13.5" rx="2" ry="2" fill={headColor} />
+      {(EYELID_MODE[eyeStyle] === 'both' || EYELID_MODE[eyeStyle] === 'left') && (
+        <ellipse className="avatar-eyelid" cx="12.75" cy="13.5" rx="2" ry="2" fill={headColor} />
+      )}
+      {EYELID_MODE[eyeStyle] === 'both' && (
+        <ellipse className="avatar-eyelid" cx="19.25" cy="13.5" rx="2" ry="2" fill={headColor} />
+      )}
 
       {/* Mouth — wrapped for breathing animation */}
       <g className="avatar-mouth">
