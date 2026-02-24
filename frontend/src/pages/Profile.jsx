@@ -14,6 +14,7 @@ import {
   Lock,
   Sun,
   Moon,
+  Monitor,
   Flame,
   Award,
   Star,
@@ -155,7 +156,7 @@ function PushNotificationToggle() {
 export default function Profile() {
   const navigate = useNavigate();
   const { user, logout, updateUser } = useAuth();
-  const { theme, toggle: toggleTheme, colorTheme, setColorTheme } = useTheme();
+  const { theme, mode, setMode, colorTheme, setColorTheme } = useTheme();
 
   const [showEditor, setShowEditor] = useState(false);
   const [editorConfig, setEditorConfig] = useState(null);
@@ -582,27 +583,25 @@ export default function Profile() {
         <h2 className="text-cream text-sm font-bold mb-4">
           Appearance
         </h2>
-        <div className="flex items-center justify-between mb-5">
-          <div className="flex items-center gap-2 text-cream text-sm">
-            {theme === 'dark' ? <Moon size={16} className="text-purple" /> : <Sun size={16} className="text-gold" />}
-            <span>{theme === 'dark' ? 'Dark Mode' : 'Light Mode'}</span>
-          </div>
-          <button
-            onClick={toggleTheme}
-            className={`relative w-12 h-6 rounded-full transition-colors ${
-              theme === 'light'
-                ? 'bg-sky/30 border border-sky/40'
-                : 'bg-navy border border-border'
-            }`}
-          >
-            <div
-              className={`absolute top-0.5 w-5 h-5 rounded-full transition-all ${
-                theme === 'light'
-                  ? 'left-6 bg-sky'
-                  : 'left-0.5 bg-muted/60'
+        <div className="flex items-center gap-1 mb-5 bg-navy/60 rounded-lg p-1">
+          {[
+            { id: 'light', icon: Sun, label: 'Light' },
+            { id: 'dark', icon: Moon, label: 'Dark' },
+            { id: 'system', icon: Monitor, label: 'Auto' },
+          ].map(({ id, icon: Icon, label }) => (
+            <button
+              key={id}
+              onClick={() => setMode(id)}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-md text-xs font-medium transition-colors ${
+                mode === id
+                  ? 'bg-sky/20 text-sky border border-sky/30'
+                  : 'text-muted hover:text-cream'
               }`}
-            />
-          </button>
+            >
+              <Icon size={14} />
+              {label}
+            </button>
+          ))}
         </div>
 
         {/* Color Theme Picker */}
