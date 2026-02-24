@@ -19,17 +19,18 @@ import {
   Loader2,
   Users,
   Trophy,
+  MoreHorizontal,
 } from 'lucide-react';
 import AvatarDisplay from './AvatarDisplay';
 
 const ALL_NAV_ITEMS = [
   { label: 'Home', icon: Home, path: '/' },
   { label: 'Quests', icon: Swords, path: '/chores' },
-  { label: 'Party', icon: Users, path: '/party' },
-  { label: 'Leaderboard', icon: Trophy, path: '/leaderboard', settingKey: 'leaderboard_enabled' },
+  { label: 'Party', icon: Users, path: '/party', mobileMore: true },
+  { label: 'Leaderboard', icon: Trophy, path: '/leaderboard', settingKey: 'leaderboard_enabled', mobileMore: true },
   { label: 'Rewards', icon: Gift, path: '/rewards' },
-  { label: 'Calendar', icon: CalendarDays, path: '/calendar' },
-  { label: 'Events', icon: Sparkles, path: '/events', parentOnly: true },
+  { label: 'Calendar', icon: CalendarDays, path: '/calendar', mobileMore: true },
+  { label: 'Events', icon: Sparkles, path: '/events', parentOnly: true, mobileMore: true },
 ];
 
 function timeAgo(dateStr) {
@@ -65,7 +66,9 @@ export default function Layout({ children }) {
     if (user) syncFromUser(user);
   }, [user, syncFromUser]);
   const [showNotifs, setShowNotifs] = useState(false);
+  const [showMore, setShowMore] = useState(false);
   const panelRef = useRef(null);
+  const moreRef = useRef(null);
 
   // Close panel on outside click
   useEffect(() => {
@@ -79,9 +82,22 @@ export default function Layout({ children }) {
     return () => document.removeEventListener('mousedown', handler);
   }, [showNotifs]);
 
-  // Close panel on route change
+  // Close More menu on outside click
+  useEffect(() => {
+    if (!showMore) return;
+    const handler = (e) => {
+      if (moreRef.current && !moreRef.current.contains(e.target)) {
+        setShowMore(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showMore]);
+
+  // Close panels on route change
   useEffect(() => {
     setShowNotifs(false);
+    setShowMore(false);
   }, [location.pathname]);
 
   const isParent = user?.role === 'parent' || user?.role === 'admin';
@@ -90,6 +106,8 @@ export default function Layout({ children }) {
     if (item.settingKey && settings[item.settingKey] === false) return false;
     return true;
   });
+  const primaryNavItems = navItems.filter((item) => !item.mobileMore);
+  const moreNavItems = navItems.filter((item) => item.mobileMore);
   const isHome = location.pathname === '/';
 
   const isActive = (path) => path === '/' ? location.pathname === '/' : (location.pathname === path || location.pathname.startsWith(path + '/'));
@@ -326,9 +344,33 @@ export default function Layout({ children }) {
       </div>
 
       {/* ─── Mobile Bottom Nav ─── */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-surface/90 backdrop-blur-md border-t border-border">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-surface/90 backdrop-blur-md border-t border-border" ref={moreRef}>
+        {/* More slide-up menu */}
+        {showMore && moreNavItems.length > 0 && (
+          <div className="absolute bottom-full left-0 right-0 bg-surface border-t border-border rounded-t-xl shadow-2xl">
+            {moreNavItems.map((item) => {
+              const Icon = item.icon;
+              const active = isActive(item.path);
+              return (
+                <button
+                  key={item.path}
+                  onClick={() => { navigate(item.path); setShowMore(false); }}
+                  className={`flex items-center gap-3 w-full px-5 py-3.5 transition-colors text-left ${
+                    active
+                      ? 'bg-sky/10 text-sky'
+                      : 'text-muted hover:text-cream hover:bg-surface-raised'
+                  }`}
+                >
+                  <Icon size={18} className={active ? 'text-sky' : ''} />
+                  <span className="font-medium text-sm">{item.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         <div className="flex items-center justify-around h-16 px-1">
-          {navItems.map((item) => {
+          {primaryNavItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.path);
             return (
@@ -346,6 +388,23 @@ export default function Layout({ children }) {
               </button>
             );
           })}
+
+          {/* More button */}
+          {moreNavItems.length > 0 && (
+            <button
+              onClick={() => setShowMore((v) => !v)}
+              className={`flex flex-col items-center gap-1 py-1.5 px-3 rounded-lg transition-all min-w-0 ${
+                showMore || moreNavItems.some((item) => isActive(item.path))
+                  ? 'text-sky'
+                  : 'text-muted'
+              }`}
+            >
+              <MoreHorizontal size={20} />
+              <span className="text-[10px] font-medium leading-none truncate">
+                More
+              </span>
+            </button>
+          )}
         </div>
       </nav>
     </div>
