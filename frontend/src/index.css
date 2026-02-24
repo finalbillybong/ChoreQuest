@@ -474,28 +474,34 @@ h1, h2, h3, h4, h5, h6 {
   animation:
     avatar-sway 4s ease-in-out infinite,
     avatar-fidget 12s ease-in-out infinite;
+  animation-delay: var(--avatar-delay, 0s);
   transform-origin: 16px 28px; /* bottom-center of 32x32 viewBox */
 }
 
 .avatar-idle .avatar-eyelid {
   animation: avatar-blink 5s ease-in-out infinite;
+  animation-delay: var(--avatar-delay, 0s);
 }
 
 .avatar-idle .avatar-mouth {
   animation: avatar-mouth-move 7s ease-in-out infinite;
+  animation-delay: var(--avatar-delay, 0s);
   transform-origin: 16px 18px; /* center of mouth area */
 }
 
 .avatar-idle .avatar-pet {
   animation: avatar-pet-bounce 2s ease-in-out infinite;
+  animation-delay: var(--avatar-delay, 0s);
 }
 
 .avatar-idle .avatar-pet-tail {
   animation: avatar-tail-wag 0.6s ease-in-out infinite;
+  animation-delay: var(--avatar-delay, 0s);
   transform-origin: center bottom;
   transform-box: fill-box;
 }
 
 .avatar-idle .avatar-sparkle {
   animation: avatar-sparkle 6s ease-in-out infinite;
+  animation-delay: var(--avatar-delay, 0s);
 }

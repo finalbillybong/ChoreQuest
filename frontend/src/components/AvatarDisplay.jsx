@@ -196,10 +196,13 @@ export default function AvatarDisplay({ config, size = 'md', name = '', animate 
   const px = SIZES[size] || SIZES.md;
 
   if (config && typeof config === 'object' && Object.keys(config).length > 0) {
+    // Deterministic delay so grouped avatars desync their animations
+    const delay = -(hashString(`${config.head}${config.hair}${config.eyes}${config.mouth}`) % 1200) / 100;
+
     return (
       <div
         className={`rounded-full overflow-hidden flex-shrink-0${animate ? ' avatar-idle' : ''}`}
-        style={{ width: px, height: px }}
+        style={{ width: px, height: px, '--avatar-delay': `${delay}s` }}
       >
         <SvgAvatar config={config} size={px} />
       </div>
