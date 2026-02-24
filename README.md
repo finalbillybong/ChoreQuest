@@ -25,8 +25,8 @@ A gamified family chore management app with full RPG theming. Parents create que
 |---|---|
 | 🗡️ **Quest Board** | Daily quest carousel with animated cards, themed boards, tap to complete or attach photo proof |
 | ⭐ **XP, Ranks & Streaks** | Earn XP per quest, climb 8 rank tiers from Apprentice to Mythic, build daily streaks |
-| 🎭 **Custom Avatars** | Full SVG editor: 9 head shapes, 20 hair styles, 15 eye styles, 14 mouths, 3 body shapes, 13 hats, 8 accessories, 7 face extras, 6 outfit patterns — with idle animations |
-| 🐾 **Pets** | 6 companion pets (cat, dog, dragon, owl, bunny, phoenix) that earn XP and level up through 8 tiers |
+| 🎭 **Custom Avatars** | Full SVG editor: 9 head shapes, 20 hair styles, 15 eye styles, 14 mouths, 3 body shapes, 12 hats, 7 gear items (equip multiple at once), 7 face extras, 6 outfit patterns — with idle animations |
+| 🐾 **Pets** | 6 companion pets (cat, dog, dragon, owl, bunny, phoenix) that earn XP from all sources and level up through 8 tiers |
 | 🛒 **Avatar Shop** | Unlock avatar items by spending XP, reaching streaks, earning lifetime XP, or random quest drops — with rarity tiers from common to legendary |
 | 🎰 **Daily Spin Wheel** | Animated bonus wheel (1–25 XP) unlocked by finishing all daily quests |
 | 🏪 **Treasure Shop** | Parents create rewards, kids redeem with XP — full approval workflow |
@@ -114,7 +114,7 @@ Real-time updates delivered instantly while the app is open. The bell icon shows
 ### Push notifications (Web Push / VAPID)
 Notifications that arrive even when the app is closed — just like a native app. Supported on Android, desktop browsers, and iOS 16.4+ (when installed as a PWA).
 
-**12 notification types:** quest assigned, quest completed, quest verified, achievement unlocked, bonus XP, trade proposed/accepted/denied, streak milestone, reward approved/denied, pet level-up.
+**14 notification types:** quest assigned, quest completed, quest verified, achievement unlocked, bonus XP, trade proposed/accepted/denied, streak milestone, reward approved/denied, avatar item drop, shoutout, pet level-up.
 
 #### Setting up push notifications
 
@@ -144,7 +144,7 @@ Notifications that arrive even when the app is closed — just like a native app
 - **Daily quest board** — see today's assigned quests in an animated card carousel, mark them done with a single tap (or attach a photo if proof is required). Choose from 6 board themes: Classic, Haunted Dungeon, Winter Workshop, Space Station, Ocean Kingdom, and Enchanted Garden
 - **XP, ranks, and streaks** — earn XP for each verified quest. Climb through 8 rank tiers (Apprentice → Scout → Adventurer → Knight → Champion → Hero → Legend → Mythic) based on lifetime XP. Build a daily streak by completing quests — current and longest streaks are tracked. Vacation days preserve streaks automatically
 - **Daily spin wheel** — animated bonus wheel awarding 1–25 random XP once per day, unlocked only when all daily quests are completed/verified
-- **Achievements** — 14 unlockable achievements: First Steps, Week Warrior, On Fire (7-day streak), Streak Master (30-day), Unstoppable (100-day), Piggy Bank / Money Bags / Point Millionaire (100/500/1000 lifetime XP), Early Bird (complete before 9 AM), Speed Demon (all done before noon), All Done!, Helping Hand, Treat Yourself / Big Spender (5/20 redemptions)
+- **Achievements** — 18 unlockable achievements: First Steps, Week Warrior, On Fire (7-day streak), Streak Master (30-day), Unstoppable (100-day), Piggy Bank / Money Bags / Point Millionaire (100/500/1000 lifetime XP), Early Bird (complete before 9 AM), Speed Demon (all done before noon), All Done!, Helping Hand, Treat Yourself / Big Spender (5/20 redemptions), plus 4 pet milestones: Growing Bond (Lv2), Loyal Companion (Lv4), Mighty Beast (Lv6), Legendary Tamer (Lv8)
 - **Treasure Shop** — browse and redeem rewards using earned XP. See pending/approved/fulfilled status in an inventory view
 - **Avatar Shop** — unlock new avatar items by spending XP, reaching streak milestones, earning lifetime XP totals, or through random quest drops. Items have rarity tiers: common, uncommon, rare, epic, and legendary
 - **Wishlist** — add items with URLs, images, and notes. Parents can see wishlists and convert items into shop rewards
@@ -155,13 +155,13 @@ Notifications that arrive even when the app is closed — just like a native app
   - **Eyes** — 15 styles: normal, happy, wide, sleepy, wink, angry, dot, star, glasses, sunglasses, eye patch, crying, heart eyes, dizzy, closed
   - **Mouth** — 14 styles: smile, grin, neutral, open, tongue, frown, surprised, smirk, braces, vampire, whistle, mask, beard, moustache
   - **Body** — 3 shapes: regular, slim, broad
-  - **Hats** — 13 options: crown, wizard, beanie, cap, pirate, headphones, tiara, horns, bunny ears, cat ears, halo, viking
-  - **Accessories** — 8 gear items: scarf, necklace, bow tie, cape, wings, shield, sword
+  - **Hats** — 12 options: crown, wizard, beanie, cap, pirate, headphones, tiara, horns, bunny ears, cat ears, halo, viking
+  - **Gear** — 7 items equippable simultaneously: scarf, necklace, bow tie, cape, wings, shield, sword
   - **Face extras** — 7 options: freckles, blush, face paint, scar, bandage, stickers
-  - **Outfit patterns** — 6 options: stripes, stars, camo, tie dye, plaid
+  - **Outfit patterns** — 5 options: stripes, stars, camo, tie dye, plaid
   - **Pets** — 6 companions: cat, dog, dragon, owl, bunny, phoenix (with customisable colours and positioning)
-  - **Colour palettes** for skin, hair, eyes, mouth, body, background, hat, accessory, and pet
-- **Pets** — companion pets earn XP whenever their owner completes quests and level up through 8 tiers: Hatchling → Youngling → Companion → Loyal → Brave → Mighty → Majestic → Legendary. Higher-level pets grow larger and gain visual effects (purple glow at level 5+, gold glow at level 7+)
+  - **Colour palettes** for skin, hair, eyes, mouth, body, background, hat, gear, and pet
+- **Pets** — companion pets earn XP from all sources (quest completion, bonus XP, achievements, spin wheel) and level up through 8 tiers: Hatchling → Youngling → Companion → Loyal → Brave → Mighty → Majestic → Legendary. Higher-level pets grow larger and gain visual effects (purple glow at level 5+, gold glow at level 7+). The avatar editor shows all 8 level previews for the equipped pet
 - **Party page** — family hub showing all members with their avatars, ranks, pet levels, daily progress rings, and a shoutout feed
 - **Emotes** — broadcast avatar reactions to the whole family: dance, wave, cheer, flex, sparkle, high-five
 - **Shoutouts** — send kudos with a custom message and emoji to any family member. Recent shoutouts appear in the Party feed
@@ -180,7 +180,7 @@ Notifications that arrive even when the app is closed — just like a native app
 - **Active Quests tab** — view only quests that have active assignments, with hero count badges
 - **Verification queue** — review and approve/reject completed quests from the parent dashboard, including photo proof viewing
 - **Uncomplete / skip** — reverse a verification (deducting awarded XP) or skip a pending quest for the day
-- **Bonus XP** — award ad-hoc bonus XP to any kid with a description
+- **Bonus XP** — award ad-hoc bonus XP to any kid with a description (also awards pet XP)
 - **Rewards management** — create rewards with XP costs, stock limits, icons, and auto-approval thresholds. Approve, deny, or fulfil redemption requests
 - **Family overview** — dashboard with kid cards showing today's quest progress, points balance, and current streak
 - **Seasonal events** — create time-limited XP multiplier events (multipliers compound if multiple events are active)
@@ -196,6 +196,7 @@ Notifications that arrive even when the app is closed — just like a native app
 - **Invite codes** — generate registration codes with max uses and expiration dates. First user auto-becomes admin; subsequent users need a code (when public registration is disabled)
 - **Audit log** — searchable log of logins, password changes, role changes, point adjustments, and other sensitive actions with timestamps, user IDs, and IP addresses
 - **App settings** — configure daily reset hour, toggle leaderboard, spin wheel, and chore trading
+- **Display name limit** — 10 character maximum enforced on registration and profile updates
 
 ---
 
@@ -224,7 +225,7 @@ Notifications that arrive even when the app is closed — just like a native app
 
 ### First run
 
-The database, default categories (9), achievements (14), quest templates (24), and app settings are created on first startup. The first user to register becomes the admin. After that, registration requires an invite code by default — generate them from the admin dashboard.
+The database, default categories (9), achievements (18), quest templates (24), and app settings are created on first startup. The first user to register becomes the admin. After that, registration requires an invite code by default — generate them from the admin dashboard.
 
 ### Data persistence
 
@@ -259,7 +260,7 @@ Back up this directory to preserve all app data.
 ```
 backend/
   main.py            # FastAPI app, middleware, startup, daily reset task
-  models.py          # SQLAlchemy models (18+ tables)
+  models.py          # SQLAlchemy models (27 tables)
   schemas.py         # Pydantic request/response schemas
   auth.py            # JWT, password/PIN hashing, token creation
   config.py          # Settings validation from environment
@@ -351,6 +352,7 @@ Real-time updates are pushed to connected clients:
 | `spin_result` | Daily spin outcome |
 | `trade_proposed` / `accepted` / `denied` | Quest trade lifecycle |
 | `emote` | Avatar emote broadcast (dance, wave, cheer, etc.) |
+| `shoutout` | Family member sends kudos |
 | `pet_levelup` | Pet reaches a new level tier |
 
 ---
@@ -364,3 +366,4 @@ Real-time updates are pushed to connected clients:
 - **Rate limiting** — login (10/5min), PIN (5/15min), registration (5/hour)
 - **Security headers** — X-Frame-Options, Content-Security-Policy, Strict-Transport-Security, Permissions-Policy
 - **Invite-only registration** — public registration disabled by default, admin generates invite codes with usage limits and expiration
+- **Display name limit** — 10 character maximum enforced at schema, database, and UI levels

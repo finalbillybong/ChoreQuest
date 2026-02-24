@@ -35,6 +35,10 @@ export default function Register() {
       setError('Display name is required');
       return;
     }
+    if (displayName.trim().length > 10) {
+      setError('Display name must be 10 characters or less');
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -119,6 +123,7 @@ export default function Register() {
             type="text"
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
+            maxLength={10}
             placeholder="What others will see"
             autoComplete="off"
             className="field-input"

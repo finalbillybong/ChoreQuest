@@ -116,7 +116,7 @@ class User(Base):
     __tablename__ = "users"
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     username: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
-    display_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    display_name: Mapped[str] = mapped_column(String(10), nullable=False)
     password_hash: Mapped[str] = mapped_column(String, nullable=False)
     pin_hash: Mapped[str | None] = mapped_column(String, nullable=True)
     role: Mapped[UserRole] = mapped_column(Enum(UserRole), nullable=False)

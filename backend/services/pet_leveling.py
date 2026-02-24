@@ -83,3 +83,33 @@ def migrate_pet_xp(config: dict) -> dict:
     else:
         config["pet_xp_map"] = {}
     return config
+
+
+def award_pet_xp(user, amount: int) -> dict | None:
+    """Award XP to the user's equipped pet and mutate avatar_config.
+
+    Returns a dict with old/new level info if the pet levelled up, else None.
+    Does nothing if the user has no pet equipped.
+    The caller must commit the DB session afterwards.
+    """
+    config = user.avatar_config or {}
+    pet = config.get("pet")
+    if not pet or pet == "none" or amount <= 0:
+        return None
+
+    config = migrate_pet_xp(config)
+    old_xp = get_current_pet_xp(config)
+    old_level = get_pet_level(old_xp)["level"]
+    new_xp = old_xp + amount
+    set_current_pet_xp(config, new_xp)
+    user.avatar_config = {**config}  # trigger SQLAlchemy mutation detection
+
+    new_level_info = get_pet_level(new_xp)
+    if new_level_info["level"] > old_level:
+        return {
+            "old_level": old_level,
+            "new_level": new_level_info["level"],
+            "name": new_level_info["name"],
+            "pet": pet,
+        }
+    return None

@@ -363,6 +363,7 @@ export default function Profile() {
               type="text"
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
+              maxLength={10}
               placeholder="Your display name"
               className="field-input"
             />
