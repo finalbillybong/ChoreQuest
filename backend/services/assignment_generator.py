@@ -43,6 +43,14 @@ async def auto_generate_week_assignments(
     week_end = week_start + timedelta(days=6)
     week_dates = [week_start + timedelta(days=i) for i in range(7)]
 
+    # Filter out vacation days from week generation
+    from backend.routers.vacation import is_vacation_day
+    active_dates = []
+    for d in week_dates:
+        if not await is_vacation_day(db, d):
+            active_dates.append(d)
+    week_dates = active_dates
+
     exclusion_set = await _load_exclusion_set(db, week_start, week_end)
 
     chores = await _load_active_chores(db)
@@ -70,6 +78,12 @@ async def generate_daily_assignments(db: AsyncSession, today: date) -> None:
     chore actually has an occurrence so that non-active days (e.g.
     weekends for a Mon-Fri custom schedule) don't waste rotation slots.
     """
+    # Check vacation mode — skip generation if today is a vacation day
+    from backend.routers.vacation import is_vacation_day
+    if await is_vacation_day(db, today):
+        logger.info("Skipping assignment generation — vacation day %s", today)
+        return
+
     now = datetime.now(timezone.utc)
     chores = await _load_active_chores(db)
 

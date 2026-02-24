@@ -23,6 +23,8 @@ from backend.schemas import UserResponse, AchievementResponse, AchievementUpdate
 from backend.dependencies import get_current_user, require_parent
 from backend.services.assignment_generator import auto_generate_week_assignments
 from backend.services.stats_helpers import completion_rate
+from backend.services.ranks import get_rank
+from backend.services.pet_leveling import get_pet_level
 
 router = APIRouter(prefix="/api/stats", tags=["stats"])
 
@@ -44,6 +46,10 @@ async def get_my_stats(
         db, current_user.id, thirty_days_ago,
     )
 
+    rank = get_rank(current_user.total_points_earned or 0)
+    pet_xp = (current_user.avatar_config or {}).get("pet_xp", 0)
+    pet_info = get_pet_level(pet_xp) if (current_user.avatar_config or {}).get("pet") not in (None, "none") else None
+
     return {
         "points_balance": current_user.points_balance,
         "total_points_earned": current_user.total_points_earned,
@@ -51,6 +57,8 @@ async def get_my_stats(
         "longest_streak": current_user.longest_streak,
         "achievements_count": achievements_count,
         "completion_rate": rate_30d,
+        "rank": rank,
+        "pet": pet_info,
     }
 
 
@@ -172,6 +180,9 @@ async def get_party(
     # Build members list
     members = []
     for u in all_users:
+        rank = get_rank(u.total_points_earned or 0)
+        pet_xp = (u.avatar_config or {}).get("pet_xp", 0)
+        has_pet = (u.avatar_config or {}).get("pet") not in (None, "none")
         member = {
             "id": u.id,
             "display_name": u.display_name or u.username,
@@ -179,6 +190,8 @@ async def get_party(
             "avatar_config": u.avatar_config,
             "current_streak": u.current_streak,
             "total_points_earned": u.total_points_earned,
+            "rank": rank,
+            "pet": get_pet_level(pet_xp) if has_pet else None,
         }
         if u.role == UserRole.kid:
             member["points_balance"] = u.points_balance

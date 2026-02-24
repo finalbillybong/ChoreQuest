@@ -10,6 +10,7 @@ import {
   Award,
   ArrowLeft,
 } from 'lucide-react';
+import VacationSettings from '../components/VacationSettings';
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -315,6 +316,9 @@ export default function Settings() {
               </div>
             )}
           </div>
+
+          {/* Vacation Mode */}
+          <VacationSettings />
 
           {/* Admin link */}
           {user?.role === 'admin' && (

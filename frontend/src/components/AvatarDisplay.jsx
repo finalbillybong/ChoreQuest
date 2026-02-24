@@ -184,9 +184,30 @@ function SvgAvatar({ config, size }) {
         </g>
       )}
 
-      {/* Pet — wrapped for wiggle animation */}
+      {/* Pet — wrapped for wiggle animation, grows with pet level */}
       <g className="avatar-pet">
-        {renderPet(petStyle, petColor, petPosition)}
+        {(() => {
+          const petXp = config.pet_xp || 0;
+          const thresholds = [0, 50, 150, 350, 700, 1200, 2000, 3500];
+          let petLevel = 1;
+          for (let i = 0; i < thresholds.length; i++) {
+            if (petXp >= thresholds[i]) petLevel = i + 1;
+          }
+          // Scale 1.0 at lv1 up to 1.28 at lv8
+          const sc = 1 + (petLevel - 1) * 0.04;
+          const glowColor = petLevel >= 7 ? '#f59e0b' : petLevel >= 5 ? '#a855f7' : null;
+          const px = petPosition === 'left' ? 3 : 26;
+          return (
+            <>
+              {glowColor && (
+                <circle cx={px} cy={20} r={4} fill={glowColor} opacity="0.15" />
+              )}
+              <g transform={sc !== 1 ? `translate(${px},20) scale(${sc}) translate(${-px},-20)` : undefined}>
+                {renderPet(petStyle, petColor, petPosition)}
+              </g>
+            </>
+          );
+        })()}
       </g>
     </svg>
   );

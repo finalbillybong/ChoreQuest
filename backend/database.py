@@ -27,6 +27,7 @@ async def init_db():
             Notification, SpinResult, ApiKey, AuditLog, AppSetting,
             InviteCode, RefreshToken, PushSubscription,
             AvatarItem, UserAvatarItem,
+            Shoutout, VacationPeriod,
         )
         await conn.run_sync(Base.metadata.create_all)
 

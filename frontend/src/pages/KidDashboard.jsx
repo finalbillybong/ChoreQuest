@@ -21,6 +21,9 @@ import PointCounter from '../components/PointCounter';
 import StreakDisplay from '../components/StreakDisplay';
 import SpinWheel from '../components/SpinWheel';
 import ConfettiAnimation from '../components/ConfettiAnimation';
+import RankBadge from '../components/RankBadge';
+import PetLevelBadge from '../components/PetLevelBadge';
+import { QuestBoardOverlay, QuestBoardDecorations, QuestBoardTitle, BOARD_THEMES } from '../components/QuestBoardTheme';
 
 // ---------- helpers ----------
 
@@ -80,11 +83,23 @@ export default function KidDashboard() {
   const [assignments, setAssignments] = useState([]);
   const [chores, setChores] = useState([]);
   const [spinAvailability, setSpinAvailability] = useState(null);
+  const [myStats, setMyStats] = useState(null);
 
   // ui state
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [showThemePicker, setShowThemePicker] = useState(false);
+
+  // Board theme — stored in localStorage
+  const [boardTheme, setBoardTheme] = useState(() =>
+    localStorage.getItem('chorequest-board-theme') || 'default'
+  );
+  const changeBoardTheme = (id) => {
+    setBoardTheme(id);
+    localStorage.setItem('chorequest-board-theme', id);
+    setShowThemePicker(false);
+  };
 
   // ---- data fetching ----
 
@@ -101,11 +116,14 @@ export default function KidDashboard() {
       if (spin_wheel_enabled) {
         promises.push(api('/api/spin/availability'));
       }
+      promises.push(api('/api/stats/me'));
 
       const results = await Promise.all(promises);
       const choresRes = results[0];
       const calendarRes = results[1];
       const spinRes = spin_wheel_enabled ? results[2] : null;
+      const statsRes = results[spin_wheel_enabled ? 3 : 2];
+      if (statsRes) setMyStats(statsRes);
 
       setChores(choresRes);
 
@@ -161,15 +179,33 @@ export default function KidDashboard() {
       </AnimatePresence>
 
       {/* ── Header with stats ── */}
-      <div className="game-panel p-5">
-        <div className="flex items-center justify-between gap-2 flex-wrap mb-4">
-          <h1 className="font-heading text-cream text-xl font-extrabold">
-            Quest Board
-          </h1>
+      <div className="game-panel p-5 relative overflow-hidden">
+        <QuestBoardOverlay themeId={boardTheme} />
+        <div className="relative z-10">
+        <div className="flex items-center justify-between gap-2 flex-wrap mb-2">
+          <div className="flex items-center gap-2">
+            <h1 className="font-heading text-cream text-xl font-extrabold">
+              <QuestBoardTitle themeId={boardTheme}>Quest Board</QuestBoardTitle>
+            </h1>
+            <button
+              onClick={() => setShowThemePicker((v) => !v)}
+              className="text-muted hover:text-cream transition-colors text-lg"
+              title="Change board theme"
+            >
+              {BOARD_THEMES.find((t) => t.id === boardTheme)?.icon || '\u2694\uFE0F'}
+            </button>
+          </div>
           <div className="flex items-center gap-3">
             <PointCounter value={user?.points_balance ?? 0} />
             <StreakDisplay streak={user?.current_streak ?? 0} />
           </div>
+        </div>
+
+        {/* Board theme decorations */}
+        <div className="flex items-center gap-2 flex-wrap mb-3">
+          <QuestBoardDecorations themeId={boardTheme} />
+          {myStats?.rank && <RankBadge rank={myStats.rank} size="sm" />}
+          {myStats?.pet && <PetLevelBadge pet={myStats.pet} compact />}
         </div>
 
         {/* Progress bar */}
@@ -189,7 +225,34 @@ export default function KidDashboard() {
             </div>
           </div>
         )}
+        </div>{/* close z-10 */}
       </div>
+
+      {/* ── Board Theme Picker ── */}
+      {showThemePicker && (
+        <div className="game-panel p-4">
+          <h3 className="text-cream text-xs font-bold mb-3">Choose Board Theme</h3>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {BOARD_THEMES.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => changeBoardTheme(t.id)}
+                className={`flex items-center gap-2 p-3 rounded-lg border transition-all text-left ${
+                  boardTheme === t.id
+                    ? 'border-accent bg-accent/10'
+                    : 'border-border/50 bg-surface-raised/30 hover:border-border-light'
+                }`}
+              >
+                <span className="text-xl">{t.icon}</span>
+                <div>
+                  <p className="text-cream text-xs font-medium">{t.label}</p>
+                  <p className="text-muted text-[10px]">{t.description}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ── Error banner ── */}
       {error && (

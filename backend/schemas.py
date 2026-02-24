@@ -459,3 +459,40 @@ class AuditLogResponse(BaseModel):
 
 class SettingsUpdate(BaseModel):
     settings: dict[str, str]
+
+
+# Shoutouts
+class ShoutoutCreate(BaseModel):
+    to_user_id: int
+    message: str = Field(max_length=200)
+    emoji: str = Field(max_length=10, default="star")
+
+
+class ShoutoutResponse(BaseModel):
+    id: int
+    from_user_id: int
+    from_user_name: str | None = None
+    to_user_id: int
+    to_user_name: str | None = None
+    message: str
+    emoji: str
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+# Vacation
+class VacationCreate(BaseModel):
+    start_date: date
+    end_date: date
+
+
+class VacationResponse(BaseModel):
+    id: int
+    start_date: date
+    end_date: date
+    created_by: int
+    is_active: bool
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
