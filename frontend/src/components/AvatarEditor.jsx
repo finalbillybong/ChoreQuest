@@ -549,13 +549,10 @@ export default function AvatarEditor({ isOpen, onClose }) {
                 </button>
               </div>
               <div className="flex justify-center">
-                <div className="avatar-idle">
+                <div className={`avatar-idle rounded-2xl transition-shadow duration-300 ${preview ? 'shadow-[0_0_12px_rgba(245,158,11,0.4)]' : ''}`}>
                   <AvatarDisplay config={displayConfig} size="lg" />
                 </div>
               </div>
-              {preview && (
-                <p className="text-amber-400/80 text-[10px] mt-2 text-center">Previewing locked item</p>
-              )}
             </div>
 
             {/* ─── Category strip (pinned, horizontal scroll) ─── */}
