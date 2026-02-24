@@ -30,8 +30,11 @@ export function renderAccessory(style, color) {
     case 'cape':
       return (
         <g opacity="0.7">
-          <path d="M9,22 Q7,28 9,32 L23,32 Q25,28 23,22" fill={color} />
-          <path d="M10,23 Q12,25 11,28" stroke="white" strokeWidth="0.3" fill="none" opacity="0.1" />
+          {/* Cape drapes from shoulder seams and tapers outward */}
+          <path d="M11,21 Q9,26 8,32 L24,32 Q23,26 21,21" fill={color} />
+          {/* Subtle fabric folds */}
+          <path d="M13,22 Q12,27 10,31" stroke="white" strokeWidth="0.3" fill="none" opacity="0.12" />
+          <path d="M19,22 Q20,27 22,31" stroke="black" strokeWidth="0.3" fill="none" opacity="0.06" />
         </g>
       );
     case 'wings':

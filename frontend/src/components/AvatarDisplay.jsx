@@ -128,7 +128,10 @@ function SvgAvatar({ config, size }) {
   const mouthStyle = config.mouth || 'smile';
   const bodyShape = config.body || 'regular';
   const hatStyle = config.hat || 'none';
-  const accessoryStyle = config.accessory || 'none';
+  // Multi-accessory: read accessories array, fall back to legacy single accessory
+  const accessories = Array.isArray(config.accessories) && config.accessories.length > 0
+    ? config.accessories.filter(a => a !== 'none')
+    : (config.accessory && config.accessory !== 'none' ? [config.accessory] : []);
   const faceExtraStyle = config.face_extra || 'none';
   const outfitPatternStyle = config.outfit_pattern || 'none';
   const petStyle = config.pet || 'none';
@@ -149,12 +152,12 @@ function SvgAvatar({ config, size }) {
       className="avatar-svg rounded-full"
       style={{ background: bgColor }}
     >
-      {/* Accessory behind body (cape, wings, sword) — scaled to match body width */}
-      {(accessoryStyle === 'cape' || accessoryStyle === 'wings' || accessoryStyle === 'sword') && (
-        <g transform={scaleAroundCenter(behindScale[accessoryStyle] || 1)}>
-          {renderAccessory(accessoryStyle, accessoryColor)}
+      {/* Accessories behind body (cape, wings, sword) — scaled to match body width */}
+      {accessories.filter(a => a === 'cape' || a === 'wings' || a === 'sword').map(a => (
+        <g key={a} transform={scaleAroundCenter(behindScale[a] || 1)}>
+          {renderAccessory(a, accessoryColor)}
         </g>
-      )}
+      ))}
 
       {/* Neck */}
       <rect x="14" y="20" width="4" height="4" fill={headColor} />
@@ -199,12 +202,12 @@ function SvgAvatar({ config, size }) {
       </g>
 
       {/* Accessories (front-facing, not cape/wings/sword) — scaled to body width */}
-      {accessoryStyle !== 'cape' && accessoryStyle !== 'wings' && accessoryStyle !== 'sword' && accessoryStyle !== 'none' && (
-        <g className="avatar-accessory" transform={scaleAroundCenter((FRONT_ACCESSORY_SCALE[bodyShape] || {})[accessoryStyle] || 1)}>
-          {renderAccessory(accessoryStyle, accessoryColor)}
-          <circle className="avatar-sparkle" cx="16" cy="23" r="0.6" fill="white" opacity="0" />
+      {accessories.filter(a => a !== 'cape' && a !== 'wings' && a !== 'sword').map((a, i) => (
+        <g key={a} className="avatar-accessory" transform={scaleAroundCenter((FRONT_ACCESSORY_SCALE[bodyShape] || {})[a] || 1)}>
+          {renderAccessory(a, accessoryColor)}
+          {i === 0 && <circle className="avatar-sparkle" cx="16" cy="23" r="0.6" fill="white" opacity="0" />}
         </g>
-      )}
+      ))}
 
       {/* Pet — wrapped for wiggle animation, grows with pet level */}
       <g className="avatar-pet">
