@@ -19,7 +19,7 @@ function PetCat({ color, position }) {
   return (
     <g transform={PET_OFFSETS[position] || PET_OFFSETS.right}>
       {/* Tail */}
-      <path d="M5,4 Q7,2 6.5,5" stroke={color} strokeWidth="0.7" fill="none" strokeLinecap="round" />
+      <path className="avatar-pet-tail" d="M5,4 Q7,2 6.5,5" stroke={color} strokeWidth="0.7" fill="none" strokeLinecap="round" />
       <ellipse cx="3" cy="3" rx="2.5" ry="2" fill={color} />
       {/* Ears */}
       <polygon points="1,1 1.5,-1 3,1" fill={color} />
@@ -42,7 +42,7 @@ function PetDog({ color, position }) {
   return (
     <g transform={PET_OFFSETS[position] || PET_OFFSETS.right}>
       {/* Tail */}
-      <path d="M5.5,3 Q7,1 6.5,3.5" stroke={color} strokeWidth="0.8" fill="none" strokeLinecap="round" />
+      <path className="avatar-pet-tail" d="M5.5,3 Q7,1 6.5,3.5" stroke={color} strokeWidth="0.8" fill="none" strokeLinecap="round" />
       <ellipse cx="3" cy="3" rx="2.5" ry="2" fill={color} />
       {/* Floppy ears */}
       <ellipse cx="0.5" cy="1.5" rx="1.2" ry="1.8" fill={color} />
@@ -74,7 +74,7 @@ function PetDragon({ color, position }) {
       <circle cx="5" cy="3.5" r="0.5" fill="#f9d71c" />
       <circle cx="5" cy="3.5" r="0.2" fill="#111" />
       {/* Tail */}
-      <path d="M6,4 Q8.5,3 8,5.5" stroke={color} strokeWidth="0.8" fill="none" strokeLinecap="round" />
+      <path className="avatar-pet-tail" d="M6,4 Q8.5,3 8,5.5" stroke={color} strokeWidth="0.8" fill="none" strokeLinecap="round" />
       {/* Wings */}
       <polygon points="1,3 -1,2 0,4" fill={color} opacity="0.6" />
       <polygon points="7,3 9,2 8,4" fill={color} opacity="0.6" />
@@ -124,7 +124,7 @@ function PetBunny({ color, position }) {
       {/* Nose */}
       <ellipse cx="3" cy="3.3" rx="0.3" ry="0.2" fill="#e87a9a" />
       {/* Tail puff */}
-      <circle cx="5.5" cy="3.5" r="0.8" fill={color} />
+      <circle className="avatar-pet-tail" cx="5.5" cy="3.5" r="0.8" fill={color} />
     </g>
   );
 }
@@ -145,8 +145,10 @@ function PetPhoenix({ color, position }) {
       {/* Beak */}
       <polygon points="3.5,4.5 4,5.5 4.5,4.5" fill="#f39c12" />
       {/* Tail flames */}
-      <path d="M1,5 Q-0.5,7 1.5,6" stroke="#ff4444" strokeWidth="0.6" fill="#f39c12" opacity="0.7" />
-      <path d="M7,5 Q8.5,7 6.5,6" stroke="#ff4444" strokeWidth="0.6" fill="#f39c12" opacity="0.7" />
+      <g className="avatar-pet-tail">
+        <path d="M1,5 Q-0.5,7 1.5,6" stroke="#ff4444" strokeWidth="0.6" fill="#f39c12" opacity="0.7" />
+        <path d="M7,5 Q8.5,7 6.5,6" stroke="#ff4444" strokeWidth="0.6" fill="#f39c12" opacity="0.7" />
+      </g>
     </g>
   );
 }

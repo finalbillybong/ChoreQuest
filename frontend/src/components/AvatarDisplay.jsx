@@ -99,13 +99,17 @@ function SvgAvatar({ config, size }) {
       {/* Face extras (under eyes) */}
       {renderFaceExtra(faceExtraStyle)}
 
-      {/* Eyes — wrapped for blink animation */}
-      <g className="avatar-eyes">
-        <EyesComponent color={eyeColor} />
-      </g>
+      {/* Eyes */}
+      <EyesComponent color={eyeColor} />
 
-      {/* Mouth — pass mouthColor for items that need a tint (tongue, etc.) */}
-      <MouthComponent color={mouthColor} mouthColor={mouthColor} />
+      {/* Eyelids — head-colored ovals that briefly cover eyes to simulate blink */}
+      <ellipse className="avatar-eyelid" cx="12.75" cy="13.5" rx="2" ry="2" fill={headColor} />
+      <ellipse className="avatar-eyelid" cx="19.25" cy="13.5" rx="2" ry="2" fill={headColor} />
+
+      {/* Mouth — wrapped for breathing animation */}
+      <g className="avatar-mouth">
+        <MouthComponent color={mouthColor} mouthColor={mouthColor} />
+      </g>
 
       {/* Hair */}
       {renderHair(hairStyle, hairColor)}
@@ -113,8 +117,13 @@ function SvgAvatar({ config, size }) {
       {/* Hat (on top of hair) */}
       {renderHat(hatStyle, hatColor)}
 
-      {/* Accessories (front-facing, not cape/wings) */}
-      {accessoryStyle !== 'cape' && accessoryStyle !== 'wings' && accessoryStyle !== 'none' && renderAccessory(accessoryStyle, accessoryColor)}
+      {/* Accessories (front-facing, not cape/wings) — with sparkle overlay */}
+      {accessoryStyle !== 'cape' && accessoryStyle !== 'wings' && accessoryStyle !== 'none' && (
+        <g className="avatar-accessory">
+          {renderAccessory(accessoryStyle, accessoryColor)}
+          <circle className="avatar-sparkle" cx="16" cy="23" r="0.6" fill="white" opacity="0" />
+        </g>
+      )}
 
       {/* Pet — wrapped for wiggle animation */}
       <g className="avatar-pet">
