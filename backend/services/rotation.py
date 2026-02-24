@@ -8,14 +8,19 @@ from backend.models import ChoreRotation, RotationCadence
 def should_advance_rotation(rotation: ChoreRotation, now: datetime) -> bool:
     """Determine whether a rotation should advance to the next kid.
 
-    Returns True when enough time has passed since the last rotation
-    based on the configured cadence.
+    Returns True when enough calendar days have passed since the last
+    rotation based on the configured cadence.  We compare calendar
+    dates (not raw timedeltas) so that e.g. Monday 23:00 → Tuesday
+    00:01 correctly counts as 1 day for daily cadence.
     """
     if rotation.last_rotated is None:
         return True
 
     cadence = _cadence_value(rotation.cadence)
-    days_since = (now - rotation.last_rotated).days
+
+    now_date = now.date() if hasattr(now, "date") else now
+    last_date = rotation.last_rotated.date() if hasattr(rotation.last_rotated, "date") else rotation.last_rotated
+    days_since = (now_date - last_date).days
 
     thresholds = {
         "daily": 1,

@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../api/client';
 import { useAuth } from '../hooks/useAuth';
-import { Save, Loader2, ChevronDown, Lock } from 'lucide-react';
+import AvatarDisplay from './AvatarDisplay';
+import { Save, Loader2, X, Lock } from 'lucide-react';
 
 const HEAD_OPTIONS = [
   { id: 'round', label: 'Round' },
@@ -142,12 +144,9 @@ const PET_POSITION_OPTIONS = [
 ];
 
 const SKIN_COLORS = [
-  // Warm tones
   '#ffe0bd', '#ffcc99', '#f5d6b8', '#f8d9c0',
   '#e8b88a', '#d4a373', '#c68642', '#a67c52',
-  // Cool / deep tones
   '#8d5524', '#6b3a2a', '#4a2912', '#3b1f0e',
-  // Rosy / olive undertones
   '#f0c4a8', '#d4956a', '#b07848', '#8a6642',
 ];
 
@@ -266,16 +265,19 @@ function ShapeSelector({ options, selected, onSelect, lockedItems, configKey, on
           <button
             key={opt.id}
             onClick={() => !isLocked && onSelect(opt.id)}
-            onPointerDown={() => isLocked && configKey && onPreview?.(configKey, opt.id)}
-            onPointerUp={() => isLocked && onPreviewEnd?.()}
-            onPointerLeave={() => isLocked && onPreviewEnd?.()}
-            className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-all flex items-center gap-1 ${
+            onMouseEnter={() => isLocked && configKey && onPreview?.(configKey, opt.id)}
+            onMouseLeave={() => isLocked && onPreviewEnd?.()}
+            onTouchStart={() => isLocked && configKey && onPreview?.(configKey, opt.id)}
+            onTouchEnd={() => isLocked && onPreviewEnd?.()}
+            onTouchCancel={() => isLocked && onPreviewEnd?.()}
+            className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-all flex items-center gap-1 select-none ${
               isLocked
                 ? 'border-amber-500/30 text-muted/60 bg-amber-500/5'
                 : selected === opt.id
                 ? 'border-sky bg-sky/10 text-sky'
                 : 'border-border text-muted hover:border-border-light hover:text-cream'
             }`}
+            style={isLocked ? { WebkitTouchCallout: 'none', touchAction: 'manipulation' } : undefined}
           >
             {isLocked && <Lock size={10} className="text-amber-500/60" />}
             {opt.label}
@@ -404,14 +406,13 @@ function CategoryContent({ category, config, set, lockedByCategory, onPreview, o
   }
 }
 
-// Map editor categories to avatar_items categories
 const EDITOR_TO_ITEM_CATEGORY = {
   head: 'head', hair: 'hair', eyes: 'eyes', mouth: 'mouth',
   hat: 'hat', accessory: 'accessory', face: 'face_extra',
   pattern: 'outfit_pattern', pet: 'pet',
 };
 
-export default function AvatarEditor({ onConfigChange }) {
+export default function AvatarEditor({ isOpen, onClose }) {
   const { user, updateUser } = useAuth();
   const [config, setConfig] = useState(() => ({
     ...DEFAULT_CONFIG,
@@ -419,10 +420,9 @@ export default function AvatarEditor({ onConfigChange }) {
   }));
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
-  const [openCategory, setOpenCategory] = useState(null);
+  const [openCategory, setOpenCategory] = useState('head');
   const [lockedByCategory, setLockedByCategory] = useState({});
-  // Try-on preview: temporarily override a config key while holding a locked item
-  const [preview, setPreview] = useState(null); // { key, value }
+  const [preview, setPreview] = useState(null);
 
   // Fetch avatar items to determine locks
   const fetchLocks = useCallback(async () => {
@@ -442,24 +442,47 @@ export default function AvatarEditor({ onConfigChange }) {
     }
   }, []);
 
-  useEffect(() => { fetchLocks(); }, [fetchLocks]);
+  useEffect(() => { if (isOpen) fetchLocks(); }, [isOpen, fetchLocks]);
 
+  // Reset config from user when opened
   useEffect(() => {
-    if (user?.avatar_config && Object.keys(user.avatar_config).length > 0) {
-      setConfig((prev) => ({ ...DEFAULT_CONFIG, ...prev, ...user.avatar_config }));
+    if (isOpen && user?.avatar_config) {
+      setConfig({ ...DEFAULT_CONFIG, ...(user.avatar_config || {}) });
+      setMsg('');
+      setOpenCategory('head');
     }
-  }, [user?.avatar_config]);
+  }, [isOpen, user?.avatar_config]);
 
-  // Notify parent of config changes (with preview overlay) so the profile avatar updates live
+  // Lock body scroll when modal is open
   useEffect(() => {
-    if (preview) {
-      onConfigChange?.({ ...config, [preview.key]: preview.value });
-    } else {
-      onConfigChange?.(config);
-    }
-  }, [config, preview, onConfigChange]);
+    if (!isOpen) return;
+    const scrollY = window.scrollY;
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.left = '0';
+    document.body.style.right = '0';
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.left = '';
+      document.body.style.right = '';
+      document.body.style.overflow = '';
+      window.scrollTo(0, scrollY);
+    };
+  }, [isOpen]);
 
-  // Build locks mapped to editor category IDs
+  // Escape key to close
+  useEffect(() => {
+    if (!isOpen) return;
+    const handler = (e) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [isOpen, onClose]);
+
+  // Compute display config (with preview overlay)
+  const displayConfig = preview ? { ...config, [preview.key]: preview.value } : config;
+
   const editorLocks = {};
   for (const [editorCat, itemCat] of Object.entries(EDITOR_TO_ITEM_CATEGORY)) {
     if (lockedByCategory[itemCat]) {
@@ -481,7 +504,8 @@ export default function AvatarEditor({ onConfigChange }) {
     try {
       const res = await api('/api/avatar', { method: 'PUT', body: { config } });
       updateUser({ avatar_config: res.avatar_config || config });
-      setMsg('Avatar saved!');
+      setMsg('Saved!');
+      setTimeout(() => onClose(), 600);
     } catch (err) {
       setMsg(err.message || 'Failed to save');
     } finally {
@@ -490,68 +514,97 @@ export default function AvatarEditor({ onConfigChange }) {
     }
   };
 
-  const toggleCategory = (id) => {
-    setOpenCategory((prev) => (prev === id ? null : id));
-  };
-
   return (
-    <div className="relative pb-14">
-      {/* Header */}
-      <div className="game-panel p-3 mb-3">
-        <h2 className="text-cream text-sm font-bold">Customise Avatar</h2>
-        {preview && (
-          <p className="text-amber-400/80 text-[10px] mt-1">Hold to preview — release to revert</p>
-        )}
-      </div>
-
-      {/* Horizontal scrollable category strip */}
-      <div className="game-panel p-3 mb-3">
-        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
-          {CATEGORIES.map((cat) => (
-            <button
-              key={cat.id}
-              onClick={() => toggleCategory(cat.id)}
-              className={`flex-shrink-0 flex items-center gap-1 px-3 py-2 rounded-lg border text-xs font-medium transition-all ${
-                openCategory === cat.id
-                  ? 'border-sky bg-sky/15 text-sky'
-                  : 'border-border text-muted hover:border-border-light hover:text-cream'
-              }`}
-            >
-              {cat.label}
-              <ChevronDown
-                size={12}
-                className={`transition-transform ${openCategory === cat.id ? 'rotate-180' : ''}`}
-              />
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Expanded options panel */}
-      {openCategory && (
-        <div className="game-panel p-4">
-          <CategoryContent
-            category={openCategory}
-            config={config}
-            set={set}
-            lockedByCategory={editorLocks}
-            onPreview={handlePreview}
-            onPreviewEnd={handlePreviewEnd}
-          />
-        </div>
-      )}
-
-      {/* Sticky save button */}
-      <div className="sticky bottom-20 z-30 flex justify-center mt-3">
-        <button
-          onClick={save}
-          disabled={saving}
-          className="game-btn game-btn-blue flex items-center gap-2 !py-2.5 !px-5 !text-xs shadow-lg shadow-sky/20"
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          className="fixed inset-0 z-50 flex flex-col"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.15 }}
         >
-          {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-          {saving ? 'Saving...' : msg || 'Save Avatar'}
-        </button>
-      </div>
-    </div>
+          {/* Backdrop */}
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+
+          {/* Modal panel — full height with flex layout */}
+          <motion.div
+            className="relative z-10 flex flex-col w-full max-w-lg mx-auto h-full max-h-[100dvh] sm:max-h-[92vh] sm:my-auto sm:rounded-2xl overflow-hidden bg-surface border-x border-border sm:border"
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 40 }}
+            transition={{ type: 'spring', damping: 30, stiffness: 400 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* ─── Pinned top: close button + avatar preview ─── */}
+            <div className="flex-shrink-0 border-b border-border bg-surface-raised/50 px-4 pt-3 pb-4">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="font-heading text-cream text-lg font-bold">Customise Avatar</h2>
+                <button
+                  onClick={onClose}
+                  className="p-1.5 rounded-lg hover:bg-surface-raised transition-colors text-muted hover:text-cream"
+                  aria-label="Close"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+              <div className="flex justify-center">
+                <div className="avatar-idle">
+                  <AvatarDisplay config={displayConfig} size="lg" />
+                </div>
+              </div>
+              {preview && (
+                <p className="text-amber-400/80 text-[10px] mt-2 text-center">Previewing locked item</p>
+              )}
+            </div>
+
+            {/* ─── Category strip (pinned, horizontal scroll) ─── */}
+            <div className="flex-shrink-0 border-b border-border bg-surface px-3 py-2">
+              <div className="flex gap-2 overflow-x-auto pb-0.5 scrollbar-hide">
+                {CATEGORIES.map((cat) => (
+                  <button
+                    key={cat.id}
+                    onClick={() => setOpenCategory(cat.id)}
+                    className={`flex-shrink-0 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all ${
+                      openCategory === cat.id
+                        ? 'border-sky bg-sky/15 text-sky'
+                        : 'border-border text-muted hover:border-border-light hover:text-cream'
+                    }`}
+                  >
+                    {cat.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* ─── Scrollable options area ─── */}
+            <div className="flex-1 overflow-y-auto overscroll-contain p-4">
+              {openCategory && (
+                <CategoryContent
+                  category={openCategory}
+                  config={config}
+                  set={set}
+                  lockedByCategory={editorLocks}
+                  onPreview={handlePreview}
+                  onPreviewEnd={handlePreviewEnd}
+                />
+              )}
+            </div>
+
+            {/* ─── Pinned bottom: save button ─── */}
+            <div className="flex-shrink-0 border-t border-border bg-surface-raised/50 px-4 py-3 flex justify-center">
+              <button
+                onClick={save}
+                disabled={saving}
+                className="game-btn game-btn-blue flex items-center gap-2 !py-2.5 !px-6 !text-xs shadow-lg shadow-sky/20"
+              >
+                {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                {saving ? 'Saving...' : msg || 'Save Avatar'}
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
