@@ -116,10 +116,10 @@ function SvgAvatar({ config, size }) {
 
       {/* Eyelids — head-colored ovals that briefly cover eyes to simulate blink */}
       {(EYELID_MODE[eyeStyle] === 'both' || EYELID_MODE[eyeStyle] === 'left') && (
-        <ellipse className="avatar-eyelid" cx="12.75" cy="13.5" rx="2" ry="2" fill={headColor} />
+        <ellipse className="avatar-eyelid" cx="12.75" cy="13.5" rx="2.8" ry="2.5" fill={headColor} />
       )}
       {EYELID_MODE[eyeStyle] === 'both' && (
-        <ellipse className="avatar-eyelid" cx="19.25" cy="13.5" rx="2" ry="2" fill={headColor} />
+        <ellipse className="avatar-eyelid" cx="19.25" cy="13.5" rx="2.8" ry="2.5" fill={headColor} />
       )}
 
       {/* Mouth — wrapped for breathing animation */}

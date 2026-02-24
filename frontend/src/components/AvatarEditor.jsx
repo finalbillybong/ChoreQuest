@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../api/client';
 import { useAuth } from '../hooks/useAuth';
 import AvatarDisplay from './AvatarDisplay';
-import { Save, Loader2, X, Lock } from 'lucide-react';
+import { Save, Loader2, X, Lock, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const HEAD_OPTIONS = [
   { id: 'round', label: 'Round' },
@@ -412,6 +412,83 @@ const EDITOR_TO_ITEM_CATEGORY = {
   pattern: 'outfit_pattern', pet: 'pet',
 };
 
+function CategoryStrip({ openCategory, onSelect }) {
+  const scrollRef = useRef(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const checkScroll = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 4);
+    setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 4);
+  }, []);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    checkScroll();
+    el.addEventListener('scroll', checkScroll, { passive: true });
+    window.addEventListener('resize', checkScroll);
+    return () => {
+      el.removeEventListener('scroll', checkScroll);
+      window.removeEventListener('resize', checkScroll);
+    };
+  }, [checkScroll]);
+
+  const scroll = (dir) => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollBy({ left: dir * 120, behavior: 'smooth' });
+  };
+
+  return (
+    <div className="flex-shrink-0 border-b border-border bg-surface px-1 py-2 relative">
+      {/* Left arrow */}
+      {canScrollLeft && (
+        <button
+          onClick={() => scroll(-1)}
+          className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-7 h-7 flex items-center justify-center rounded-full bg-surface/90 border border-border text-muted hover:text-cream shadow-sm"
+          aria-label="Scroll left"
+        >
+          <ChevronLeft size={14} />
+        </button>
+      )}
+
+      {/* Scrollable strip */}
+      <div
+        ref={scrollRef}
+        className="flex gap-2 overflow-x-auto pb-0.5 px-2 scrollbar-hide"
+      >
+        {CATEGORIES.map((cat) => (
+          <button
+            key={cat.id}
+            onClick={() => onSelect(cat.id)}
+            className={`flex-shrink-0 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all ${
+              openCategory === cat.id
+                ? 'border-sky bg-sky/15 text-sky'
+                : 'border-border text-muted hover:border-border-light hover:text-cream'
+            }`}
+          >
+            {cat.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Right arrow */}
+      {canScrollRight && (
+        <button
+          onClick={() => scroll(1)}
+          className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-7 h-7 flex items-center justify-center rounded-full bg-surface/90 border border-border text-muted hover:text-cream shadow-sm"
+          aria-label="Scroll right"
+        >
+          <ChevronRight size={14} />
+        </button>
+      )}
+    </div>
+  );
+}
+
 export default function AvatarEditor({ isOpen, onClose }) {
   const { user, updateUser } = useAuth();
   const [config, setConfig] = useState(() => ({
@@ -555,24 +632,8 @@ export default function AvatarEditor({ isOpen, onClose }) {
               </div>
             </div>
 
-            {/* ─── Category strip (pinned, horizontal scroll) ─── */}
-            <div className="flex-shrink-0 border-b border-border bg-surface px-3 py-2">
-              <div className="flex gap-2 overflow-x-auto pb-0.5 scrollbar-hide">
-                {CATEGORIES.map((cat) => (
-                  <button
-                    key={cat.id}
-                    onClick={() => setOpenCategory(cat.id)}
-                    className={`flex-shrink-0 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all ${
-                      openCategory === cat.id
-                        ? 'border-sky bg-sky/15 text-sky'
-                        : 'border-border text-muted hover:border-border-light hover:text-cream'
-                    }`}
-                  >
-                    {cat.label}
-                  </button>
-                ))}
-              </div>
-            </div>
+            {/* ─── Category strip (pinned, horizontal scroll with arrows) ─── */}
+            <CategoryStrip openCategory={openCategory} onSelect={setOpenCategory} />
 
             {/* ─── Scrollable options area ─── */}
             <div className="flex-1 overflow-y-auto overscroll-contain p-4">

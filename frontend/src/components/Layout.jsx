@@ -156,6 +156,7 @@ export default function Layout({ children }) {
               config={user.avatar_config}
               size="sm"
               name={user.display_name || user.username}
+              animate
             />
             <div className="min-w-0">
               <p className="text-cream text-sm font-medium truncate">
@@ -317,6 +318,7 @@ export default function Layout({ children }) {
                   config={user.avatar_config}
                   size="sm"
                   name={user.display_name || user.username}
+                  animate
                 />
               </button>
             )}

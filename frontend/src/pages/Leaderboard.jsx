@@ -118,6 +118,7 @@ export default function Leaderboard() {
                     config={entry.avatar_config}
                     size="md"
                     name={entry.display_name || entry.username}
+                    animate
                   />
                 </div>
 
@@ -191,6 +192,7 @@ export default function Leaderboard() {
                         config={entry.avatar_config}
                         size="sm"
                         name={entry.display_name || entry.username}
+                        animate
                       />
                     </div>
 
