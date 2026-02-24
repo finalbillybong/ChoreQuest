@@ -2,7 +2,7 @@
 
 > *Turn chores into quests, kids into heroes.*
 
-A gamified family chore management app with full RPG theming. Parents create quests, assign them to kids with per-child schedules, and kids earn XP by completing them. Progress is tracked through streaks, achievements, a leaderboard, a daily spin wheel, and a treasure shop where kids spend earned XP.
+A gamified family chore management app with full RPG theming. Parents create quests, assign them to kids with per-child schedules, and kids earn XP by completing them. Progress is tracked through streaks, ranks, achievements, a leaderboard, a daily spin wheel, and a treasure shop where kids spend earned XP. Kids customise animated SVG avatars with pets that level up alongside them.
 
 ---
 
@@ -23,18 +23,25 @@ A gamified family chore management app with full RPG theming. Parents create que
 
 | | |
 |---|---|
-| 🗡️ **Quest Board** | Daily quest carousel with animated cards, tap to complete or attach photo proof |
-| ⭐ **XP & Streaks** | Earn XP per quest, build daily streaks, unlock 14 achievements |
+| 🗡️ **Quest Board** | Daily quest carousel with animated cards, themed boards, tap to complete or attach photo proof |
+| ⭐ **XP, Ranks & Streaks** | Earn XP per quest, climb 8 rank tiers from Apprentice to Mythic, build daily streaks |
+| 🎭 **Custom Avatars** | Full SVG editor: 9 head shapes, 20 hair styles, 15 eye styles, 14 mouths, 3 body shapes, 13 hats, 8 accessories, 7 face extras, 6 outfit patterns — with idle animations |
+| 🐾 **Pets** | 6 companion pets (cat, dog, dragon, owl, bunny, phoenix) that earn XP and level up through 8 tiers |
+| 🛒 **Avatar Shop** | Unlock avatar items by spending XP, reaching streaks, earning lifetime XP, or random quest drops — with rarity tiers from common to legendary |
 | 🎰 **Daily Spin Wheel** | Animated bonus wheel (1–25 XP) unlocked by finishing all daily quests |
 | 🏪 **Treasure Shop** | Parents create rewards, kids redeem with XP — full approval workflow |
 | 📋 **Wishlist** | Kids add wishlist items with links & images; parents convert them into rewards |
 | 🔄 **Quest Trading** | Siblings propose quest swaps through the calendar, with real-time notifications |
-| 🏆 **Leaderboard** | Weekly XP rankings with quest counts and streak display |
+| 🏆 **Leaderboard** | Weekly XP rankings with quest counts, streak display, ranks, and pet levels |
 | 📅 **Calendar** | Weekly view with auto-generated recurring assignments |
-| 🎭 **Custom Avatars** | SVG-based editor: head shape, hair, eyes, mouth, and colour palettes |
-| 🔔 **Push Notifications** | Web Push (VAPID) — quest assigned, verified, achievements, trades, and more |
-| 📱 **Installable PWA** | Add to home screen on any device for a native app experience |
 | 🎉 **Seasonal Events** | Time-limited XP multiplier events that compound when overlapping |
+| 🏖️ **Vacation Mode** | Set vacation periods that pause quests and preserve streaks |
+| 📊 **Progress Charts** | 30-day daily charts showing XP earned, quests completed, and completion rates |
+| 🎊 **Party Page** | Family hub showing all members with avatars, ranks, pets, progress rings, shoutouts, and emotes |
+| 💬 **Shoutouts & Emotes** | Send kudos to family members or broadcast avatar emotes (dance, wave, cheer, flex, sparkle, high-five) |
+| 🎨 **Themes** | 8 colour themes (Quest Blue, Dragon Fire, Enchanted Forest, Arctic, Rose Gold, Galaxy, Sunshine, Fairy Dust), dark/light/auto mode, and 6 quest board skins |
+| 🔔 **Push Notifications** | Web Push (VAPID) — quest assigned, verified, achievements, trades, pet level-ups, and more |
+| 📱 **Installable PWA** | Add to home screen on any device for a native app experience |
 | 🛡️ **Admin Tools** | User management, API keys, invite codes, and full audit log |
 
 ---
@@ -107,7 +114,7 @@ Real-time updates delivered instantly while the app is open. The bell icon shows
 ### Push notifications (Web Push / VAPID)
 Notifications that arrive even when the app is closed — just like a native app. Supported on Android, desktop browsers, and iOS 16.4+ (when installed as a PWA).
 
-**11 notification types:** quest assigned, quest completed, quest verified, achievement unlocked, bonus XP, trade proposed/accepted/denied, streak milestone, reward approved/denied.
+**12 notification types:** quest assigned, quest completed, quest verified, achievement unlocked, bonus XP, trade proposed/accepted/denied, streak milestone, reward approved/denied, pet level-up.
 
 #### Setting up push notifications
 
@@ -134,16 +141,34 @@ Notifications that arrive even when the app is closed — just like a native app
 
 ## 🎮 For kids
 
-- **Daily quest board** — see today's assigned quests in an animated card carousel, mark them done with a single tap (or attach a photo if proof is required)
-- **XP and streaks** — earn XP for each verified quest, build a daily streak by completing all assigned quests. Current streak and longest streak are tracked. Streak resets if a day is missed
+- **Daily quest board** — see today's assigned quests in an animated card carousel, mark them done with a single tap (or attach a photo if proof is required). Choose from 6 board themes: Classic, Haunted Dungeon, Winter Workshop, Space Station, Ocean Kingdom, and Enchanted Garden
+- **XP, ranks, and streaks** — earn XP for each verified quest. Climb through 8 rank tiers (Apprentice → Scout → Adventurer → Knight → Champion → Hero → Legend → Mythic) based on lifetime XP. Build a daily streak by completing quests — current and longest streaks are tracked. Vacation days preserve streaks automatically
 - **Daily spin wheel** — animated bonus wheel awarding 1–25 random XP once per day, unlocked only when all daily quests are completed/verified
 - **Achievements** — 14 unlockable achievements: First Steps, Week Warrior, On Fire (7-day streak), Streak Master (30-day), Unstoppable (100-day), Piggy Bank / Money Bags / Point Millionaire (100/500/1000 lifetime XP), Early Bird (complete before 9 AM), Speed Demon (all done before noon), All Done!, Helping Hand, Treat Yourself / Big Spender (5/20 redemptions)
 - **Treasure Shop** — browse and redeem rewards using earned XP. See pending/approved/fulfilled status in an inventory view
+- **Avatar Shop** — unlock new avatar items by spending XP, reaching streak milestones, earning lifetime XP totals, or through random quest drops. Items have rarity tiers: common, uncommon, rare, epic, and legendary
 - **Wishlist** — add items with URLs, images, and notes. Parents can see wishlists and convert items into shop rewards
 - **Quest trading** — propose quest swaps with siblings through the calendar. Target kid gets a notification and can accept or deny
-- **Custom avatar** — SVG-based avatar editor with head shape, hair style, eyes, mouth, plus colour palettes for skin, hair, eyes, and background
+- **Custom avatar** — full SVG-based avatar editor with animated idle effects (eye blink, body sway, mouth movement, pet bounce, accessory sparkle). Customise:
+  - **Head** — 9 shapes: round, oval, square, diamond, heart, long, triangle, pear, wide
+  - **Hair** — 20 styles: short, long, spiky, curly, mohawk, buzz, ponytail, bun, pigtails, afro, braids, wavy, side part, fade, dreadlocks, bob, shoulder, undercut, twin buns
+  - **Eyes** — 15 styles: normal, happy, wide, sleepy, wink, angry, dot, star, glasses, sunglasses, eye patch, crying, heart eyes, dizzy, closed
+  - **Mouth** — 14 styles: smile, grin, neutral, open, tongue, frown, surprised, smirk, braces, vampire, whistle, mask, beard, moustache
+  - **Body** — 3 shapes: regular, slim, broad
+  - **Hats** — 13 options: crown, wizard, beanie, cap, pirate, headphones, tiara, horns, bunny ears, cat ears, halo, viking
+  - **Accessories** — 8 gear items: scarf, necklace, bow tie, cape, wings, shield, sword
+  - **Face extras** — 7 options: freckles, blush, face paint, scar, bandage, stickers
+  - **Outfit patterns** — 6 options: stripes, stars, camo, tie dye, plaid
+  - **Pets** — 6 companions: cat, dog, dragon, owl, bunny, phoenix (with customisable colours and positioning)
+  - **Colour palettes** for skin, hair, eyes, mouth, body, background, hat, accessory, and pet
+- **Pets** — companion pets earn XP whenever their owner completes quests and level up through 8 tiers: Hatchling → Youngling → Companion → Loyal → Brave → Mighty → Majestic → Legendary. Higher-level pets grow larger and gain visual effects (purple glow at level 5+, gold glow at level 7+)
+- **Party page** — family hub showing all members with their avatars, ranks, pet levels, daily progress rings, and a shoutout feed
+- **Emotes** — broadcast avatar reactions to the whole family: dance, wave, cheer, flex, sparkle, high-five
+- **Shoutouts** — send kudos with a custom message and emoji to any family member. Recent shoutouts appear in the Party feed
+- **Progress charts** — 30-day view of daily XP earned, quests completed vs assigned, and completion rates
+- **Themes** — pick from 8 colour themes (Quest Blue, Dragon Fire, Enchanted Forest, Arctic, Rose Gold, Galaxy, Sunshine, Fairy Dust) with dark mode, light mode, or auto (follows device setting)
 - **PIN login** — log in with a 6-digit PIN instead of a password (handy for shared tablets)
-- **Leaderboard** — weekly XP rankings showing each kid's weekly XP, lifetime XP, quests completed, and current streak
+- **Leaderboard** — weekly XP rankings showing each kid's weekly XP, lifetime XP, quests completed, current streak, rank, and pet level
 
 ## 🏰 For parents
 
@@ -159,8 +184,10 @@ Notifications that arrive even when the app is closed — just like a native app
 - **Rewards management** — create rewards with XP costs, stock limits, icons, and auto-approval thresholds. Approve, deny, or fulfil redemption requests
 - **Family overview** — dashboard with kid cards showing today's quest progress, points balance, and current streak
 - **Seasonal events** — create time-limited XP multiplier events (multipliers compound if multiple events are active)
+- **Vacation mode** — set vacation/blackout periods that pause quest assignments and preserve kids' streaks. Streaks are automatically maintained across vacation days
 - **Category management** — create, edit, and delete quest categories with custom icons and colours
 - **Chore rotations** — rotate a quest between kids on a set cadence (daily/weekly/fortnightly/monthly) with manual advance option
+- **Achievement management** — enable or disable individual achievements from Settings
 
 ## 🛡️ For admins
 
@@ -243,12 +270,14 @@ backend/
   services/
     push.py          # Web Push subscription management
     push_hook.py     # Push notification dispatch on events
+    ranks.py         # Title/rank system (8 tiers based on lifetime XP)
+    pet_leveling.py  # Pet XP progression (8 levels from Hatchling to Legendary)
   routers/
     auth.py          # Registration, login, PIN, refresh, profile
     chores.py        # Quest CRUD, categories, templates, assignment rules, completion
     rewards.py       # Reward CRUD, redemptions, approval workflow
     calendar.py      # Weekly calendar, auto-generation, quest trading
-    stats.py         # Family stats, leaderboard, achievements, history
+    stats.py         # Family stats, leaderboard, achievements, history, ranks
     points.py        # Bonus XP, point adjustments
     spin.py          # Daily spin wheel
     rotations.py     # Kid rotation management
@@ -256,7 +285,11 @@ backend/
     push.py          # Push subscription endpoints, VAPID key
     wishlist.py      # Kid wishlists, convert to reward
     events.py        # Seasonal event CRUD
-    avatar.py        # Avatar parts and customisation
+    avatar.py        # Avatar parts, customisation, avatar shop purchases
+    vacation.py      # Vacation/blackout periods (streak-preserving)
+    progress.py      # 30-day progress chart data (XP, completions, rates)
+    shoutouts.py     # Family shoutouts (kudos with messages)
+    emotes.py        # Avatar emotes broadcast via WebSocket
     admin.py         # Users, API keys, invite codes, audit log, settings
     uploads.py       # Photo proof upload/retrieval
 frontend/
@@ -265,7 +298,7 @@ frontend/
     sw.js            # Service worker (caching, push, offline)
   src/
     pages/           # Page components
-      KidDashboard   # Quest carousel, points, streak, spin wheel access
+      KidDashboard   # Quest carousel, points, streak, spin wheel, board themes
       ParentDashboard # Family overview, verification queue, bonus XP
       AdminDashboard # Users, API keys, invite codes, audit log tabs
       Chores         # Quest library + active quests (two-tab parent view)
@@ -274,14 +307,25 @@ frontend/
       Rewards        # Treasure Shop with redemption workflow
       Inventory      # Redemption history (pending/approved/fulfilled)
       KidQuests      # Per-kid quest view for parents
-      Leaderboard    # Weekly XP rankings
+      Leaderboard    # Weekly XP rankings with ranks and pet levels
       Wishlist       # Kid wishlist management
       Events         # Seasonal event calendar
       Profile        # Avatar editor, stats, streak display
-      Settings       # Theme, security, notification preferences
+      AvatarShop     # Browse and purchase avatar items with XP
+      Party          # Family hub with avatars, ranks, shoutouts, emotes
+      Settings       # Theme, vacation, security, notification preferences
       Login          # Password and PIN login
       Register       # Registration with invite code
     components/      # Shared components
+      avatar/        # SVG avatar renderer (heads, hair, eyes, mouths, bodies,
+                     #   hats, accessories, face extras, outfit patterns, pets)
+      QuestBoardTheme # Themed board overlays and particle effects
+      RankBadge      # XP rank display component
+      PetLevelBadge  # Pet level display component
+      ShoutoutPanel  # Shoutout feed and creation
+      EmoteBar       # Emote reaction buttons
+      StreakDisplay   # Flame icon with streak count
+      VacationSettings # Vacation period management
     hooks/           # useAuth, useTheme, useWebSocket, useNotifications, usePushNotifications
     api/client.js    # Fetch wrapper with token refresh
     utils/
@@ -306,6 +350,8 @@ Real-time updates are pushed to connected clients:
 | `reward_approved` / `denied` / `fulfilled` | Redemption status changes |
 | `spin_result` | Daily spin outcome |
 | `trade_proposed` / `accepted` / `denied` | Quest trade lifecycle |
+| `emote` | Avatar emote broadcast (dance, wave, cheer, etc.) |
+| `pet_levelup` | Pet reaches a new level tier |
 
 ---
 
