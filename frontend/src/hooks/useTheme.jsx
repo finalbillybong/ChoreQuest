@@ -3,6 +3,13 @@ import { api } from '../api/client';
 
 const ThemeContext = createContext(null);
 
+const MQ = window.matchMedia('(prefers-color-scheme: light)');
+
+function resolveMode(preference) {
+  if (preference === 'system') return MQ.matches ? 'light' : 'dark';
+  return preference;
+}
+
 export const COLOR_THEMES = [
   // ── Boy themes ──
   { id: 'default',  label: 'Quest Blue',        group: 'boy',  accent: '#3b82f6', secondary: '#60a5fa', tertiary: '#f59e0b' },
@@ -17,23 +24,40 @@ export const COLOR_THEMES = [
 ];
 
 export function ThemeProvider({ children }) {
-  const [mode, setMode] = useState(() => {
-    const saved = localStorage.getItem('chorequest-theme');
-    if (saved) return saved;
-    return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  // preference is what the user chose: 'dark', 'light', or 'system'
+  const [preference, setPreference] = useState(() => {
+    return localStorage.getItem('chorequest-theme') || 'system';
   });
+
+  // resolved is the actual mode applied: always 'dark' or 'light'
+  const [resolved, setResolved] = useState(() => resolveMode(
+    localStorage.getItem('chorequest-theme') || 'system'
+  ));
 
   const [colorTheme, setColorTheme] = useState(() => {
     return localStorage.getItem('chorequest-color-theme') || 'default';
   });
 
-  // Apply mode + color theme to document
+  // When preference changes, update resolved and persist
   useEffect(() => {
-    localStorage.setItem('chorequest-theme', mode);
+    localStorage.setItem('chorequest-theme', preference);
+    setResolved(resolveMode(preference));
+  }, [preference]);
+
+  // Listen for OS theme changes when in 'system' mode
+  useEffect(() => {
+    if (preference !== 'system') return;
+    const handler = () => setResolved(resolveMode('system'));
+    MQ.addEventListener('change', handler);
+    return () => MQ.removeEventListener('change', handler);
+  }, [preference]);
+
+  // Apply resolved mode + color theme to document
+  useEffect(() => {
     localStorage.setItem('chorequest-color-theme', colorTheme);
 
     const el = document.documentElement;
-    el.classList.toggle('light-mode', mode === 'light');
+    el.classList.toggle('light-mode', resolved === 'light');
 
     // Remove all theme-* classes, then add the active one
     COLOR_THEMES.forEach((t) => {
@@ -42,9 +66,9 @@ export function ThemeProvider({ children }) {
     if (colorTheme !== 'default') {
       el.classList.add(`theme-${colorTheme}`);
     }
-  }, [mode, colorTheme]);
+  }, [resolved, colorTheme]);
 
-  const toggleMode = () => setMode((t) => (t === 'dark' ? 'light' : 'dark'));
+  const toggleMode = () => setPreference((p) => (resolveMode(p) === 'dark' ? 'light' : 'dark'));
 
   const setColorThemeAndSync = useCallback(async (themeId) => {
     setColorTheme(themeId);
@@ -76,7 +100,9 @@ export function ThemeProvider({ children }) {
   return (
     <ThemeContext.Provider
       value={{
-        theme: mode,
+        theme: resolved,       // 'dark' or 'light' — what's actually applied
+        mode: preference,      // 'dark', 'light', or 'system' — what the user chose
+        setMode: setPreference,
         toggle: toggleMode,
         colorTheme,
         setColorTheme: setColorThemeAndSync,

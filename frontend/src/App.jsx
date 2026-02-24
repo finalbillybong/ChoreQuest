@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './hooks/useAuth';
 import { useWebSocket } from './hooks/useWebSocket';
 import Layout from './components/Layout';
+import UpdatePrompt from './components/UpdatePrompt';
 
 const Login = lazy(() => import('./pages/Login'));
 const Register = lazy(() => import('./pages/Register'));
@@ -44,6 +45,7 @@ export default function App() {
   if (!user) {
     return (
       <Suspense fallback={<Loading />}>
+        <UpdatePrompt />
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
@@ -59,6 +61,7 @@ export default function App() {
 
   return (
     <Layout>
+      <UpdatePrompt />
       <Suspense fallback={<Loading />}>
         <Routes>
           <Route path="/" element={<DashboardComponent />} />
