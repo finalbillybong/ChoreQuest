@@ -28,7 +28,7 @@ import ConfettiAnimation from '../components/ConfettiAnimation';
 import RankBadge from '../components/RankBadge';
 import PetLevelBadge from '../components/PetLevelBadge';
 import { QuestBoardOverlay, QuestBoardPageGlow, QuestBoardParticles, QuestBoardDecorations, QuestBoardTitle, BOARD_THEMES, getTheme } from '../components/QuestBoardTheme';
-import { renderPet, buildPetColors } from '../components/avatar';
+import AvatarDisplay from '../components/AvatarDisplay';
 
 // ---------- helpers ----------
 
@@ -194,8 +194,6 @@ export default function KidDashboard() {
   };
 
   const hasPet = !!myStats?.pet;
-  const petStyle = myStats?.pet?.type || user?.avatar_config?.pet || 'none';
-  const petColors = buildPetColors(user?.avatar_config || {});
 
   // ---- render ----
 
@@ -428,10 +426,7 @@ export default function KidDashboard() {
             <div
               className={`pet-interaction-stage ${petAction ? `pet-action-${petAction}` : ''}`}
             >
-              <svg width={96} height={96} viewBox="18 12 16 16" className="drop-shadow-lg">
-                <circle cx="26" cy="20" r="7" fill="rgba(255,255,255,0.06)" />
-                {renderPet(petStyle, petColors, 'right')}
-              </svg>
+              <AvatarDisplay config={user?.avatar_config} size="xl" name={user?.display_name} animate />
               {/* Floating particles during interaction */}
               <AnimatePresence>
                 {petAction === 'feed' && (
