@@ -49,13 +49,22 @@ async def get_my_stats(
 
     rank = get_rank(current_user.total_points_earned or 0)
     config = current_user.avatar_config or {}
-    has_pet = config.get("pet") not in (None, "none")
+    pet_type = config.get("pet")
+    has_pet = pet_type not in (None, "none")
     if has_pet:
         from backend.services.pet_leveling import get_current_pet_xp
         pet_xp = get_current_pet_xp(config)
         pet_info = get_pet_level(pet_xp)
+        pet_info["type"] = pet_type
     else:
         pet_info = None
+
+    # Pet interaction budget remaining today
+    interactions = config.get("pet_interactions", {})
+    if interactions.get("date") == today.isoformat():
+        interactions_remaining = max(0, 3 - (interactions.get("count", 0)))
+    else:
+        interactions_remaining = 3
 
     # Streak freeze: available once per calendar month
     today = date.today()
@@ -71,6 +80,7 @@ async def get_my_stats(
         "completion_rate": rate_30d,
         "rank": rank,
         "pet": pet_info,
+        "interactions_remaining": interactions_remaining,
         "streak_freeze_available": streak_freeze_available,
     }
 

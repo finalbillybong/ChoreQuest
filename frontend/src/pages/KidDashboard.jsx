@@ -100,13 +100,7 @@ export default function KidDashboard() {
   const [petInteracting, setPetInteracting] = useState(null);
   const [petAction, setPetAction] = useState(null); // holds last action for animation
   const [petMessage, setPetMessage] = useState('');
-  const [interactionsRemaining, setInteractionsRemaining] = useState(() => {
-    const interactions = user?.avatar_config?.pet_interactions;
-    if (interactions?.date === todayISO()) {
-      return Math.max(0, 3 - (interactions.count || 0));
-    }
-    return 3;
-  });
+  const [interactionsRemaining, setInteractionsRemaining] = useState(3);
 
   // Board theme — stored in localStorage
   const [boardTheme, setBoardTheme] = useState(() =>
@@ -140,7 +134,12 @@ export default function KidDashboard() {
       const calendarRes = results[1];
       const spinRes = spin_wheel_enabled ? results[2] : null;
       const statsRes = results[spin_wheel_enabled ? 3 : 2];
-      if (statsRes) setMyStats(statsRes);
+      if (statsRes) {
+        setMyStats(statsRes);
+        if (statsRes.interactions_remaining != null) {
+          setInteractionsRemaining(statsRes.interactions_remaining);
+        }
+      }
 
       setChores(choresRes);
 
@@ -183,6 +182,8 @@ export default function KidDashboard() {
       const labels = { feed: 'Fed', pet: 'Petted', play: 'Played with' };
       setPetMessage(`${labels[action]} your pet! +${res.xp_awarded} XP${res.levelup ? ' - LEVEL UP!' : ''}`);
       if (res.levelup) setShowConfetti(true);
+      // Update points in header immediately
+      if (res.new_balance != null) updateUser({ points_balance: res.new_balance });
       await fetchData();
     } catch (err) {
       setPetMessage(err.message || 'Could not interact with pet');
@@ -193,7 +194,7 @@ export default function KidDashboard() {
   };
 
   const hasPet = !!myStats?.pet;
-  const petStyle = user?.avatar_config?.pet || 'none';
+  const petStyle = myStats?.pet?.type || user?.avatar_config?.pet || 'none';
   const petColors = buildPetColors(user?.avatar_config || {});
 
   // ---- render ----
@@ -427,10 +428,9 @@ export default function KidDashboard() {
             <div
               className={`pet-interaction-stage ${petAction ? `pet-action-${petAction}` : ''}`}
             >
-              <svg width={80} height={80} viewBox="0 0 10 10" className="drop-shadow-lg">
-                <g transform="translate(2, 2)">
-                  {renderPet(petStyle, petColors, 'right')}
-                </g>
+              <svg width={96} height={96} viewBox="18 12 16 16" className="drop-shadow-lg">
+                <circle cx="26" cy="20" r="7" fill="rgba(255,255,255,0.06)" />
+                {renderPet(petStyle, petColors, 'right')}
               </svg>
               {/* Floating particles during interaction */}
               <AnimatePresence>
