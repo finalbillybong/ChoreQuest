@@ -273,15 +273,18 @@ export function renderPetExtras(petStyle, level, colors, position, config = {}) 
 
   if (extras.length === 0) return null;
 
-  // Custom position: mirror the same transform logic as renderPet
+  // Custom position: mirror the same transform logic as renderPet.
+  // Extras use the same local coords as PET_OFFSETS.right, so we need
+  // the inner right-offset wrapping the elements, plus the outer custom shift.
   if (position === 'custom' && config.pet_x != null && config.pet_y != null) {
     const ccx = isBig ? 25 : 26;
     const ccy = isBig ? 19 : 20;
+    const rightOffset = isBig ? BIG_PET_OFFSETS.right : PET_OFFSETS.right;
     const flip = config.pet_x < 16;
     const t = flip
       ? `translate(${config.pet_x},${config.pet_y}) scale(-1,1) translate(${-ccx},${-ccy})`
       : `translate(${config.pet_x - ccx},${config.pet_y - ccy})`;
-    return <g transform={t}>{extras}</g>;
+    return <g transform={t}><g transform={rightOffset}>{extras}</g></g>;
   }
 
   return <g transform={offsets}>{extras}</g>;
@@ -389,14 +392,17 @@ export function renderPetAccessory(petStyle, accessory, position = 'right', conf
       return null;
   }
 
+  // Custom position: accessory coords are in PET_OFFSETS.right space,
+  // so nest inside the right-offset then wrap with the custom shift.
   if (position === 'custom' && config.pet_x != null && config.pet_y != null) {
     const ccx = isBig ? 25 : 26;
     const ccy = isBig ? 19 : 20;
+    const rightOffset = isBig ? BIG_PET_OFFSETS.right : PET_OFFSETS.right;
     const flip = config.pet_x < 16;
     const t = flip
       ? `translate(${config.pet_x},${config.pet_y}) scale(-1,1) translate(${-ccx},${-ccy})`
       : `translate(${config.pet_x - ccx},${config.pet_y - ccy})`;
-    return <g transform={t}>{accessoryEl}</g>;
+    return <g transform={t}><g transform={rightOffset}>{accessoryEl}</g></g>;
   }
 
   return <g transform={offsets}>{accessoryEl}</g>;

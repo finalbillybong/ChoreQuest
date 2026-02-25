@@ -610,6 +610,62 @@ h1, h2, h3, h4, h5, h6 {
   animation: pet-shimmer-rotate 3s linear infinite;
 }
 
+/* ═══════════════════════════════════════════
+   Pet Interaction Animations (Kid Dashboard)
+   ═══════════════════════════════════════════ */
+
+.pet-interaction-stage {
+  position: relative;
+  display: inline-block;
+  transition: transform 0.2s ease;
+}
+
+/* Feed — pet bobs down (eating) then bounces up satisfied */
+@keyframes pet-action-feed-anim {
+  0%   { transform: translateY(0) scale(1); }
+  15%  { transform: translateY(4px) scale(1.05, 0.92); }
+  30%  { transform: translateY(4px) scale(0.95, 1.08); }
+  45%  { transform: translateY(4px) scale(1.05, 0.92); }
+  60%  { transform: translateY(-6px) scale(0.96, 1.06); }
+  75%  { transform: translateY(-2px) scale(1); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+.pet-action-feed {
+  animation: pet-action-feed-anim 0.8s ease-in-out;
+}
+
+/* Play — pet does a full flip/spin */
+@keyframes pet-action-play-anim {
+  0%   { transform: rotate(0deg) scale(1); }
+  25%  { transform: rotate(90deg) scale(0.9) translateY(-8px); }
+  50%  { transform: rotate(180deg) scale(0.85) translateY(-12px); }
+  75%  { transform: rotate(270deg) scale(0.9) translateY(-8px); }
+  100% { transform: rotate(360deg) scale(1) translateY(0); }
+}
+
+.pet-action-play {
+  animation: pet-action-play-anim 0.7s ease-in-out;
+}
+
+/* Pet/Stroke — happy wiggle like a puppy being stroked */
+@keyframes pet-action-pet-anim {
+  0%, 100% { transform: rotate(0deg) translateX(0); }
+  10%  { transform: rotate(-8deg) translateX(-2px); }
+  20%  { transform: rotate(8deg) translateX(2px); }
+  30%  { transform: rotate(-8deg) translateX(-2px); }
+  40%  { transform: rotate(8deg) translateX(2px); }
+  50%  { transform: rotate(-6deg) translateX(-1px); }
+  60%  { transform: rotate(6deg) translateX(1px); }
+  70%  { transform: rotate(-4deg) translateX(-1px); }
+  80%  { transform: rotate(4deg) translateX(1px); }
+  90%  { transform: rotate(-2deg); }
+}
+
+.pet-action-pet {
+  animation: pet-action-pet-anim 0.9s ease-in-out;
+}
+
 /* ── Tap-to-place crosshair in editor ── */
 @keyframes pet-place-pulse {
   0%, 100% { r: 1.5; opacity: 0.6; }

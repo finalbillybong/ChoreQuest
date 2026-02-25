@@ -28,6 +28,7 @@ import ConfettiAnimation from '../components/ConfettiAnimation';
 import RankBadge from '../components/RankBadge';
 import PetLevelBadge from '../components/PetLevelBadge';
 import { QuestBoardOverlay, QuestBoardPageGlow, QuestBoardParticles, QuestBoardDecorations, QuestBoardTitle, BOARD_THEMES, getTheme } from '../components/QuestBoardTheme';
+import { renderPet, buildPetColors } from '../components/avatar';
 
 // ---------- helpers ----------
 
@@ -97,7 +98,15 @@ export default function KidDashboard() {
 
   // Pet interactions
   const [petInteracting, setPetInteracting] = useState(null);
+  const [petAction, setPetAction] = useState(null); // holds last action for animation
   const [petMessage, setPetMessage] = useState('');
+  const [interactionsRemaining, setInteractionsRemaining] = useState(() => {
+    const interactions = user?.avatar_config?.pet_interactions;
+    if (interactions?.date === todayISO()) {
+      return Math.max(0, 3 - (interactions.count || 0));
+    }
+    return 3;
+  });
 
   // Board theme — stored in localStorage
   const [boardTheme, setBoardTheme] = useState(() =>
@@ -166,21 +175,26 @@ export default function KidDashboard() {
   // ---- pet interaction ----
   const handlePetInteraction = async (action) => {
     setPetInteracting(action);
+    setPetAction(action);
     setPetMessage('');
     try {
       const res = await api('/api/pets/interact', { method: 'POST', body: { action } });
+      setInteractionsRemaining(res.interactions_remaining);
       const labels = { feed: 'Fed', pet: 'Petted', play: 'Played with' };
-      setPetMessage(`${labels[action]} your pet! +${res.xp_awarded} XP${res.levelup ? ' - LEVEL UP!' : ''} (${res.interactions_remaining} left today)`);
+      setPetMessage(`${labels[action]} your pet! +${res.xp_awarded} XP${res.levelup ? ' - LEVEL UP!' : ''}`);
+      if (res.levelup) setShowConfetti(true);
       await fetchData();
     } catch (err) {
       setPetMessage(err.message || 'Could not interact with pet');
     } finally {
       setPetInteracting(null);
-      setTimeout(() => setPetMessage(''), 4000);
+      setTimeout(() => { setPetAction(null); setPetMessage(''); }, 4000);
     }
   };
 
   const hasPet = !!myStats?.pet;
+  const petStyle = user?.avatar_config?.pet || 'none';
+  const petColors = buildPetColors(user?.avatar_config || {});
 
   // ---- render ----
 
@@ -398,10 +412,92 @@ export default function KidDashboard() {
       {/* ── Pet Interactions ── */}
       {hasPet && (
         <div className="game-panel p-4">
-          <h3 className="text-cream text-sm font-bold mb-3 flex items-center gap-2">
-            <Heart size={14} className="text-crimson" />
-            Pet Care
-          </h3>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-cream text-sm font-bold flex items-center gap-2">
+              <Heart size={14} className="text-crimson" />
+              Pet Care
+            </h3>
+            <span className="text-muted text-[11px]">
+              {interactionsRemaining} interaction{interactionsRemaining !== 1 ? 's' : ''} left today
+            </span>
+          </div>
+
+          {/* Pet display with interaction animation */}
+          <div className="flex justify-center mb-3">
+            <div
+              className={`pet-interaction-stage ${petAction ? `pet-action-${petAction}` : ''}`}
+            >
+              <svg width={80} height={80} viewBox="0 0 10 10" className="drop-shadow-lg">
+                <g transform="translate(2, 2)">
+                  {renderPet(petStyle, petColors, 'right')}
+                </g>
+              </svg>
+              {/* Floating particles during interaction */}
+              <AnimatePresence>
+                {petAction === 'feed' && (
+                  <motion.span
+                    className="absolute -top-1 right-0 text-lg pointer-events-none"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: -8 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.6 }}
+                  >
+                    🍖
+                  </motion.span>
+                )}
+                {petAction === 'pet' && (
+                  <>
+                    {[0, 1, 2].map(i => (
+                      <motion.span
+                        key={i}
+                        className="absolute pointer-events-none text-sm"
+                        style={{ left: `${20 + i * 25}%`, top: '-4px' }}
+                        initial={{ opacity: 0, y: 4 }}
+                        animate={{ opacity: [0, 1, 0], y: -16 }}
+                        transition={{ duration: 0.8, delay: i * 0.2 }}
+                      >
+                        💕
+                      </motion.span>
+                    ))}
+                  </>
+                )}
+                {petAction === 'play' && (
+                  <>
+                    {[0, 1].map(i => (
+                      <motion.span
+                        key={i}
+                        className="absolute pointer-events-none text-sm"
+                        style={{ left: `${15 + i * 50}%`, top: '-4px' }}
+                        initial={{ opacity: 0, scale: 0.5 }}
+                        animate={{ opacity: [0, 1, 0], scale: 1.2, y: -12 }}
+                        transition={{ duration: 0.6, delay: i * 0.3 }}
+                      >
+                        ⭐
+                      </motion.span>
+                    ))}
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
+
+          {/* XP feedback */}
+          <AnimatePresence>
+            {petMessage && (
+              <motion.p
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className={`text-xs mb-3 text-center font-semibold ${
+                  petMessage.includes('Could not') || petMessage.includes('tired') ? 'text-crimson' : 'text-emerald'
+                }`}
+              >
+                {petMessage}
+              </motion.p>
+            )}
+          </AnimatePresence>
+
+          {/* Action buttons */}
           <div className="flex gap-2">
             {[
               { action: 'feed', icon: Heart, label: 'Feed', color: 'game-btn-red' },
@@ -411,10 +507,10 @@ export default function KidDashboard() {
               <button
                 key={action}
                 onClick={() => handlePetInteraction(action)}
-                disabled={!!petInteracting}
+                disabled={!!petInteracting || interactionsRemaining <= 0}
                 className={`game-btn ${color} flex-1 flex items-center justify-center gap-1.5 !py-2 text-xs ${
                   petInteracting === action ? 'opacity-60 cursor-wait' : ''
-                }`}
+                } ${interactionsRemaining <= 0 ? 'opacity-40 cursor-not-allowed' : ''}`}
               >
                 {petInteracting === action ? (
                   <Loader2 size={14} className="animate-spin" />
@@ -425,13 +521,6 @@ export default function KidDashboard() {
               </button>
             ))}
           </div>
-          {petMessage && (
-            <p className={`text-xs mt-2 text-center ${
-              petMessage.includes('Could not') ? 'text-crimson' : 'text-emerald'
-            }`}>
-              {petMessage}
-            </p>
-          )}
         </div>
       )}
 
