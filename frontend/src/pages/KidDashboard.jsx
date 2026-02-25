@@ -28,7 +28,7 @@ import ConfettiAnimation from '../components/ConfettiAnimation';
 import RankBadge from '../components/RankBadge';
 import PetLevelBadge from '../components/PetLevelBadge';
 import { QuestBoardOverlay, QuestBoardPageGlow, QuestBoardParticles, QuestBoardDecorations, QuestBoardTitle, BOARD_THEMES, getTheme } from '../components/QuestBoardTheme';
-import { renderPet, buildPetColors } from '../components/avatar';
+import { renderPet, renderPetExtras, renderPetAccessory, buildPetColors } from '../components/avatar';
 
 // ---------- helpers ----------
 
@@ -411,7 +411,18 @@ export default function KidDashboard() {
       })()}
 
       {/* ── Pet Interactions ── */}
-      {hasPet && (
+      {hasPet && (() => {
+        const config = user?.avatar_config || {};
+        const petLevel = myStats?.pet?.level || 1;
+        const petLevelName = myStats?.pet?.name || 'Hatchling';
+        const petAccessory = config.pet_accessory;
+        // Level-based scale (matches AvatarDisplay)
+        const sc = 1 + (petLevel - 1) * 0.04;
+        const glowColor = petLevel >= 7 ? '#f59e0b' : petLevel >= 5 ? '#a855f7' : null;
+        // Pet center for 'right' position
+        const px = 26, py = 20;
+
+        return (
         <div className="game-panel p-4">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-cream text-sm font-bold flex items-center gap-2">
@@ -423,15 +434,26 @@ export default function KidDashboard() {
             </span>
           </div>
 
-          {/* Pet display with interaction animation */}
-          <div className="flex justify-center mb-3">
+          {/* Pet display with idle + interaction animations */}
+          <div className="flex flex-col items-center mb-3 gap-1">
             <div
               className={`pet-interaction-stage ${petAction ? `pet-action-${petAction}` : ''}`}
             >
-              <svg width={96} height={96} viewBox="19 13 14 14" className="rounded-full overflow-hidden">
-                <circle cx="26" cy="20" r="6.5" fill="rgba(255,255,255,0.06)" />
-                {renderPet(petType, petColors, 'right')}
-              </svg>
+              <div className="avatar-idle rounded-full overflow-hidden" style={{ width: 96, height: 96 }}>
+                <svg width={96} height={96} viewBox="19 13 14 14">
+                  <circle cx="26" cy="20" r="6.5" fill="rgba(255,255,255,0.06)" />
+                  {glowColor && (
+                    <circle cx={px} cy={py} r={4} fill={glowColor} opacity="0.15" />
+                  )}
+                  <g className="avatar-pet">
+                    <g transform={sc !== 1 ? `translate(${px},${py}) scale(${sc}) translate(${-px},${-py})` : undefined}>
+                      {renderPet(petType, petColors, 'right')}
+                      {renderPetExtras(petType, petLevel, petColors, 'right')}
+                      {renderPetAccessory(petType, petAccessory, 'right')}
+                    </g>
+                  </g>
+                </svg>
+              </div>
               {/* Floating particles during interaction */}
               <AnimatePresence>
                 {petAction === 'feed' && (
@@ -479,6 +501,8 @@ export default function KidDashboard() {
                 )}
               </AnimatePresence>
             </div>
+            {/* Pet level label */}
+            <PetLevelBadge pet={myStats?.pet} />
           </div>
 
           {/* XP feedback */}
@@ -522,7 +546,8 @@ export default function KidDashboard() {
             ))}
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* ── Streak Freeze Indicator ── */}
       {myStats?.streak_freeze_available && (
