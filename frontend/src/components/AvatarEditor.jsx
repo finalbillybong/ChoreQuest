@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../api/client';
 import { useAuth } from '../hooks/useAuth';
 import AvatarDisplay from './AvatarDisplay';
 import { renderPet, renderPetExtras, buildPetColors } from './avatar/pets';
-import { Save, Loader2, X, Lock, ChevronLeft, ChevronRight, Heart, Star, Crosshair } from 'lucide-react';
+import { Save, Loader2, ChevronLeft, ChevronRight, Lock, Heart, Star, Crosshair, ArrowLeft } from 'lucide-react';
 
 const HEAD_OPTIONS = [
   { id: 'round', label: 'Round' },
@@ -794,8 +795,9 @@ function CategoryStrip({ openCategory, onSelect }) {
   );
 }
 
-export default function AvatarEditor({ isOpen, onClose }) {
+export default function AvatarEditor() {
   const { user, updateUser } = useAuth();
+  const navigate = useNavigate();
   const [config, setConfig] = useState(() => ({
     ...DEFAULT_CONFIG,
     ...(user?.avatar_config || {}),
@@ -805,6 +807,8 @@ export default function AvatarEditor({ isOpen, onClose }) {
   const [openCategory, setOpenCategory] = useState('head');
   const [lockedByCategory, setLockedByCategory] = useState({});
   const [preview, setPreview] = useState(null);
+
+  const goBack = useCallback(() => navigate(-1), [navigate]);
 
   // Fetch avatar items to determine locks
   const fetchLocks = useCallback(async () => {
@@ -824,43 +828,26 @@ export default function AvatarEditor({ isOpen, onClose }) {
     }
   }, []);
 
-  useEffect(() => { if (isOpen) fetchLocks(); }, [isOpen, fetchLocks]);
+  useEffect(() => { fetchLocks(); }, [fetchLocks]);
 
-  // Reset config from user when opened
+  // Reset config from user when avatar_config changes
   useEffect(() => {
-    if (isOpen && user?.avatar_config) {
-      setConfig({ ...DEFAULT_CONFIG, ...(user.avatar_config || {}) });
-      setMsg('');
-      setOpenCategory('head');
+    if (user?.avatar_config) {
+      setConfig((prev) => {
+        // Only reset if user config actually changed (e.g. after save from another tab)
+        const userCfg = { ...DEFAULT_CONFIG, ...(user.avatar_config || {}) };
+        if (JSON.stringify(prev) === JSON.stringify(userCfg)) return prev;
+        return userCfg;
+      });
     }
-  }, [isOpen, user?.avatar_config]);
+  }, [user?.avatar_config]);
 
-  // Lock body scroll when modal is open
+  // Escape key to go back
   useEffect(() => {
-    if (!isOpen) return;
-    const scrollY = window.scrollY;
-    document.body.style.position = 'fixed';
-    document.body.style.top = `-${scrollY}px`;
-    document.body.style.left = '0';
-    document.body.style.right = '0';
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.position = '';
-      document.body.style.top = '';
-      document.body.style.left = '';
-      document.body.style.right = '';
-      document.body.style.overflow = '';
-      window.scrollTo(0, scrollY);
-    };
-  }, [isOpen]);
-
-  // Escape key to close
-  useEffect(() => {
-    if (!isOpen) return;
-    const handler = (e) => { if (e.key === 'Escape') onClose(); };
+    const handler = (e) => { if (e.key === 'Escape') goBack(); };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [isOpen, onClose]);
+  }, [goBack]);
 
   // Compute display config (with preview overlay)
   const displayConfig = preview ? { ...config, [preview.key]: preview.value } : config;
@@ -895,7 +882,7 @@ export default function AvatarEditor({ isOpen, onClose }) {
       const res = await api('/api/avatar', { method: 'PUT', body: { config } });
       updateUser({ avatar_config: res.avatar_config || config });
       setMsg('Saved!');
-      setTimeout(() => onClose(), 600);
+      setTimeout(() => goBack(), 600);
     } catch (err) {
       setMsg(err.message || 'Failed to save');
     } finally {
@@ -905,87 +892,62 @@ export default function AvatarEditor({ isOpen, onClose }) {
   };
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <motion.div
-          className="fixed inset-0 z-50 flex flex-col"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.15 }}
-        >
-          {/* Backdrop */}
-          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
-
-          {/* Modal panel — full height with flex layout */}
-          <motion.div
-            className="relative z-10 flex flex-col w-full max-w-lg mx-auto h-full max-h-[100dvh] sm:max-h-[92vh] sm:my-auto sm:rounded-2xl overflow-hidden bg-surface border-x border-border sm:border"
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 40 }}
-            transition={{ type: 'spring', damping: 30, stiffness: 400 }}
-            onClick={(e) => e.stopPropagation()}
+    <div className="fixed inset-0 z-50 flex flex-col bg-surface">
+      {/* ─── Pinned top: back button + avatar preview ─── */}
+      <div className="flex-shrink-0 border-b border-border bg-surface-raised/50 px-4 pt-3 pb-5">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={goBack}
+              className="p-1.5 rounded-lg hover:bg-surface-raised transition-colors text-muted hover:text-cream"
+              aria-label="Back"
+            >
+              <ArrowLeft size={18} />
+            </button>
+            <h2 className="font-heading text-cream text-lg font-bold">Customise Avatar</h2>
+          </div>
+          <button
+            onClick={save}
+            disabled={saving}
+            className="game-btn game-btn-blue flex items-center gap-1.5 !py-1.5 !px-4 !text-xs"
           >
-            {/* ─── Pinned top: close button + avatar preview ─── */}
-            <div className="flex-shrink-0 border-b border-border bg-surface-raised/50 px-4 pt-3 pb-5">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="font-heading text-cream text-lg font-bold">Customise Avatar</h2>
-                <button
-                  onClick={onClose}
-                  className="p-1.5 rounded-lg hover:bg-surface-raised transition-colors text-muted hover:text-cream"
-                  aria-label="Close"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-              <div className="flex justify-center">
-                {openCategory === 'pet' && config.pet_position === 'custom' && config.pet && config.pet !== 'none' ? (
-                  <TapToPlaceOverlay
-                    config={displayConfig}
-                    onPlace={(x, y) => {
-                      setConfig((prev) => ({ ...prev, pet_x: x, pet_y: y }));
-                      setMsg('');
-                    }}
-                  />
-                ) : (
-                  <div className={`avatar-idle rounded-2xl transition-shadow duration-300 ${preview ? 'shadow-[0_0_16px_rgba(245,158,11,0.45)]' : ''}`}>
-                    <AvatarDisplay config={displayConfig} size="xl" />
-                  </div>
-                )}
-              </div>
+            {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+            {saving ? 'Saving...' : msg || 'Save'}
+          </button>
+        </div>
+        <div className="flex justify-center">
+          {openCategory === 'pet' && config.pet_position === 'custom' && config.pet && config.pet !== 'none' ? (
+            <TapToPlaceOverlay
+              config={displayConfig}
+              onPlace={(x, y) => {
+                setConfig((prev) => ({ ...prev, pet_x: x, pet_y: y }));
+                setMsg('');
+              }}
+            />
+          ) : (
+            <div className={`avatar-idle rounded-2xl transition-shadow duration-300 ${preview ? 'shadow-[0_0_16px_rgba(245,158,11,0.45)]' : ''}`}>
+              <AvatarDisplay config={displayConfig} size="xl" />
             </div>
+          )}
+        </div>
+      </div>
 
-            {/* ─── Category strip (pinned, horizontal scroll with arrows) ─── */}
-            <CategoryStrip openCategory={openCategory} onSelect={setOpenCategory} />
+      {/* ─── Category strip (pinned, horizontal scroll with arrows) ─── */}
+      <CategoryStrip openCategory={openCategory} onSelect={setOpenCategory} />
 
-            {/* ─── Scrollable options area ─── */}
-            <div className="flex-1 overflow-y-auto overscroll-contain p-4">
-              {openCategory && (
-                <CategoryContent
-                  category={openCategory}
-                  config={config}
-                  set={set}
-                  lockedByCategory={editorLocks}
-                  onPreview={handlePreview}
-                  onPreviewEnd={handlePreviewEnd}
-                />
-              )}
-            </div>
-
-            {/* ─── Pinned bottom: save button ─── */}
-            <div className="flex-shrink-0 border-t border-border bg-surface-raised/50 px-4 py-3 flex justify-center">
-              <button
-                onClick={save}
-                disabled={saving}
-                className="game-btn game-btn-blue flex items-center gap-2 !py-2.5 !px-6 !text-xs shadow-lg shadow-sky/20"
-              >
-                {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-                {saving ? 'Saving...' : msg || 'Save Avatar'}
-              </button>
-            </div>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+      {/* ─── Scrollable options area ─── */}
+      <div className="flex-1 overflow-y-auto overscroll-contain p-4">
+        {openCategory && (
+          <CategoryContent
+            category={openCategory}
+            config={config}
+            set={set}
+            lockedByCategory={editorLocks}
+            onPreview={handlePreview}
+            onPreviewEnd={handlePreviewEnd}
+          />
+        )}
+      </div>
+    </div>
   );
 }

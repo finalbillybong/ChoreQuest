@@ -3,7 +3,6 @@ import { api } from '../api/client';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme, COLOR_THEMES } from '../hooks/useTheme';
 import AvatarDisplay from '../components/AvatarDisplay';
-import AvatarEditor from '../components/AvatarEditor';
 import { useNavigate } from 'react-router-dom';
 import ChoreIcon from '../components/ChoreIcon';
 import RankBadge from '../components/RankBadge';
@@ -164,7 +163,7 @@ export default function Profile() {
   const { user, logout, updateUser } = useAuth();
   const { theme, mode, setMode, colorTheme, setColorTheme } = useTheme();
 
-  const [showEditor, setShowEditor] = useState(false);
+  // showEditor state removed — avatar editor is now a full page at /avatar
 
   // Display name editing
   const [displayName, setDisplayName] = useState(user?.display_name || '');
@@ -322,7 +321,7 @@ export default function Profile() {
       {/* Avatar + Name + Role */}
       <div className="game-panel p-6 flex flex-col items-center gap-4">
         <button
-          onClick={() => setShowEditor(true)}
+          onClick={() => navigate('/avatar')}
           className="relative"
           aria-label="Customise avatar"
         >
@@ -386,7 +385,6 @@ export default function Profile() {
       </div>
 
       {/* Avatar Editor Modal */}
-      <AvatarEditor isOpen={showEditor} onClose={() => setShowEditor(false)} />
 
       {/* Stats Summary (kids only) */}
       {isKid && (

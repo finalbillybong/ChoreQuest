@@ -20,6 +20,7 @@ const Settings = lazy(() => import('./pages/Settings'));
 const Events = lazy(() => import('./pages/Events'));
 const KidQuests = lazy(() => import('./pages/KidQuests'));
 const Party = lazy(() => import('./pages/Party'));
+const AvatarEditor = lazy(() => import('./components/AvatarEditor'));
 
 function Loading() {
   return (
@@ -74,6 +75,7 @@ export default function App() {
           <Route path="/party" element={<Party />} />
           <Route path="/leaderboard" element={<Leaderboard />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/avatar" element={<AvatarEditor />} />
           <Route path="/events" element={<Events />} />
           <Route path="/kids/:kidId" element={<KidQuests />} />
           <Route path="/settings" element={<Settings />} />
