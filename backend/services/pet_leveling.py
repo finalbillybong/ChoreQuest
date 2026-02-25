@@ -1,5 +1,9 @@
 """Pet leveling system — pets gain XP alongside their owner and evolve."""
 
+import json
+from sqlalchemy import text
+
+
 PET_LEVELS = [
     (0,    1, "Hatchling"),
     (50,   2, "Youngling"),
@@ -91,6 +95,9 @@ def award_pet_xp(user, amount: int) -> dict | None:
     Returns a dict with old/new level info if the pet levelled up, else None.
     Does nothing if the user has no pet equipped.
     The caller must commit the DB session afterwards.
+
+    NOTE: This only mutates the ORM object in memory. For reliable persistence
+    with async SQLite, use award_pet_xp_db() instead which writes via direct SQL.
     """
     config = user.avatar_config or {}
     pet = config.get("pet")
@@ -103,6 +110,43 @@ def award_pet_xp(user, amount: int) -> dict | None:
     new_xp = old_xp + amount
     set_current_pet_xp(config, new_xp)
     user.avatar_config = {**config}  # trigger SQLAlchemy mutation detection
+
+    new_level_info = get_pet_level(new_xp)
+    if new_level_info["level"] > old_level:
+        return {
+            "old_level": old_level,
+            "new_level": new_level_info["level"],
+            "name": new_level_info["name"],
+            "pet": pet,
+        }
+    return None
+
+
+async def award_pet_xp_db(db, user, amount: int) -> dict | None:
+    """Award XP to the user's equipped pet via direct SQL UPDATE.
+
+    Reliably persists avatar_config changes (SQLAlchemy ORM JSON mutation
+    detection is unreliable with async SQLite).
+    Returns a dict with old/new level info if the pet levelled up, else None.
+    Does NOT commit — the caller must commit.
+    """
+    config = dict(user.avatar_config or {})
+    pet = config.get("pet")
+    if not pet or pet == "none" or amount <= 0:
+        return None
+
+    config = migrate_pet_xp(config)
+    old_xp = get_current_pet_xp(config)
+    old_level = get_pet_level(old_xp)["level"]
+    new_xp = old_xp + amount
+    set_current_pet_xp(config, new_xp)
+
+    await db.execute(
+        text("UPDATE users SET avatar_config = :config WHERE id = :uid"),
+        {"config": json.dumps(config), "uid": user.id},
+    )
+    # Keep ORM object in sync so later reads in the same request see updated data
+    user.avatar_config = config
 
     new_level_info = get_pet_level(new_xp)
     if new_level_info["level"] > old_level:

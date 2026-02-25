@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime, date, timezone, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
-from sqlalchemy import select, and_, func, delete
+from sqlalchemy import select, and_, func, delete, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -1024,27 +1024,16 @@ async def verify_chore(
     kid.total_points_earned += total_awarded
 
     # Pet XP — award the same amount as quest XP (per-pet tracking)
-    config = kid.avatar_config or {}
-    if config.get("pet") and config["pet"] != "none":
-        from backend.services.pet_leveling import (
-            get_pet_level, get_current_pet_xp, set_current_pet_xp, migrate_pet_xp,
-        )
-        config = migrate_pet_xp(config)
-        old_pet_xp = get_current_pet_xp(config)
-        old_level = get_pet_level(old_pet_xp)["level"]
-        new_pet_xp = old_pet_xp + total_awarded
-        set_current_pet_xp(config, new_pet_xp)
-        kid.avatar_config = {**config}  # trigger mutation detection
-        new_level = get_pet_level(new_pet_xp)["level"]
-        if new_level > old_level:
-            pet_name = get_pet_level(new_pet_xp)["name"]
-            db.add(Notification(
-                user_id=kid.id,
-                type=NotificationType.pet_levelup,
-                title="Pet Leveled Up!",
-                message=f"Your pet reached level {new_level} — {pet_name}!",
-                reference_type="pet",
-            ))
+    from backend.services.pet_leveling import award_pet_xp_db
+    pet_levelup = await award_pet_xp_db(db, kid, total_awarded)
+    if pet_levelup:
+        db.add(Notification(
+            user_id=kid.id,
+            type=NotificationType.pet_levelup,
+            title="Pet Leveled Up!",
+            message=f"Your pet reached level {pet_levelup['new_level']} — {pet_levelup['name']}!",
+            reference_type="pet",
+        ))
 
     if kid.last_streak_date == today:
         pass
@@ -1207,11 +1196,16 @@ async def uncomplete_chore(
             from backend.services.pet_leveling import (
                 get_current_pet_xp, set_current_pet_xp, migrate_pet_xp,
             )
+            import json as _json
             config = migrate_pet_xp(config)
             old_pet_xp = get_current_pet_xp(config)
             new_pet_xp = max(0, old_pet_xp - total_deducted)
             set_current_pet_xp(config, new_pet_xp)
-            assigned_user.avatar_config = {**config}
+            await db.execute(
+                text("UPDATE users SET avatar_config = :config WHERE id = :uid"),
+                {"config": _json.dumps(config), "uid": assigned_user.id},
+            )
+            assigned_user.avatar_config = config
 
     for tx in transactions:
         await db.delete(tx)

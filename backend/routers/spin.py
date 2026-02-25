@@ -18,7 +18,7 @@ from backend.schemas import SpinResultResponse, SpinAvailabilityResponse
 from backend.dependencies import get_current_user
 from backend.achievements import check_achievements
 from backend.websocket_manager import ws_manager
-from backend.services.pet_leveling import award_pet_xp
+from backend.services.pet_leveling import award_pet_xp_db
 
 router = APIRouter(prefix="/api/spin", tags=["spin"])
 
@@ -148,7 +148,7 @@ async def execute_spin(
     user.total_points_earned += points_won
 
     # Award pet XP alongside user XP
-    award_pet_xp(user, points_won)
+    await award_pet_xp_db(db, user, points_won)
 
     await db.commit()
     await db.refresh(spin_result)

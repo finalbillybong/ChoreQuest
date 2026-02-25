@@ -14,7 +14,7 @@ from backend.models import (
     Notification,
     NotificationType,
 )
-from backend.services.pet_leveling import award_pet_xp
+from backend.services.pet_leveling import award_pet_xp_db
 from backend.schemas import (
     BonusRequest,
     AdjustRequest,
@@ -106,7 +106,7 @@ async def award_bonus(
     db.add(notif)
 
     # Award pet XP alongside user XP
-    pet_levelup = award_pet_xp(user, body.amount)
+    pet_levelup = await award_pet_xp_db(db, user, body.amount)
     if pet_levelup:
         db.add(Notification(
             user_id=user.id,
@@ -176,7 +176,7 @@ async def adjust_points(
 
     # Award pet XP for positive adjustments
     if body.amount > 0:
-        award_pet_xp(user, body.amount)
+        await award_pet_xp_db(db, user, body.amount)
 
     # Create audit log entry
     client_ip = request.client.host if request.client else None
