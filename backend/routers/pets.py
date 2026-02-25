@@ -52,14 +52,18 @@ async def pet_interact(
 
     levelup = award_pet_xp(user, xp)
 
-    # Merge interactions into avatar_config (award_pet_xp may have replaced it)
-    user.avatar_config = {**(user.avatar_config or {}), "pet_interactions": interactions}
+    # Build final avatar_config with both pet XP changes and interactions
+    final_config = dict(user.avatar_config or {})
+    final_config["pet_interactions"] = interactions
+    user.avatar_config = final_config
     flag_modified(user, "avatar_config")
 
     # Award user XP (points balance + lifetime total)
     user.points_balance = (user.points_balance or 0) + xp
     user.total_points_earned = (user.total_points_earned or 0) + xp
 
+    db.add(user)
+    await db.flush()
     await db.commit()
 
     return {
