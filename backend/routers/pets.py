@@ -3,6 +3,7 @@ from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm.attributes import flag_modified
 
 from backend.database import get_db
 from backend.models import User
@@ -26,6 +27,7 @@ async def pet_interact(
     """Interact with your equipped pet (feed/pet/play) for a small XP bonus.
 
     Limited to 3 interactions per day (stored in avatar_config).
+    Awards both pet XP and user points.
     """
     config = user.avatar_config or {}
     pet = config.get("pet")
@@ -47,11 +49,16 @@ async def pet_interact(
     xp = PET_INTERACTION_XP.get(body.action, 1)
     interactions["count"] += 1
     interactions["actions"].append(body.action)
-    config["pet_interactions"] = interactions
 
     levelup = award_pet_xp(user, xp)
-    # avatar_config already mutated by award_pet_xp, but ensure interactions are saved
-    user.avatar_config = {**user.avatar_config, "pet_interactions": interactions}
+
+    # Merge interactions into avatar_config (award_pet_xp may have replaced it)
+    user.avatar_config = {**(user.avatar_config or {}), "pet_interactions": interactions}
+    flag_modified(user, "avatar_config")
+
+    # Award user XP (points balance + lifetime total)
+    user.points_balance = (user.points_balance or 0) + xp
+    user.total_points_earned = (user.total_points_earned or 0) + xp
 
     await db.commit()
 
@@ -60,4 +67,5 @@ async def pet_interact(
         "xp_awarded": xp,
         "interactions_remaining": MAX_INTERACTIONS_PER_DAY - interactions["count"],
         "levelup": levelup,
+        "new_balance": user.points_balance,
     }

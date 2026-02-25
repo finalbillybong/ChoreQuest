@@ -183,6 +183,8 @@ export default function KidDashboard() {
       const labels = { feed: 'Fed', pet: 'Petted', play: 'Played with' };
       setPetMessage(`${labels[action]} your pet! +${res.xp_awarded} XP${res.levelup ? ' - LEVEL UP!' : ''}`);
       if (res.levelup) setShowConfetti(true);
+      // Update points in header immediately
+      if (res.new_balance != null) updateUser({ points_balance: res.new_balance });
       await fetchData();
     } catch (err) {
       setPetMessage(err.message || 'Could not interact with pet');
@@ -427,10 +429,8 @@ export default function KidDashboard() {
             <div
               className={`pet-interaction-stage ${petAction ? `pet-action-${petAction}` : ''}`}
             >
-              <svg width={80} height={80} viewBox="0 0 10 10" className="drop-shadow-lg">
-                <g transform="translate(2, 2)">
-                  {renderPet(petStyle, petColors, 'right')}
-                </g>
+              <svg width={80} height={80} viewBox="20 14 13 12" className="drop-shadow-lg">
+                {renderPet(petStyle, petColors, 'right')}
               </svg>
               {/* Floating particles during interaction */}
               <AnimatePresence>
