@@ -59,17 +59,17 @@ async def get_my_stats(
     else:
         pet_info = None
 
+    # Streak freeze: available once per calendar month
+    today = date.today()
+    current_month = today.month + today.year * 12
+    streak_freeze_available = (current_user.streak_freeze_month or 0) != current_month
+
     # Pet interaction budget remaining today
     interactions = config.get("pet_interactions", {})
     if interactions.get("date") == today.isoformat():
         interactions_remaining = max(0, 3 - (interactions.get("count", 0)))
     else:
         interactions_remaining = 3
-
-    # Streak freeze: available once per calendar month
-    today = date.today()
-    current_month = today.month + today.year * 12
-    streak_freeze_available = (current_user.streak_freeze_month or 0) != current_month
 
     return {
         "points_balance": current_user.points_balance,
