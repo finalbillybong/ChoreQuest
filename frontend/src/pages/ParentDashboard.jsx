@@ -1,3 +1,4 @@
+import { toLocalISODate } from '../utils/date';
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -54,7 +55,7 @@ export default function ParentDashboard() {
 
       setFamilyStats(familyRes);
 
-      const today = new Date().toISOString().slice(0, 10);
+      const today = toLocalISODate();
       const todayAssignments = (calendarRes.days && calendarRes.days[today]) || [];
       const needsVerification = todayAssignments.filter(
         (a) => a.status === 'completed'

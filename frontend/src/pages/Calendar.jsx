@@ -1,3 +1,4 @@
+import { toLocalISODate } from '../utils/date';
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
@@ -20,19 +21,19 @@ import {
 } from 'lucide-react';
 
 function toISO(date) {
-  return date.toISOString().slice(0, 10);
+  return toLocalISODate(date);
 }
 
 function addDays(dateStr, n) {
   const d = new Date(dateStr + 'T00:00:00');
   d.setDate(d.getDate() + n);
-  return d.toISOString().slice(0, 10);
+  return toLocalISODate(d);
 }
 
 const SHORT_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 function statusStyle(assignment, dayStr) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = toLocalISODate();
 
   if (assignment.status === 'verified') {
     return {

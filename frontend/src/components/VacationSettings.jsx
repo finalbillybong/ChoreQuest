@@ -1,3 +1,4 @@
+import { toLocalISODate } from '../utils/date';
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../api/client';
 import { Palmtree, Trash2, Plus, Loader2 } from 'lucide-react';
@@ -55,7 +56,7 @@ export default function VacationSettings() {
     }
   };
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = toLocalISODate();
 
   return (
     <div className="game-panel p-5">

@@ -1,3 +1,4 @@
+import { toLocalISODate } from '../utils/date';
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -38,11 +39,11 @@ function getMondayOfThisWeek() {
   const diff = day === 0 ? -6 : 1 - day;
   const monday = new Date(now);
   monday.setDate(now.getDate() + diff);
-  return monday.toISOString().slice(0, 10);
+  return toLocalISODate(monday);
 }
 
 function todayISO() {
-  return new Date().toISOString().slice(0, 10);
+  return toLocalISODate();
 }
 
 function difficultyLabel(difficulty) {
